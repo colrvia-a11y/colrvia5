@@ -6,7 +6,7 @@ import 'package:color_canvas/screens/home_screen.dart';
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'dart:async';
-import 'dart:math';
+// ...existing code...
 
 class SearchScreen extends StatefulWidget {
   final Function(Paint)? onPaintSelectedForRoller;
@@ -306,7 +306,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -459,7 +459,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -571,7 +571,7 @@ class _SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Color swatches - using fixed dimensions to prevent layout loops
-            Container(
+            SizedBox(
               height: 120,
               child: Row(
                 children: palette.colors.asMap().entries.map((entry) {

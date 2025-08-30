@@ -6,9 +6,7 @@ import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/services/auth_guard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:color_canvas/screens/color_story_wizard_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
-import 'package:color_canvas/utils/color_utils.dart';
 
 class SavePalettePanel extends StatefulWidget {
   final String? projectId;
@@ -123,7 +121,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
             project = await ProjectService.fetch(widget.projectId!);
           } else {
             project = await ProjectService.create(
-              title: palette.name ?? 'New Color Story',
+              title: palette.name,
               paletteId: savedPaletteId,
             );
           }
@@ -139,7 +137,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
               label: 'Preview',
               onPressed: () {
                 Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => VisualizerScreen(projectId: project?.id),
+                  builder: (_) => VisualizerScreen(),
                 ));
               },
             ),

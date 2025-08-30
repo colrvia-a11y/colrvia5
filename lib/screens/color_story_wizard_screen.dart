@@ -7,8 +7,7 @@ import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/services/ai_service.dart';
 import 'package:color_canvas/services/analytics_service.dart';
-import 'package:color_canvas/services/auth_guard.dart';
-import 'package:color_canvas/screens/color_story_detail_screen.dart';
+// ...existing code...
 import 'package:color_canvas/screens/settings_screen.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 
@@ -36,7 +35,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
     'warm_cool': 0.5,           // warm ↔ cool  
     'airy_cozy': 0.5,           // airy ↔ cozy
   };
-  Set<String> _brandHints = {};
+  final Set<String> _brandHints = {};
   String _guidanceLevel = 'balanced';
   
   // UI state
@@ -287,7 +286,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
       final color = palette.colors[i];
       print('🐛 Wizard: Color[$i] - hex: "${color.hex}", name: "${color.name}", brand: "${color.brand}", code: "${color.code}"');
       
-      if (color.hex == null || color.hex!.isEmpty) {
+      if (color.hex.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Color ${i + 1} is missing hex value')),
         );
@@ -421,7 +420,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             print('🐛 Wizard: - Current user: ${FirebaseService.currentUser?.uid}');
             print('🐛 Wizard: - User match: ${data['ownerId'] == FirebaseService.currentUser?.uid}');
             print('🐛 Wizard: - Document status: ${data['status']}');
-            print('🐛 Wizard: SUCCESS - Document found after ${attempt} attempts');
+            print('🐛 Wizard: SUCCESS - Document found after $attempt attempts');
             break;
           } else {
             print('🐛 Wizard: - Document does not exist on attempt $attempt');
@@ -1122,52 +1121,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
     );
   }
 
-  void _showPaywallDialog(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Upgrade to Pro'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message),
-              const SizedBox(height: 16),
-              const Text(
-                'Pro benefits:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('• Unlimited color story generations'),
-              const Text('• Unlimited palette saves'),
-              const Text('• HD room visualizations'),
-              const Text('• Priority support'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Maybe Later'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // TODO: Navigate to upgrade screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Upgrade feature coming soon!'),
-                  ),
-                );
-              },
-              child: const Text('Upgrade Now'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+// ...existing code...
 
   @override
   void dispose() {

@@ -1,21 +1,6 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
+import 'package:flutter/material.dart' as m;
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:color_canvas/services/firebase_service.dart';
-import 'package:color_canvas/services/project_service.dart';
-import 'package:color_canvas/services/analytics_service.dart';
-import 'package:color_canvas/services/auth_guard.dart';
-import 'package:color_canvas/models/color_story.dart';
-import 'package:color_canvas/firestore/firestore_data_schema.dart' as schema;
-import 'package:color_canvas/screens/color_story_detail_screen.dart';
-import 'package:color_canvas/screens/color_story_wizard_screen.dart';
-import 'package:color_canvas/screens/roller_screen.dart';
-import 'package:color_canvas/utils/gradient_hero_utils.dart';
-import 'package:color_canvas/widgets/network_aware_image.dart';
-import 'package:color_canvas/services/network_utils.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -27,104 +12,12 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
-  // Performance optimization - debounce search
+
+  // Minimal state preserved for future expansion
   Timer? _searchDebounce;
   final Duration _searchDelay = const Duration(milliseconds: 500);
-  
-  List<ColorStory> _stories = [];
-  List<ColorStory> _filteredStories = [];
   bool _isLoading = false;
-  bool _hasMoreData = true;
-  bool _hasError = false;
-  String _errorMessage = '';
-  final int _pageSize = 24;
-  DocumentSnapshot? _lastDocument; // Cursor for pagination
-  
-  // Filter states
-  final Set<String> _selectedThemes = <String>{};
-  final Set<String> _selectedFamilies = <String>{};
-  final Set<String> _selectedRooms = <String>{};
   String _searchQuery = '';
-  String _sortBy = 'newest'; // v3: 'newest' or 'most_loved'
-  
-  // Filter options (loaded dynamically from Firestore)
-  List<String> _themeOptions = [];
-  List<String> _familyOptions = [];
-  List<String> _roomOptions = [];
-  
-  // User palette state for FAB visibility
-  bool _hasUserPalettes = false;
-  
-  // Spotlight stories state
-  List<ColorStory> _spotlightStories = [];
-  bool _isLoadingSpotlights = false;
-  
-  // Network preferences
-  bool _wifiOnlyAssets = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTaxonomies();
-    _loadSpotlightStories();
-    _loadColorStories();
-    _checkUserPalettes();
-    _loadUserPreferences();
-    _scrollController.addListener(_onScroll);
-    
-    // Track screen view
-    AnalyticsService.instance.screenView('explore_color_stories');
-  }
-
-  Future<void> _loadTaxonomies() async {
-    try {
-      final taxonomies = await FirebaseService.getTaxonomyOptions();
-      setState(() {
-        _themeOptions = taxonomies['themes'] ?? [];
-        _familyOptions = taxonomies['families'] ?? [];
-        _roomOptions = taxonomies['rooms'] ?? [];
-      });
-    } catch (e) {
-      // Use defaults on error
-      setState(() {
-        _themeOptions = ['coastal', 'modern-farmhouse', 'traditional', 'contemporary', 'rustic', 'minimalist'];
-        _familyOptions = ['greens', 'blues', 'neutrals', 'warm-neutrals', 'cool-neutrals', 'whites', 'grays'];
-        _roomOptions = ['kitchen', 'living', 'bedroom', 'bathroom', 'dining', 'exterior', 'office'];
-      });
-    }
-  }
-  
-  Future<void> _loadSpotlightStories() async {
-    setState(() => _isLoadingSpotlights = true);
-    
-    try {
-      final spotlights = await FirebaseService.getSpotlightStories(limit: 12);
-      setState(() => _spotlightStories = spotlights);
-    } catch (e) {
-      debugPrint('Error loading spotlight stories: $e');
-      // Fail silently - spotlight rail will just not appear
-    } finally {
-      setState(() => _isLoadingSpotlights = false);
-    }
-  }
-  
-  Future<void> _loadUserPreferences() async {
-    final user = FirebaseService.currentUser;
-    if (user != null) {
-      try {
-        final doc = await FirebaseService.getUserDocument(user.uid);
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>? ?? {};
-          setState(() {
-            _wifiOnlyAssets = data['wifiOnlyAssets'] ?? false;
-          });
-        }
-      } catch (e) {
-        // Use defaults if loading fails
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -134,175 +27,139 @@ class _ExploreScreenState extends State<ExploreScreen> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _loadMoreStories();
-    }
-  }
-
-  Future<void> _loadColorStories() async {
-    if (_isLoading) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      // Direct Firestore query with proper filtering
-      final sortByMostLoved = _sortBy == 'most_loved';
-      Query q = FirebaseFirestore.instance.collection('colorStories')
-        .where('access', isEqualTo: 'public')
-        .where('status', isEqualTo: 'complete')
-        .orderBy(sortByMostLoved ? 'likeCount' : 'createdAt', descending: true);
-      
-      // Apply additional filters
-      if (_selectedThemes.isNotEmpty) {
-        q = q.where('themes', arrayContainsAny: _selectedThemes.toList());
-      }
-      if (_selectedFamilies.isNotEmpty) {
-        q = q.where('families', arrayContainsAny: _selectedFamilies.toList());
-      }
-      if (_selectedRooms.isNotEmpty) {
-        q = q.where('rooms', arrayContainsAny: _selectedRooms.toList());
-      }
-      
-      q = q.limit(_pageSize);
-      
-      final snapshot = await q.get();
-      final stories = snapshot.docs.map((doc) => 
-        ColorStory.fromSnap(doc.id, doc.data() as Map<String, dynamic>)).toList();
-      
-      setState(() {
-        _stories = stories;
-        _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
-        _hasMoreData = snapshot.docs.length == _pageSize;
-        _applyTextFilter();
-      });
-    } catch (e) {
-      debugPrint('Error loading color stories: $e');
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Failed to load color stories. Please check your connection.';
-        // Fallback to sample data for development
-        _stories = _getSampleStories();
-        _applyTextFilter();
-      });
-      
-      // Don't show global SnackBar - handle error locally in UI
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadMoreStories() async {
-    if (_isLoading || !_hasMoreData || _lastDocument == null) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      // Direct Firestore query with proper filtering and pagination
-      final sortByMostLoved = _sortBy == 'most_loved';
-      Query q = FirebaseFirestore.instance.collection('colorStories')
-        .where('access', isEqualTo: 'public')
-        .where('status', isEqualTo: 'complete')
-        .orderBy(sortByMostLoved ? 'likeCount' : 'createdAt', descending: true);
-      
-      // Apply additional filters
-      if (_selectedThemes.isNotEmpty) {
-        q = q.where('themes', arrayContainsAny: _selectedThemes.toList());
-      }
-      if (_selectedFamilies.isNotEmpty) {
-        q = q.where('families', arrayContainsAny: _selectedFamilies.toList());
-      }
-      if (_selectedRooms.isNotEmpty) {
-        q = q.where('rooms', arrayContainsAny: _selectedRooms.toList());
-      }
-      
-      q = q.startAfterDocument(_lastDocument!).limit(_pageSize);
-      
-      final snapshot = await q.get();
-      final newStories = snapshot.docs.map((doc) => 
-        ColorStory.fromSnap(doc.id, doc.data() as Map<String, dynamic>)).toList();
-      
-      setState(() {
-        _stories.addAll(newStories);
-        _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
-        _hasMoreData = snapshot.docs.length == _pageSize;
-        _applyTextFilter();
-      });
-    } catch (e) {
-      debugPrint('Error loading more stories: $e');
-      // Don't show global SnackBar for load more failures - handle silently
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _applyTextFilter() {
-    if (_searchQuery.isEmpty) {
-      _filteredStories = List.from(_stories);
-    } else {
-      final query = _searchQuery.toLowerCase();
-      _filteredStories = _stories.where((story) {
-        final titleMatch = story.title.toLowerCase().contains(query);
-        final tagsMatch = story.tags.any((tag) => tag.toLowerCase().contains(query));
-        return titleMatch || tagsMatch;
-      }).toList();
-    }
-  }
-
   void _onSearchChanged(String query) {
-    // Cancel previous debounce timer
     _searchDebounce?.cancel();
-    
-    setState(() {
-      _searchQuery = query;
-      _applyTextFilter();
+    setState(() => _searchQuery = query);
+    _searchDebounce = Timer(_searchDelay, () {
+      // hook for analytics/search later
     });
-    
-    // Debounced analytics tracking to avoid too many events
-    if (query.trim().isNotEmpty) {
-      _searchDebounce = Timer(_searchDelay, () {
-        final startTime = DateTime.now();
-        _applyTextFilter();
-        final searchDuration = DateTime.now().difference(startTime).inMilliseconds.toDouble();
-        
-        final activeFilters = <String>[
-          ..._selectedThemes.map((t) => 'theme:$t'),
-          ..._selectedFamilies.map((f) => 'family:$f'),
-          ..._selectedRooms.map((r) => 'room:$r'),
-        ];
-        
-        AnalyticsService.instance.trackExploreSearch(
-          searchQuery: query.trim(),
-          resultCount: _filteredStories.length,
-          searchDurationMs: searchDuration,
-          activeFilters: activeFilters.isNotEmpty ? activeFilters : null,
-        );
-      });
-    }
   }
 
-  void _onFilterChanged() {
-    _hasMoreData = true;
-    _lastDocument = null; // Reset cursor for new filter query
-    _loadColorStories();
-    
-    // Track filter analytics
-    AnalyticsService.instance.trackExploreFilterChange(
-      selectedThemes: _selectedThemes.toList(),
-      selectedFamilies: _selectedFamilies.toList(),
-      selectedRooms: _selectedRooms.toList(),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Explore Color Stories'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => setState(() => _isLoading = !_isLoading),
+            tooltip: 'Toggle loading',
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search stories, styles, or rooms…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear',
+                      )
+                    : null,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildPlaceholderGrid(theme),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {},
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Create'),
+      ),
     );
   }
 
+  Widget _buildPlaceholderGrid(ThemeData theme) {
+    return GridView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return _CardSkeleton(index: index);
+      },
+    );
+  }
+}
+
+class _CardSkeleton extends StatelessWidget {
+  const _CardSkeleton({required this.index});
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme;
+    return Material(
+      color: color.surface,
+      elevation: 1,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {},
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.primaries[index % Colors.primaries.length].shade400,
+                      Colors.primaries[(index + 3) % Colors.primaries.length].shade200,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Beautiful Color Story',
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w600)),
+                    m.SizedBox(height: 6),
+                    Text('AI Generated', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+/*
   void _toggleTheme(String theme) {
     final wasSelected = _selectedThemes.contains(theme);
     setState(() {
@@ -791,7 +648,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -1097,10 +954,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     ),
                   ],
                 ),
-                if (!isLast) const SizedBox(height: 40),
+                if (!isLast) const m.SizedBox(height: 40),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -1329,44 +1186,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildRecentStoriesPreview() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              'Recent Stories',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => _showBrowseStoriesSheet(),
-              child: const Text('View All'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _spotlightStories.take(5).length,
-            itemBuilder: (context, index) {
-              final story = _spotlightStories[index];
-              return Container(
-                width: 160,
-                margin: EdgeInsets.only(right: index < _spotlightStories.length - 1 ? 12 : 0),
-                child: _buildSpotlightCard(story, index),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -1387,7 +1206,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Column(
               children: [
                 // Hero Section - Full Screen Experience
-                Container(
+                SizedBox(
                   height: screenHeight * 0.85,
                   width: double.infinity,
                   child: Stack(
@@ -1452,9 +1271,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                           color: Colors.white,
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
+                              ),
                               ),
                               
                               const SizedBox(height: 48),
@@ -1586,10 +1406,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                    );
+                                  },
+                                ),
                             ],
                           ),
                         ),
@@ -1703,57 +1522,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildSpotlightRail() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.stars,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Designer Spotlights',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: _showAllSpotlights,
-                  child: const Text('See all'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          
-          // Horizontal scrolling cards
-          SizedBox(
-            height: 140,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _spotlightStories.length,
-              itemBuilder: (context, index) {
-                final story = _spotlightStories[index];
-                return _buildSpotlightCard(story, index);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
   Widget _buildSpotlightCard(ColorStory story, int index) {
     return Container(
       width: 200,
@@ -1930,38 +1698,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget _buildEmptyState() {
-    // Generate dynamic suggestions based on current filter state
     final suggestion = _buildDynamicSuggestion();
-    
-    // Track empty state analytics
-    AnalyticsService.instance.trackExploreEmptyStateShown(
-      selectedThemes: _selectedThemes.toList(),
-      selectedFamilies: _selectedFamilies.toList(),
-      selectedRooms: _selectedRooms.toList(),
-      searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-      suggestedAction: suggestion['action'] ?? 'unknown',
-    );
-    
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.palette_outlined,
+              Icons.search_off,
               size: 64,
               color: Colors.grey[400],
             ),
-            const SizedBox(height: 16),
+            const m.SizedBox(height: 12),
             Text(
-              'No matches yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
+              'No color stories found',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            const SizedBox(height: 12),
+            const m.SizedBox(height: 12),
             Text(
               suggestion['message'] ?? 'Try adjusting your filters or search terms',
               textAlign: TextAlign.center,
@@ -1970,15 +1726,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 24),
-            
-            // Clear filters button (always shown when filters are active)
+            const m.SizedBox(height: 24),
             if (_selectedThemes.isNotEmpty || _selectedFamilies.isNotEmpty || _selectedRooms.isNotEmpty || _searchQuery.isNotEmpty)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Track clear filters action
                     AnalyticsService.instance.trackColorStoriesEngagement(
                       action: 'clear_filters_from_empty_state',
                       additionalData: {
@@ -1988,7 +1741,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         'had_search': _searchQuery.isNotEmpty,
                       },
                     );
-                    
                     setState(() {
                       _selectedThemes.clear();
                       _selectedFamilies.clear();
@@ -2639,3 +2391,4 @@ class _FeaturePatternPainter extends CustomPainter {
     return animationValue != oldDelegate.animationValue;
   }
 }
+*/

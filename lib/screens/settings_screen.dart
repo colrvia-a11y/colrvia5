@@ -461,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: const Text('Enable admin privileges for data management'),
                 value: _isAdmin,
                 onChanged: (value) => _toggleAdminMode(),
-                activeColor: Colors.orange,
+                activeThumbColor: Colors.orange,
               ),
             ],
           ],

@@ -213,6 +213,7 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
     );
   }
 
+  // ignore: unused_element
   void _showPalettePaywallDialog() {
     showDialog(
       context: context,

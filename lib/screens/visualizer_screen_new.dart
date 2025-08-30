@@ -109,8 +109,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     );
     
     _accentGlow = ColorTween(
-      begin: const Color(0xFF404934), // Brand forest green
-      end: const Color(0xFFF2B897),   // Brand warm peach
+      begin: const Color(0xFF6C5CE7),
+      end: const Color(0xFFA29BFE),
     ).animate(CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut));
     
     _masterController.forward();
@@ -122,10 +122,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   }
 
   Future<void> _loadRecentColors() async {
-    // Load from local storage in production - Updated with brand colors
+    // Load from local storage in production
     _recentColors = [
-      '#404934', '#f2b897', '#F5F5DC', '#FAF0E6', '#2F3728', '#E5A177',
-      '#5A6348', '#FFFFFF', '#000000', '#1F251A', '#D8936B', '#6B7A5A'
+      '#FF6B35', '#F7931E', '#FFD23F', '#06FFA5', '#118AB2', '#073B4C',
+      '#E74C3C', '#9B59B6', '#3498DB', '#1ABC9C', '#F39C12', '#2ECC71'
     ];
   }
 
@@ -133,7 +133,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF404934), // Brand forest green base
+      backgroundColor: const Color(0xFF0A0A0B),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: AnimatedBuilder(
@@ -201,9 +201,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF404934), // Brand forest green
-            Color(0xFF2F3728), // Deeper forest for depth
-            Color(0xFF1F251A), // Rich organic dark
+            Color(0xFF0A0A0B),
+            Color(0xFF1A1A2E),
+            Color(0xFF16213E),
           ],
         ),
       ),
@@ -242,8 +242,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        _accentGlow.value ?? const Color(0xFF404934),
-                        _accentGlow.value?.withValues(alpha: 0.3) ?? const Color(0xFF404934).withValues(alpha: 0.3),
+                        _accentGlow.value ?? const Color(0xFF6C5CE7),
+                        _accentGlow.value?.withOpacity(0.3) ?? const Color(0xFF6C5CE7).withOpacity(0.3),
                         Colors.transparent,
                       ],
                     ),
@@ -322,7 +322,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           subtitle: 'Transform your real space',
           onTap: () => _navigateToMode(VisualizerMode.upload),
           gradient: const LinearGradient(
-            colors: [Color(0xFFF2B897), Color(0xFFE5A177)], // Warm peach gradient
+            colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
           ),
         ),
         
@@ -335,7 +335,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           subtitle: 'Generate your dream space',
           onTap: () => _generateMockup(),
           gradient: const LinearGradient(
-            colors: [Color(0xFF404934), Color(0xFF5A6348)], // Forest green gradient
+            colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
           ),
         ),
       ],
@@ -437,7 +437,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             child: Row(
               children: [
                 Icon(feature['icon'] as IconData, 
-                     color: const Color(0xFFF2B897), size: 20), // Brand peach
+                     color: const Color(0xFF6C5CE7), size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -527,7 +527,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     child: const Icon(
                       Icons.add_photo_alternate,
                       size: 60,
-                      color: Color(0xFFF2B897), // Brand peach
+                      color: Color(0xFF6C5CE7),
                     ),
                   ),
                 );
@@ -588,7 +588,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.check_circle, 
-                     color: Color(0xFF404934), size: 16), // Brand forest green
+                     color: Color(0xFF00B894), size: 16),
                 const SizedBox(width: 8),
                 Text(
                   tip,
@@ -681,7 +681,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF404934), // Brand forest green
+        color: const Color(0xFF00B894),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -710,7 +710,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             title: 'Analyze Image',
             subtitle: 'Let AI understand your space',
             icon: Icons.psychology,
-            color: const Color(0xFFF2B897), // Brand peach
+            color: const Color(0xFF6C5CE7),
             onTap: _analyzeImage,
             isLoading: _isAnalyzing,
           ),
@@ -867,13 +867,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               margin: const EdgeInsets.all(40),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.1),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                color: Colors.white.withOpacity(0.1),
+                border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
               ),
               child: const Icon(
                 Icons.psychology,
                 size: 80,
-                color: Color(0xFFF2B897), // Brand peach
+                color: Color(0xFF6C5CE7),
               ),
             ),
           ),
@@ -923,7 +923,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFF2B897), Color(0xFFE5A177)], // Brand peach gradient
+                        colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
                       ),
                       borderRadius: BorderRadius.circular(2),
                     ),
@@ -1016,7 +1016,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       title: 'Apply Colors',
       subtitle: 'Generate realistic visualizations',
       icon: Icons.palette,
-      color: const Color(0xFF404934), // Brand forest green
+      color: const Color(0xFF00B894),
       onTap: _startGeneration,
     );
   }
@@ -1071,7 +1071,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               margin: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF404934), // Brand forest green
+                color: Color(0xFF0A0A0B),
               ),
               child: const Icon(
                 Icons.auto_awesome,
@@ -1130,7 +1130,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFF2B897), Color(0xFF404934), Color(0xFFE5A177)], // Brand gradient
+                      colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE), Color(0xFF00B894)],
                     ),
                     borderRadius: BorderRadius.circular(3),
                   ),
@@ -1215,7 +1215,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFF2B897) : Colors.transparent, // Brand peach when active
+        color: isActive ? const Color(0xFF6C5CE7) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -1262,11 +1262,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: isSelected 
-              ? Border.all(color: const Color(0xFFF2B897), width: 3) // Brand peach border
-              : Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              ? Border.all(color: const Color(0xFF6C5CE7), width: 3)
+              : Border.all(color: Colors.white.withOpacity(0.2)),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: const Color(0xFFF2B897).withValues(alpha: 0.3), // Brand peach glow
+              color: const Color(0xFF6C5CE7).withOpacity(0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -1290,7 +1290,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF404934), // Brand forest green
+                      color: Color(0xFF6C5CE7),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.check, color: Colors.white, size: 16),
@@ -1346,7 +1346,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               title: 'Save Favorite',
               subtitle: 'Add to your collection',
               icon: Icons.favorite,
-              color: const Color(0xFF404934), // Brand forest green
+              color: const Color(0xFFE74C3C),
               onTap: _saveFavorite,
             ),
           ),
@@ -1356,7 +1356,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               title: 'Try More Colors',
               subtitle: 'Generate new variations',
               icon: Icons.refresh,
-              color: const Color(0xFFF2B897), // Brand peach
+              color: const Color(0xFF6C5CE7),
               onTap: _tryMoreColors,
             ),
           ),

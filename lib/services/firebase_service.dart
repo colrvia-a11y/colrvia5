@@ -173,7 +173,7 @@ class FirebaseService {
           .get();
       
       return snapshot.docs
-          .map((doc) => model.ColorStory.fromSnap(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) => model.ColorStory.fromSnap(doc.id, doc.data()))
           .toList();
     } catch (e) {
       debugPrint('Error loading spotlight stories: $e');
@@ -357,7 +357,7 @@ class FirebaseService {
     final snapshot = await _db.collection('colorStories').get();
     return snapshot.docs.map((doc) => {
       'id': doc.id,
-      ...doc.data() as Map<String, dynamic>,
+      ...doc.data(),
     }).toList();
   }
   
@@ -378,7 +378,7 @@ class FirebaseService {
       // Search by name (case insensitive prefix search)
       final nameSnapshot = await _db.collection('paints')
         .where('name', isGreaterThanOrEqualTo: query)
-        .where('name', isLessThan: query + 'z')
+        .where('name', isLessThan: '${query}z')
         .limit(25)
         .get();
       
@@ -387,7 +387,7 @@ class FirebaseService {
       // Search by brand name
       final brandSnapshot = await _db.collection('paints')
         .where('brandName', isGreaterThanOrEqualTo: query)
-        .where('brandName', isLessThan: query + 'z')
+        .where('brandName', isLessThan: '${query}z')
         .limit(25)
         .get();
         
@@ -396,7 +396,7 @@ class FirebaseService {
       // Search by color code
       final codeSnapshot = await _db.collection('paints')
         .where('code', isGreaterThanOrEqualTo: query.toUpperCase())
-        .where('code', isLessThan: query.toUpperCase() + 'Z')
+        .where('code', isLessThan: '${query.toUpperCase()}Z')
         .limit(25)
         .get();
         

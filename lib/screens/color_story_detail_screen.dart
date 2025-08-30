@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
@@ -50,9 +49,9 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
   // Note: isOwner is now computed locally in build method
   
   // Variations state
-  List<ColorStory> _variants = [];
-  Map<String, bool> _variantLoading = {};
-  Map<String, String?> _variantErrors = {};
+  final List<ColorStory> _variants = [];
+  final Map<String, bool> _variantLoading = {};
+  final Map<String, String?> _variantErrors = {};
   
   // Variation presets
   final List<Map<String, String>> _variationPresets = [
@@ -262,17 +261,13 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
       }
     }
     
-    // Navigate to visualizer with URL-safe parameters
-    final encodedAssignments = Uri.encodeComponent(jsonEncode(assignments));
-    
-    // Update project funnel stage and get projectId first
-    String? projectId;
+    // Navigate to visualizer 
+    // Update project funnel stage first
     try {
       final projects = await ProjectService.myProjectsStream(limit: 10).first;
       final matchingProject = projects.where((p) => p.colorStoryId == story.id).firstOrNull;
       
       if (matchingProject != null) {
-        projectId = matchingProject.id;
         await ProjectService.setFunnelStage(matchingProject.id, FunnelStage.visualize);
         // Track visualizer opening
         AnalyticsService.instance.logVisualizerOpenedFromStory(matchingProject.id);
@@ -285,16 +280,12 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => VisualizerScreen(
-          projectId: projectId,
           storyId: story.id,
-          assignmentsParam: encodedAssignments,
-          initialGuide: story.usageGuide,
         ),
         settings: RouteSettings(
           name: '/visualizer',
           arguments: {
             'storyId': story.id,
-            'assignments': encodedAssignments,
             'source': 'story',
           },
         ),
@@ -796,9 +787,9 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  if ((story.room?.isNotEmpty == true) || (story.style?.isNotEmpty == true))
+                                  if ((story.room.isNotEmpty == true) || (story.style.isNotEmpty == true))
                                     Text(
-                                      '${story.room?.isNotEmpty == true ? story.room : ''} ${story.style?.isNotEmpty == true ? '• ${story.style}' : ''}',
+                                      '${story.room.isNotEmpty == true ? story.room : ''} ${story.style.isNotEmpty == true ? '• ${story.style}' : ''}',
                                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                         color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.w500,
@@ -812,7 +803,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
                         const SizedBox(height: 20),
                         
                         // Audio controls
-                        if (story.audioUrl?.isNotEmpty == true)
+                        if (story.audioUrl.isNotEmpty == true)
                           FutureBuilder<bool>(
                             future: NetworkUtils.isWifi(),
                             builder: (c, wifiSnap) {
@@ -822,7 +813,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
                                   margin: const EdgeInsets.only(bottom: 16),
                                   child: OutlinedButton.icon(
                                     onPressed: () async { 
-                                      await _maybeLoadAudio(story.audioUrl!); 
+                                      await _maybeLoadAudio(story.audioUrl); 
                                       await _player.play(); 
                                     },
                                     icon: const Icon(Icons.download),
@@ -840,7 +831,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
                                     if (_player.playing) { 
                                       await _player.pause(); 
                                     } else {
-                                      if (_player.duration == null) await _maybeLoadAudio(story.audioUrl!);
+                                      if (_player.duration == null) await _maybeLoadAudio(story.audioUrl);
                                       await _player.play();
                                     }
                                     setState((){});
@@ -1356,7 +1347,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
       
       // Create a new project for the remix
       final project = await ProjectService.create(
-        title: (story.room?.isNotEmpty == true) && (story.style?.isNotEmpty == true) 
+        title: (story.room.isNotEmpty == true) && (story.style.isNotEmpty == true) 
           ? '${story.room} ${story.style} Story (Remix)'
           : 'Color Story (Remix)',
       );
@@ -1436,6 +1427,9 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
   /// Share the color story
   Future<void> _shareStory(ColorStory story) async {
     try {
+      String excerpt = '';
+      String contextInfo = '';
+      String colors = '';
       // Generate share title from palette name or first two colors
       String shareTitle;
       if (story.usageGuide.isNotEmpty) {
@@ -1444,38 +1438,33 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
         final accentColors = story.usageGuide.where((item) => item.role.toLowerCase().contains('accent'));
         final mainColor = mainColors.isNotEmpty ? mainColors.first.name : null;
         final accentColor = accentColors.isNotEmpty ? accentColors.first.name : null;
-        
         if (mainColor != null && accentColor != null) {
-          shareTitle = 'Color Story: \$mainColor & \$accentColor';
+          shareTitle = 'Color Story: $mainColor & $accentColor';
         } else {
-          final colors = story.usageGuide.take(2).map((item) => item.name).join(' & ');
-          shareTitle = 'Color Story: \$colors';
+          // Use first two color names if available
+          colors = story.usageGuide.take(2).map((item) => item.name).join(' & ');
+          shareTitle = 'Color Story: $colors';
         }
       } else {
         shareTitle = 'Color Story: Beautiful Color Palette';
       }
-      
       // Create excerpt from narration (first 140 chars)
-      String excerpt = '';
-      if (story.narration?.isNotEmpty == true) {
-        excerpt = story.narration!.length > 140 
-          ? '\${story.narration!.substring(0, 137)}...' 
-          : story.narration!;
-      } else if (story.storyText?.isNotEmpty == true) {
-        excerpt = story.storyText!.length > 140
-          ? '\${story.storyText!.substring(0, 137)}...'
-          : story.storyText!;
+      if (story.narration.isNotEmpty == true) {
+        excerpt = story.narration.length > 140 
+          ? '${story.narration.substring(0, 137)}...'
+          : story.narration;
+      } else if (story.storyText.isNotEmpty == true) {
+        excerpt = story.storyText.length > 140
+          ? '${story.storyText.substring(0, 137)}...'
+          : story.storyText;
       } else {
         excerpt = 'Discover this beautiful color palette and story.';
       }
-      
       // Create share text with room and style context
-      String contextInfo = '';
-      if ((story.room?.isNotEmpty == true) && (story.style?.isNotEmpty == true)) {
-        contextInfo = '\n\n\${story.style!.toUpperCase()} \${story.room!.toUpperCase()}';
+      if ((story.room.isNotEmpty == true) && (story.style.isNotEmpty == true)) {
+        contextInfo = '\n\n${story.style.toUpperCase()} ${story.room.toUpperCase()}';
       }
-      
-      final shareText = '\$shareTitle\$contextInfo\n\n\$excerpt\n\n🎨 View this color story: https://colorcanvas.app/story/\${story.id}';
+      final shareText = '$shareTitle$contextInfo\n\n$excerpt\n\n🎨 View this color story: https://colorcanvas.app/story/${story.id}';
       
       // Share the story
       await Share.share(

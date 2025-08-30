@@ -132,7 +132,7 @@ class ColorUtils {
     
     if (lab.length < 3) return tags;
     
-    final l = lab[0]; // Lightness
+  // ...existing code...
     final a = lab[1]; // Green-Red axis
     final b = lab[2]; // Blue-Yellow axis
     

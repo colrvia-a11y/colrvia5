@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' hide Paint;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:color_canvas/utils/slug_utils.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
@@ -24,18 +23,20 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   String _title = '';
   String _slug = '';
   String _description = '';
-  Set<String> _selectedThemes = {};
-  Set<String> _selectedFamilies = {};
-  Set<String> _selectedRooms = {};
-  List<String> _tags = [];
+  final Set<String> _selectedThemes = {};
+  final Set<String> _selectedFamilies = {};
+  final Set<String> _selectedRooms = {};
+  final List<String> _tags = [];
   File? _heroImage;
+  // ignore: unused_field
   String _heroImageUrl = '';
   
   // Palette data
-  List<PaletteEntry> _selectedColors = [];
+  final List<PaletteEntry> _selectedColors = [];
   List<Paint> _availablePaints = [];
   List<Paint> _filteredPaints = [];
-  String _paintSearchQuery = '';
+  // ignore: unused_field
+  final String _paintSearchQuery = '';
   String? _selectedBrand;
   
   // UI state
@@ -44,6 +45,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   bool _isLoading = false;
   bool _isFeatured = false;
   bool _isPublished = false;
+  // ignore: unused_field
   String? _publishedStoryId;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _slugController = TextEditingController();
@@ -483,6 +485,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     );
   }
 
+  // ignore: unused_element
   void _proceedToColorSelection() {
     // This method is no longer needed since we have the multi-step wizard
     // The navigation is handled by _nextStep()
@@ -1097,7 +1100,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 
                 // Brand filter
                 DropdownButtonFormField<String?>(
-                  value: _selectedBrand,
+                  initialValue: _selectedBrand,
                   decoration: const InputDecoration(
                     labelText: 'Brand Filter',
                     border: OutlineInputBorder(),
@@ -1483,7 +1486,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 SizedBox(
                   width: 100,
                   child: DropdownButtonFormField<String>(
-                    value: entry.role,
+                    initialValue: entry.role,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -1850,7 +1853,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 ),
               
               // Color Reveal Cards (like in Color Story Detail)
-              ..._selectedColors.map((entry) => _buildPreviewColorCard(entry, textColor)).toList(),
+              ..._selectedColors.map((entry) => _buildPreviewColorCard(entry, textColor)),
               
               // CTA Section Preview
               Container(
@@ -2087,7 +2090,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '"${_title}" has been successfully published and is now available in the Explore section.',
+            '"$_title" has been successfully published and is now available in the Explore section.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.grey[600],
@@ -2213,6 +2216,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     }
   }
   
+  // ignore: unused_element
   Widget _buildStep3PreviewAndPublish() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

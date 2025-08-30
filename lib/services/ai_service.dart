@@ -1,6 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// ...existing code...
 import '../firestore/firestore_data_schema.dart';
 
 class AiService {
@@ -18,7 +17,7 @@ class AiService {
       throw Exception('Cannot generate color story: Palette has no colors');
     }
     
-    final safeName = palette.name?.trim().isEmpty == true ? 'Untitled Palette' : (palette.name ?? 'Untitled Palette');
+  final safeName = palette.name.trim().isEmpty ? 'Untitled Palette' : palette.name;
     final safeRoom = room.trim().isEmpty ? 'living room' : room;
     final safeStyle = style.trim().isEmpty ? 'modern' : style;
     
@@ -27,10 +26,10 @@ class AiService {
         'id': palette.id,
         'name': safeName,
         'items': palette.colors.map((c) => {
-          'hex': c.hex ?? '#000000', // Fallback for null hex
+          'hex': c.hex, // Fallback for null hex (removed ?? operator)
           'brandName': (c.brand?.trim().isEmpty == true) ? '' : (c.brand ?? ''),
-          'name': (c.name?.trim().isEmpty == true) ? 'Untitled Color' : (c.name ?? 'Untitled Color'),
-          'code': (c.code?.trim().isEmpty == true) ? '' : (c.code ?? ''),
+          'name': c.name.trim().isEmpty ? 'Untitled Color' : c.name,
+          'code': c.code.trim().isEmpty ? '' : c.code,
         }).toList(),
       },
       'room': safeRoom,

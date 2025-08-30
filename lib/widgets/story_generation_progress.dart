@@ -311,7 +311,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       orElse: () => {'id': step, 'label': step.toUpperCase(), 'icon': Icons.error},
     );
     final stepLabel = stepInfo['label'] as String;
-    final stepIcon = stepInfo['icon'] as IconData;
+  // ...existing code...
     
     // Format error message for user display
     String userMessage = _formatErrorMessage(code, message);

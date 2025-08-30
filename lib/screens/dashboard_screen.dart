@@ -10,7 +10,6 @@ import 'roller_screen.dart';
 import 'explore_screen.dart';
 import 'color_story_wizard_screen.dart';
 import 'visualizer_screen.dart';
-import 'login_screen.dart';
 import 'settings_screen.dart';
 import 'library_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
@@ -74,376 +73,593 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     Debug.build('DashboardScreen', 'build', details: 'reduceMotion: $_reduceMotion, hasCheckedReduceMotion: $_hasCheckedReduceMotion');
-    final theme = Theme.of(context);
-    final titleStyle = theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800);
-    final subtle = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(.6));
-
+    
+    // Brand colors matching visualizer design
+    const Color forestGreen = Color(0xFF404934);
+    const Color warmPeach = Color(0xFFf2b897);
+    const Color creamWhite = Color(0xFFFFFBF7);
+    
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: Semantics(
-        label: 'Dashboard screen',
+      backgroundColor: creamWhite,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              creamWhite,
+              forestGreen.withOpacity(0.03),
+              warmPeach.withOpacity(0.05),
+            ],
+            stops: const [0.0, 0.7, 1.0],
+          ),
+        ),
         child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              sliver: SliverToBoxAdapter(
-                child: Row(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Elevated Header with Brand Styling
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _AccountHeaderDelegate(),
+              ),
+
+              // Welcome Hero Section
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                sliver: SliverToBoxAdapter(child: _WelcomeHeroSection()),
+              ),
+
+              // Quick Actions Grid
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                sliver: SliverToBoxAdapter(child: _QuickActionsGrid()),
+              ),
+
+              // Recent Projects Section
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionHeader(
+                    title: 'Recent Projects',
+                    icon: Icons.history_rounded,
+                  ),
+                ),
+              ),
+
+              StreamBuilder<List<ProjectDoc>>(
+                stream: _getProjectsStream(),
+                builder: (context, snapshot) {
+                  if (FirebaseService.currentUser == null) {
+                    return SliverToBoxAdapter(child: _BrandedSignInCard(onSignIn: _showSignInPrompt));
+                  }
+                  
+                  final projects = snapshot.data ?? const <ProjectDoc>[];
+                  if (snapshot.connectionState == ConnectionState.waiting && projects.isEmpty) {
+                    return SliverToBoxAdapter(child: _BrandedProjectsSkeleton());
+                  }
+                  if (projects.isEmpty) {
+                    return SliverToBoxAdapter(child: _BrandedEmptyProjects());
+                  }
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    sliver: SliverList.separated(
+                      itemCount: projects.length > 3 ? 3 : projects.length, // Show max 3 recent
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) => _BrandedProjectCard(projects[i]),
+                    ),
+                  );
+                },
+              ),
+
+              // Library Section
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionHeader(
+                    title: 'Library',
+                    icon: Icons.collections_bookmark_rounded,
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                sliver: SliverToBoxAdapter(child: _BrandedLibrarySection()),
+              ),
+
+              // Support & Info Section
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionHeader(
+                    title: 'Support & Info',
+                    icon: Icons.help_center_rounded,
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                sliver: SliverToBoxAdapter(child: _BrandedSupportSection()),
+              ),
+
+              // Account Section
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionHeader(
+                    title: 'Account',
+                    icon: Icons.account_circle_rounded,
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                sliver: SliverToBoxAdapter(child: _BrandedUserSection()),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+}
+
+// === NEW BRANDED COMPONENTS ===
+
+class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final opacity = 1.0 - (shrinkOffset / maxExtent).clamp(0.0, 1.0);
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            forestGreen.withOpacity(0.95),
+            forestGreen.withOpacity(0.8),
+            warmPeach.withOpacity(0.15),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: forestGreen.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Colrvia', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-                    const Spacer(),
-                    // Change to a real Settings button + proper tooltip
-                    IconButton(
-                      icon: const Icon(Icons.settings_outlined),
-                      tooltip: 'Settings',
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    Text(
+                      'Account',
+                      style: TextStyle(
+                        color: creamWhite,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    if (opacity > 0.5)
+                      Opacity(
+                        opacity: opacity,
+                        child: Text(
+                          'Manage your colors and preferences',
+                          style: TextStyle(
+                            color: creamWhite.withOpacity(0.8),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: creamWhite.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: creamWhite.withOpacity(0.2),
+                  ),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.settings_rounded,
+                    color: creamWhite,
+                  ),
+                  tooltip: 'Settings',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => 120;
+
+  @override
+  double get minExtent => 90;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+}
+
+class _WelcomeHeroSection extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseService.currentUser;
+    final displayName = user?.email?.split('@').first ?? 'there';
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            creamWhite,
+            warmPeach.withOpacity(0.08),
+            forestGreen.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: forestGreen.withOpacity(0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: forestGreen.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: forestGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.palette_rounded,
+                  color: forestGreen,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back, $displayName!',
+                      style: TextStyle(
+                        color: forestGreen,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'Ready to create something beautiful?',
+                      style: TextStyle(
+                        color: forestGreen.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-
-            // Hero CTA
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              sliver: SliverToBoxAdapter(child: _HeroStartCard(titleStyle: titleStyle, subtle: subtle, reduceMotion: _reduceMotion)),
-            ),
-
-            // Funnel diagram
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              sliver: SliverToBoxAdapter(child: _FunnelDiagram()),
-            ),
-
-            // Active projects
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: Semantics(
-                  header: true,
-                  label: 'Your Color Stories section',
-                  child: Text('Your Color Stories', style: titleStyle),
-                ),
-              ),
-            ),
-
-            StreamBuilder<List<ProjectDoc>>(
-              stream: _getProjectsStream(),
-              builder: (context, snapshot) {
-                // Show sign-in prompt if not authenticated
-                if (FirebaseService.currentUser == null) {
-                  return SliverToBoxAdapter(child: _SignInPromptCard(onSignIn: _showSignInPrompt));
-                }
-                
-                final projects = snapshot.data ?? const <ProjectDoc>[];
-                if (snapshot.connectionState == ConnectionState.waiting && projects.isEmpty) {
-                  return SliverToBoxAdapter(child: _ProjectsSkeleton());
-                }
-                if (projects.isEmpty) {
-                  return SliverToBoxAdapter(child: _EmptyProjects());
-                }
-                return SliverList.separated(
-                  itemCount: projects.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, i) => Semantics(
-                    label: 'Project ${projects[i].title}, ${projects[i].funnelStage.name} stage',
-                    button: true,
-                    child: _ProjectCard(projects[i]),
-                  ),
-                );
-              },
-            ),
-
-            // Helpful pills
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              sliver: SliverToBoxAdapter(child: _HelpfulPills()),
-            ),
-
-            // Library Section
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  'Library',
-                  style: titleStyle?.copyWith(fontSize: 20),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              sliver: SliverToBoxAdapter(child: _LibrarySection()),
-            ),
-
-            // Support & Info Section
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  'Support & Info',
-                  style: titleStyle?.copyWith(fontSize: 20),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              sliver: SliverToBoxAdapter(child: _SupportInfoSection()),
-            ),
-
-            // User Profile Section
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-              sliver: SliverToBoxAdapter(child: _UserProfileSection()),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SupportInfoSection extends StatelessWidget {
+class _QuickActionsGrid extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.2,
       children: [
-        _buildMenuItem(
-          context,
-          icon: Icons.auto_awesome,
-          title: "What's New",
-          onTap: () => _showComingSoon(context, "What's New"),
+        _QuickActionCard(
+          icon: Icons.palette_outlined,
+          title: 'Color Picker',
+          subtitle: 'Build palettes',
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [forestGreen.withOpacity(0.9), forestGreen],
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RollerScreen())
+          ),
         ),
-        _buildMenuItem(
-          context,
-          icon: Icons.chat_bubble_outline,
-          title: 'Feedback',
-          onTap: () => _showComingSoon(context, 'Feedback'),
+        _QuickActionCard(
+          icon: Icons.explore_outlined,
+          title: 'Explore',
+          subtitle: 'Find inspiration',
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [warmPeach.withOpacity(0.9), warmPeach],
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ExploreScreen())
+          ),
         ),
-        _buildMenuItem(
-          context,
-          icon: Icons.help_outline,
-          title: 'FAQ',
-          onTap: () => _showComingSoon(context, 'FAQ'),
+        _QuickActionCard(
+          icon: Icons.chair_outlined,
+          title: 'Visualizer',
+          subtitle: 'See colors in space',
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              forestGreen.withOpacity(0.7),
+              warmPeach.withOpacity(0.8),
+            ],
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => VisualizerScreen())
+          ),
         ),
-        _buildMenuItem(
-          context,
-          icon: Icons.support_agent,
-          title: 'Support',
-          onTap: () => _showComingSoon(context, 'Support'),
-        ),
-        _buildMenuItem(
-          context,
-          icon: Icons.gavel_outlined,
-          title: 'Legal',
-          onTap: () => _showComingSoon(context, 'Legal'),
+        _QuickActionCard(
+          icon: Icons.collections_bookmark_outlined,
+          title: 'Library',
+          subtitle: 'Your collection',
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              warmPeach.withOpacity(0.7),
+              forestGreen.withOpacity(0.8),
+            ],
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => LibraryScreen(initialFilter: LibraryFilter.all))
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildMenuItem(BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: theme.colorScheme.onSurface.withOpacity(0.8),
-              size: 24,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const Spacer(),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
-            Icon(
-              Icons.chevron_right,
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
-              size: 20,
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
 
-class _UserProfileSection extends StatelessWidget {
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+  });
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final user = FirebaseService.currentUser;
+    const Color forestGreen = Color(0xFF404934);
+    
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: forestGreen.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: forestGreen,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: TextStyle(
+            color: forestGreen,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
+class _BrandedSignInCard extends StatelessWidget {
+  final VoidCallback onSignIn;
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  const _BrandedSignInCard({required this.onSignIn});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(.3),
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            forestGreen.withOpacity(0.05),
+            warmPeach.withOpacity(0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(.1),
+          color: forestGreen.withOpacity(0.15),
         ),
       ),
       child: Column(
         children: [
-          if (user != null) ...[
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: theme.colorScheme.primary.withOpacity(.2),
-                  child: Text(
-                    user.email?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.email ?? 'User',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'Signed in',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    try {
-                      await FirebaseService.signOut();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Signed out successfully'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error signing out: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: Text(
-                    'Sign out',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: forestGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
             ),
-          ] else ...[
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: theme.colorScheme.outline.withOpacity(.2),
-                  child: Icon(
-                    Icons.person_outline,
-                    color: theme.colorScheme.onSurface.withOpacity(.7),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Not signed in',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Sign in to sync your projects',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/login');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Sign in',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            child: Icon(
+              Icons.account_circle_rounded,
+              color: forestGreen,
+              size: 32,
             ),
-          ],
-          
-          // Version info
-          const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 16),
           Text(
-            'Version 1.0.0',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(.5),
+            'Sign in to see your projects',
+            style: TextStyle(
+              color: forestGreen,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Track your color stories and sync across devices',
+            style: TextStyle(
+              color: forestGreen.withOpacity(0.7),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onSignIn,
+              icon: const Icon(Icons.login_rounded),
+              label: const Text(
+                'Sign In',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: forestGreen,
+                foregroundColor: creamWhite,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
             ),
           ),
         ],
@@ -452,60 +668,435 @@ class _UserProfileSection extends StatelessWidget {
   }
 }
 
-class _LibrarySection extends StatelessWidget {
+class _BrandedProjectsSkeleton extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: List.generate(3, (index) => Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                forestGreen.withOpacity(0.05),
+                warmPeach.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: forestGreen.withOpacity(0.1),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 18,
+                width: 140 + (index * 25).toDouble(),
+                decoration: BoxDecoration(
+                  color: forestGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 14,
+                width: 100,
+                decoration: BoxDecoration(
+                  color: warmPeach.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+              ),
+            ],
+          ),
+        )),
+      ),
+    );
+  }
+}
+
+class _BrandedEmptyProjects extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(.1),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            forestGreen.withOpacity(0.05),
+            warmPeach.withOpacity(0.08),
+          ],
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: forestGreen.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: forestGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              Icons.auto_stories_outlined,
+              color: forestGreen,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'No Color Stories yet',
+            style: TextStyle(
+              color: forestGreen,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start creating beautiful color combinations',
+            style: TextStyle(
+              color: forestGreen.withOpacity(0.7),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RollerScreen())
+                  ),
+                  icon: const Icon(Icons.palette_outlined),
+                  label: const Text('Build'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: forestGreen,
+                    foregroundColor: creamWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ExploreScreen())
+                  ),
+                  icon: const Icon(Icons.explore_outlined),
+                  label: const Text('Explore'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: forestGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: BorderSide(color: forestGreen),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BrandedProjectCard extends StatelessWidget {
+  final ProjectDoc project;
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  const _BrandedProjectCard(this.project);
+
+  @override
+  Widget build(BuildContext context) {
+    final status = {
+      FunnelStage.build: 'Building',
+      FunnelStage.story: 'Story drafted',
+      FunnelStage.visualize: 'Visualizer ready',
+      FunnelStage.share: 'Shared',
+    }[project.funnelStage]!;
+
+    final statusColor = {
+      FunnelStage.build: warmPeach,
+      FunnelStage.story: forestGreen.withOpacity(0.8),
+      FunnelStage.visualize: forestGreen,
+      FunnelStage.share: warmPeach.withOpacity(0.8),
+    }[project.funnelStage]!;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openStage(context, project),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                creamWhite,
+                forestGreen.withOpacity(0.03),
+                warmPeach.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: forestGreen.withOpacity(0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: forestGreen.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getStageIcon(project.funnelStage),
+                  color: statusColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.title,
+                      style: TextStyle(
+                        color: forestGreen,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Updated ${_timeAgo(project.updatedAt)}',
+                      style: TextStyle(
+                        color: forestGreen.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: forestGreen.withOpacity(0.4),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getStageIcon(FunnelStage stage) {
+    switch (stage) {
+      case FunnelStage.build:
+        return Icons.palette_outlined;
+      case FunnelStage.story:
+        return Icons.menu_book_outlined;
+      case FunnelStage.visualize:
+        return Icons.chair_outlined;
+      case FunnelStage.share:
+        return Icons.ios_share_outlined;
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    return '${d.inDays}d ago';
+  }
+
+  void _openStage(BuildContext context, ProjectDoc p) {
+    switch (p.funnelStage) {
+      case FunnelStage.build:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => RollerScreen(projectId: p.id)));
+        break;
+      case FunnelStage.story:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ColorStoryWizardScreen(projectId: p.id)));
+        break;
+      case FunnelStage.visualize:
+      case FunnelStage.share:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => VisualizerScreen()));
+        break;
+    }
+  }
+}
+
+class _BrandedLibrarySection extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            creamWhite,
+            forestGreen.withOpacity(0.03),
+            warmPeach.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: forestGreen.withOpacity(0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: forestGreen.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Your saved palettes and color stories',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(.7),
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: forestGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.collections_bookmark_rounded,
+                  color: forestGreen,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your Collection',
+                      style: TextStyle(
+                        color: forestGreen,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Browse saved palettes and stories',
+                      style: TextStyle(
+                        color: forestGreen.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
-                child: _LibraryQuickAccessButton(
+                child: _BrandedLibraryButton(
                   icon: Icons.palette_outlined,
                   title: 'Palettes',
+                  count: '12',
+                  colors: [forestGreen, forestGreen.withOpacity(0.8)],
                   onTap: () => _openLibraryWithFilter(context, LibraryFilter.palettes),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _LibraryQuickAccessButton(
+                child: _BrandedLibraryButton(
                   icon: Icons.auto_stories_outlined,
                   title: 'Stories',
+                  count: '8',
+                  colors: [warmPeach, warmPeach.withOpacity(0.8)],
                   onTap: () => _openLibraryWithFilter(context, LibraryFilter.stories),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
+          const SizedBox(height: 16),
+          Container(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
               onPressed: () => _openLibraryWithFilter(context, LibraryFilter.all),
               icon: const Icon(Icons.library_books_outlined),
-              label: const Text('View All'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              label: const Text(
+                'View All',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: forestGreen.withOpacity(0.1),
+                foregroundColor: forestGreen,
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 0,
               ),
             ),
           ),
@@ -523,510 +1114,458 @@ class _LibrarySection extends StatelessWidget {
   }
 }
 
-class _LibraryQuickAccessButton extends StatelessWidget {
+class _BrandedLibraryButton extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String count;
+  final List<Color> colors;
   final VoidCallback onTap;
 
-  const _LibraryQuickAccessButton({
+  const _BrandedLibraryButton({
     required this.icon,
     required this.title,
+    required this.count,
+    required this.colors,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withOpacity(.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.primary.withOpacity(.2),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroStartCard extends StatelessWidget {
-  const _HeroStartCard({required this.titleStyle, required this.subtle, required this.reduceMotion});
-  final TextStyle? titleStyle;
-  final TextStyle? subtle;
-  final bool reduceMotion;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      label: 'Start a new color story. Build from scratch or explore inspirations',
-      container: true,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant.withOpacity(.6),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Semantics(
-          header: true,
-          label: 'Start a Color Story',
-          child: Text('Start a Color Story', style: titleStyle),
-        ),
-        const SizedBox(height: 6),
-        Semantics(
-          label: 'Build from scratch or explore inspirations. You can always change your mind later.',
-          child: Text('Build from scratch or explore inspirations. You can always change your mind later.', style: subtle),
-        ),
-        const SizedBox(height: 16),
-        Semantics(
-          label: 'Choose how to start your color story',
-          child: Wrap(spacing: 12, runSpacing: 12, children: [
-            _ActionChipBig(
-              icon: Icons.palette_outlined,
-              label: 'Build',
-              semanticLabel: 'Build palette from scratch',
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RollerScreen())),
-            ),
-            _ActionChipBig(
-              icon: Icons.explore_outlined,
-              label: 'Explore',
-              semanticLabel: 'Explore color inspirations',
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExploreScreen())),
-            ),
-          ]),
-        ),
-      ]),
-      ),
-    );
-  }
-}
-
-class _FunnelDiagram extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: const [
-              // Build -> Story -> Visualize -> Share
-              _FunnelChip(label: 'Build', icon: Icons.palette_outlined, active: true),
-              Icon(Icons.arrow_forward_ios, size: 14),
-              _FunnelChip(label: 'Story', icon: Icons.menu_book_outlined),
-              Icon(Icons.arrow_forward_ios, size: 14),
-              _FunnelChip(label: 'Visualize', icon: Icons.chair_outlined),
-              Icon(Icons.arrow_forward_ios, size: 14),
-              _FunnelChip(label: 'Share', icon: Icons.ios_share_outlined),
-            ]),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Semantics(
-          label: 'How it works help',
-          button: true,
-          child: InkWell(
-            onTap: () => _showHowItWorksSheet(context),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.help_outline,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(.7),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showHowItWorksSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const _HowItWorksSheet(),
-    );
-  }
-}
-
-class _FunnelChip extends StatelessWidget {
-  const _FunnelChip({required this.label, required this.icon, this.active = false});
-  final String label;
-  final IconData icon;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      label: '$label stage${active ? ', currently active' : ''}',
-      child: Chip(
-        avatar: Icon(icon, size: 16),
-        label: Text(label),
-        side: active ? BorderSide(color: theme.colorScheme.primary) : null,
-        backgroundColor: active ? theme.colorScheme.primaryContainer : theme.colorScheme.surfaceVariant.withOpacity(.5),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-    );
-  }
-}
-
-class _ProjectCard extends StatelessWidget {
-  const _ProjectCard(this.p);
-  final ProjectDoc p;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = {
-      FunnelStage.build: 'Building',
-      FunnelStage.story: 'Story drafted',
-      FunnelStage.visualize: 'Visualizer ready',
-      FunnelStage.share: 'Shared',
-    }[p.funnelStage]!;
-
-    final chips = <Widget>[];
-    if ((p.roomType ?? '').isNotEmpty) {
-      chips.add(Chip(label: Text(p.roomType!), visualDensity: VisualDensity.compact));
-    }
-    if ((p.styleTag ?? '').isNotEmpty) {
-      chips.add(Chip(label: Text(p.styleTag!), visualDensity: VisualDensity.compact));
-    }
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      title: Text(p.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(status),
-        const SizedBox(height: 4),
-        if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: -6, children: chips),
-        const SizedBox(height: 4),
-        Text('Updated ${_timeAgo(p.updatedAt)}', style: theme.textTheme.bodySmall),
-      ]),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => _openStage(context, p),
-    );
-  }
-
-  static String _timeAgo(DateTime dt) {
-    final d = DateTime.now().difference(dt);
-    if (d.inMinutes < 1) return 'just now';
-    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
-    if (d.inHours   < 24) return '${d.inHours}h ago';
-    return '${d.inDays}d ago';
-  }
-
-  static void _openStage(BuildContext context, ProjectDoc p) {
-    switch (p.funnelStage) {
-      case FunnelStage.build:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => RollerScreen(projectId: p.id)));
-        break;
-      case FunnelStage.story:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ColorStoryWizardScreen(projectId: p.id)));
-        break;
-      case FunnelStage.visualize:
-      case FunnelStage.share:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => VisualizerScreen(projectId: p.id)));
-        break;
-    }
-  }
-}
-
-class _EmptyProjects extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(.5),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('No Color Stories yet', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        const Text('Start by building a palette or exploring inspirations.'),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, children: [
-          Semantics(
-            label: 'Build palette from scratch',
-            button: true,
-            child: ActionChip(
-              label: const Text('Build'),
-              avatar: const Icon(Icons.palette_outlined),
-              materialTapTargetSize: MaterialTapTargetSize.padded,
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RollerScreen())),
-            ),
-          ),
-          Semantics(
-            label: 'Explore color inspirations',
-            button: true,
-            child: ActionChip(
-              label: const Text('Explore'),
-              avatar: const Icon(Icons.explore_outlined),
-              materialTapTargetSize: MaterialTapTargetSize.padded,
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExploreScreen())),
-            ),
-          ),
-        ])
-      ]),
-    );
-  }
-}
-
-class _HelpfulPills extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12, runSpacing: 12,
-      children: [
-        _Pill('How it Works', Icons.route_outlined, onTap: () {
-          showModalBottomSheet(
-            context: context,
-            showDragHandle: true,
-            builder: (c) => const _HowItWorksSheet(),
-          );
-        }),
-        _Pill('Color Stories', Icons.collections_bookmark_outlined, onTap: () {
-          // Deep link to Library with Stories filter (added in Prompt 4)
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const LibraryScreen(initialFilter: LibraryFilter.stories),
-          ));
-        }),
-        _Pill('Top Projects', Icons.favorite_outline, onTap: () {
-          // Jump to Explore sorted by "Most Loved"
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const ExploreScreen(),
-          ));
-        }),
-      ],
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill(this.label, this.icon, {required this.onTap});
-  final String label; final IconData icon; final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      button: true, label: label,
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(.6),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 8),
-            Text(label),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionChipBig extends StatelessWidget {
-  const _ActionChipBig({required this.icon, required this.label, required this.onTap, this.semanticLabel});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final String? semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      label: semanticLabel ?? label,
-      button: true,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon),
-            const SizedBox(width: 8),
-            Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _HowItWorksSheet extends StatelessWidget {
-  const _HowItWorksSheet({super.key});
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final row = (IconData i, String h, String s) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(i), const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(h, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(s),
-        ])),
-      ]),
-    );
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('How it works', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text('Build → Story → Visualize → Share'),
-          const SizedBox(height: 12),
-          row(Icons.palette_outlined,  'Build',     'Craft your palette in Roller with smart locks & harmony.'),
-          row(Icons.menu_book_outlined,'Story',     'Turn it into a guided Color Story with room/style/vibe.'),
-          row(Icons.chair_outlined,    'Visualize', 'See it under different lighting and surfaces.'),
-          row(Icons.ios_share_outlined,'Share',     'Export or share your Story Card and assets.'),
-        ]),
-      ),
-    );
-  }
-}
-
-
-class _SignInPromptCard extends StatelessWidget {
-  const _SignInPromptCard({required this.onSignIn});
-  final VoidCallback onSignIn;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(.3),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(.2),
-          width: 1,
-        ),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(
-          children: [
-            Icon(
-              Icons.account_circle_outlined,
-              color: theme.colorScheme.primary,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Sign in to see your Color Stories',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text('Track your projects and sync across devices.'),
-        const SizedBox(height: 16),
-        ElevatedButton.icon(
-          onPressed: onSignIn,
-          icon: const Icon(Icons.login),
-          label: const Text('Sign In'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-class _ProjectsSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: List.generate(3, (index) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(.3),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: colors.map((c) => c.withOpacity(0.15)).toList(),
+            ),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: colors.first.withOpacity(0.2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title skeleton
-              Container(
-                height: 16,
-                width: 120 + (index * 20).toDouble(),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withOpacity(.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: colors.first,
+                    size: 20,
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.first.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      count,
+                      style: TextStyle(
+                        color: colors.first,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              // Subtitle skeleton
-              Container(
-                height: 14,
-                width: 80,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withOpacity(.15),
-                  borderRadius: BorderRadius.circular(7),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  color: colors.first,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-        )),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandedSupportSection extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            creamWhite,
+            forestGreen.withOpacity(0.03),
+            warmPeach.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: forestGreen.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildBrandedMenuItem(
+            context,
+            icon: Icons.auto_awesome_rounded,
+            title: "What's New",
+            subtitle: 'Latest features and updates',
+            onTap: () => _showComingSoon(context, "What's New"),
+          ),
+          const SizedBox(height: 8),
+          _buildBrandedMenuItem(
+            context,
+            icon: Icons.chat_bubble_outline_rounded,
+            title: 'Feedback',
+            subtitle: 'Share your thoughts',
+            onTap: () => _showComingSoon(context, 'Feedback'),
+          ),
+          const SizedBox(height: 8),
+          _buildBrandedMenuItem(
+            context,
+            icon: Icons.help_outline_rounded,
+            title: 'FAQ',
+            subtitle: 'Get quick answers',
+            onTap: () => _showComingSoon(context, 'FAQ'),
+          ),
+          const SizedBox(height: 8),
+          _buildBrandedMenuItem(
+            context,
+            icon: Icons.support_agent_rounded,
+            title: 'Support',
+            subtitle: 'Get help from our team',
+            onTap: () => _showComingSoon(context, 'Support'),
+          ),
+          const SizedBox(height: 8),
+          _buildBrandedMenuItem(
+            context,
+            icon: Icons.gavel_outlined,
+            title: 'Legal',
+            subtitle: 'Terms and privacy',
+            onTap: () => _showComingSoon(context, 'Legal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrandedMenuItem(BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: forestGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: forestGreen,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: forestGreen,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: forestGreen.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: forestGreen.withOpacity(0.4),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: forestGreen,
+      ),
+    );
+  }
+}
+
+class _BrandedUserSection extends StatelessWidget {
+  static const Color forestGreen = Color(0xFF404934);
+  static const Color warmPeach = Color(0xFFf2b897);
+  static const Color creamWhite = Color(0xFFFFFBF7);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseService.currentUser;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            creamWhite,
+            forestGreen.withOpacity(0.03),
+            warmPeach.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: forestGreen.withOpacity(0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: forestGreen.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (user != null) ...[
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [forestGreen.withOpacity(0.8), warmPeach.withOpacity(0.6)],
+                    ),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Text(
+                    user.email?.substring(0, 1).toUpperCase() ?? 'U',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: creamWhite,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.email ?? 'User',
+                        style: TextStyle(
+                          color: forestGreen,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: forestGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Signed in',
+                          style: TextStyle(
+                            color: forestGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await FirebaseService.signOut();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Signed out successfully'),
+                          backgroundColor: forestGreen,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error signing out: $e'),
+                          backgroundColor: Colors.red.shade700,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: forestGreen.withOpacity(0.1),
+                  foregroundColor: forestGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: forestGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    color: forestGreen,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Not signed in',
+                        style: TextStyle(
+                          color: forestGreen,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Sign in to sync your projects',
+                        style: TextStyle(
+                          color: forestGreen.withOpacity(0.7),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/login');
+                },
+                icon: const Icon(Icons.login_rounded),
+                label: const Text(
+                  'Sign In',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: forestGreen,
+                  foregroundColor: creamWhite,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+          
+          const SizedBox(height: 20),
+          Divider(
+            color: forestGreen.withOpacity(0.2),
+            height: 1,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.palette_rounded,
+                color: forestGreen.withOpacity(0.5),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Colrvia v1.0.0',
+                style: TextStyle(
+                  color: forestGreen.withOpacity(0.5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

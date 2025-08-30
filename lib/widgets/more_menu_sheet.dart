@@ -71,9 +71,7 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
     });
   }
 
-  void _dismissSheet() {
-    Navigator.of(context).pop();
-  }
+// ...existing code...
 
   void _onSearchSubmit(String query) {
     if (query.trim().isEmpty) return;

@@ -7,7 +7,7 @@ import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/screens/roller_screen.dart';
 import 'package:color_canvas/screens/search_screen.dart';
 import 'package:color_canvas/screens/explore_screen.dart';
-import 'package:color_canvas/screens/library_screen.dart';
+// ...existing code...
 import 'package:color_canvas/screens/color_story_wizard_screen.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/services/project_service.dart';
@@ -81,8 +81,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
   }
 
   Future<void> _exportCSV() async {
-    final csv = 'Brand,Code,Name,Hex\n' + 
-        widget.palette.colors.map((color) => '${color.brand ?? 'Unknown'},${color.code},"${color.name}",${color.hex}').join('\n');
+    final csv = 'Brand,Code,Name,Hex\n${widget.palette.colors.map((color) => '${color.brand ?? 'Unknown'},${color.code},"${color.name}",${color.hex}').join('\n')}';
     
     await Share.share(csv, subject: '${widget.palette.name} - Paint Colors');
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/screens/dashboard_screen.dart';
@@ -32,6 +31,7 @@ class HomeScreenState extends State<HomeScreen> implements HomeScreenPaintSelect
     const DashboardScreen(), // Now the Account page
   ];
 
+  @override
   void onPaintSelectedFromSearch(Paint paint) {
     Debug.info('HomeScreen', 'onPaintSelectedFromSearch', 'Paint selected: ${paint.name}');
     
@@ -224,7 +224,7 @@ class HomeScreenState extends State<HomeScreen> implements HomeScreenPaintSelect
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                         ),

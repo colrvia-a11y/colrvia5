@@ -9,7 +9,6 @@ import 'package:color_canvas/screens/home_screen.dart';
 import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/color_story_detail_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
-import 'package:color_canvas/models/color_story.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/widgets/more_menu_sheet.dart';
 import 'package:color_canvas/services/network_utils.dart';
@@ -104,9 +103,7 @@ class MyApp extends StatelessWidget {
               final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
               return VisualizerScreen(
                 storyId: args['storyId'] as String?,
-                assignmentsParam: args['assignments'] as String?,
                 initialPalette: args['initialPalette'],
-                initialGuide: args['initialGuide'] as List<ColorUsageItem>?,
               );
             },
           },
