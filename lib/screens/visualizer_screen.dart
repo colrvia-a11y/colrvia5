@@ -303,7 +303,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           const Text(
             'Upload a photo or let AI create your dream space.\nSee any color palette in stunning realism.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               color: Color(0x33FFFFFF), // White with 20% opacity
               height: 1.5,

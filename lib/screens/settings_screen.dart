@@ -298,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           fontWeight: FontWeight.bold, color: Colors.red)),
                   const SizedBox(height: 4),
                   Text('${firebaseStatus['error']}',
-                      style: TextStyle(color: Colors.red)),
+                      style: const TextStyle(color: Colors.red)),
                   const SizedBox(height: 8),
                 ],
                 const Divider(),
@@ -1189,13 +1189,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       child: const Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.verified_rounded,
                             color: _forestGreen,
                             size: 16,
                           ),
-                          const SizedBox(width: 8),
-                          const Expanded(
+                          SizedBox(width: 8),
+                          Expanded(
                             child: Text(
                               'Includes Sherwin-Williams, Benjamin Moore, and Behr',
                               style: TextStyle(

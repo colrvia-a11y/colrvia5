@@ -13,6 +13,7 @@ import 'package:color_canvas/widgets/save_palette_panel.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/data/sample_paints.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
+import 'package:color_canvas/models/color_strip_history.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -62,6 +63,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
   bool _diversifyBrands = true;
   int _paletteSize = 5;
   bool _isRolling = false;
+  
+  // Enhanced color history tracking for each strip
+  List<ColorStripHistory> _stripHistories = [];
   
   // TikTok-style vertical swipe feed
   final PageController _pageCtrl = PageController();
@@ -142,7 +146,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
     super.initState();
     
     Debug.info('RollerScreen', 'initState', 'Component initializing');
-    print('RollerScreen: initState called, about to load paints');
+    Debug.info('RollerScreen', 'initState', 'About to load paints');
     
     // Load paints from database with fallback to sample data
     _loadPaints();
@@ -221,30 +225,30 @@ class _RollerScreenState extends RollerScreenStatePublic {
     List<Paint> paints = [];
     List<Brand> brands = [];
     
-    print('RollerScreen: _loadPaints started');
+    Debug.info('RollerScreen', '_loadPaints', 'Started');
 
     // First try to load from database
-    print('Loading from database...');
+    Debug.info('RollerScreen', '_loadPaints', 'Loading from database...');
     try {
       paints = await FirebaseService.getAllPaints();
       brands = await FirebaseService.getAllBrands();
-      print('Database data loaded: ${paints.length} paints, ${brands.length} brands');
+      Debug.info('RollerScreen', '_loadPaints', 'Database loaded: ${paints.length} paints, ${brands.length} brands');
       
       // If no data in database, fall back to sample data
       if (paints.isEmpty) {
-        print('No paints found in database, falling back to sample data');
+        Debug.warning('RollerScreen', '_loadPaints', 'No paints found in database; falling back to samples');
         paints = await SamplePaints.getAllPaints();
         brands = await SamplePaints.getSampleBrands();
-        print('Sample data fallback loaded: ${paints.length} paints, ${brands.length} brands');
+        Debug.info('RollerScreen', '_loadPaints', 'Sample fallback loaded: ${paints.length} paints, ${brands.length} brands');
       }
     } catch (e) {
-      print('Error loading from database: $e, falling back to sample data');
+      Debug.error('RollerScreen', '_loadPaints', 'DB load error: $e; falling back to samples');
       try {
         paints = await SamplePaints.getAllPaints();
         brands = await SamplePaints.getSampleBrands();
-        print('Sample data fallback loaded: ${paints.length} paints, ${brands.length} brands');
+        Debug.info('RollerScreen', '_loadPaints', 'Sample fallback loaded: ${paints.length} paints, ${brands.length} brands');
       } catch (sampleError) {
-        print('Error loading sample data: $sampleError');
+        Debug.error('RollerScreen', '_loadPaints', 'Sample data load error: $sampleError');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Unable to load paint data. Please try again later.')),
@@ -255,7 +259,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
       }
     }
     
-    print('Final result: Loaded ${paints.length} paints and ${brands.length} brands');
+    Debug.info('RollerScreen', '_loadPaints', 'Final loaded: ${paints.length} paints, ${brands.length} brands');
     
     setState(() {
       _availablePaints = paints;
@@ -315,7 +319,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         // Try async palette generation first
         rolled = await _rollPaletteAsync(anchors);
       } catch (e) {
-        print('Async palette generation failed: $e, falling back to sync');
+        Debug.warning('RollerScreen', '_rollPalette', 'Async generation failed: $e; falling back to sync');
         // Fallback to synchronous palette generation
         rolled = PaletteGenerator.rollPalette(
           availablePaints: _getFilteredPaints(),
@@ -335,6 +339,16 @@ class _RollerScreenState extends RollerScreenStatePublic {
         _isRolling = false;
       });
 
+      // Update strip histories with new colors
+      _ensureStripHistories();
+      for (int i = 0; i < _currentPalette.length; i++) {
+        final isLocked = i < _lockedStates.length ? _lockedStates[i] : false;
+        if (!isLocked) {
+          // Only add to history if the strip isn't locked
+          _stripHistories[i].addPaint(_currentPalette[i]);
+        }
+      }
+
       // Ensure the current page is updated or added
       if (_visiblePage < _pages.length) {
         _pages[_visiblePage] = List<Paint>.from(_currentPalette);
@@ -342,7 +356,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         _pages.add(List<Paint>.from(_currentPalette));
       }
     } catch (e) {
-      print('Error in _rollPalette: $e');
+      Debug.error('RollerScreen', '_rollPalette', 'Error: $e');
       if (mounted) {
         _safeSetState(() => _isRolling = false);
       }
@@ -375,6 +389,69 @@ class _RollerScreenState extends RollerScreenStatePublic {
 
     // Optional prefetch to hide spinner when user swipes next
     _ensurePage(_visiblePage + 1);
+  }
+
+  /// Ensures strip histories list matches current palette size
+  void _ensureStripHistories() {
+    while (_stripHistories.length < _paletteSize) {
+      _stripHistories.add(ColorStripHistory());
+    }
+    // Remove excess histories if palette size decreased
+    if (_stripHistories.length > _paletteSize) {
+      _stripHistories.removeRange(_paletteSize, _stripHistories.length);
+    }
+  }
+
+  /// Navigate to next color variation for a specific strip
+  void _navigateStripForward(int index) {
+    _ensureStripHistories();
+    if (index >= _stripHistories.length) return;
+    
+    final history = _stripHistories[index];
+    
+    if (history.canGoForward) {
+      // Navigate forward in existing history
+      final nextPaint = history.goForward();
+      if (nextPaint != null) {
+        _updateStripColor(index, nextPaint);
+      }
+    } else {
+      // Generate a new color variation
+      _rollStripe(index);
+    }
+  }
+
+  /// Navigate to previous color variation for a specific strip
+  void _navigateStripBackward(int index) {
+    _ensureStripHistories();
+    if (index >= _stripHistories.length) return;
+    
+    final history = _stripHistories[index];
+    
+    if (history.canGoBack) {
+      // Navigate backward in history
+      final prevPaint = history.goBack();
+      if (prevPaint != null) {
+        _updateStripColor(index, prevPaint);
+      }
+    } else {
+      // If no history, generate a new color
+      _rollStripe(index);
+    }
+  }
+
+  /// Updates a specific strip color and syncs with current palette
+  void _updateStripColor(int index, Paint newPaint) {
+    if (index >= _currentPalette.length) return;
+    
+    setState(() {
+      _currentPalette[index] = newPaint;
+    });
+    
+    // Sync current page cache
+    if (_visiblePage < _pages.length) {
+      _pages[_visiblePage] = List<Paint>.from(_currentPalette);
+    }
   }
 
   void _rollStripe(int index) {
@@ -414,12 +491,18 @@ class _RollerScreenState extends RollerScreenStatePublic {
         _isRolling = false; // Reset rolling state
       });
 
+      // Add new color to strip history
+      _ensureStripHistories();
+      if (index < _currentPalette.length && index < _stripHistories.length) {
+        _stripHistories[index].addPaint(_currentPalette[index]);
+      }
+
       // Sync current page cache after rolling a stripe
       if (_visiblePage < _pages.length) {
         _pages[_visiblePage] = List<Paint>.from(_currentPalette);
       }
     } catch (e) {
-      print('Error in _rollStripe: $e');
+      Debug.error('RollerScreen', '_rollStripe', 'Error: $e');
       if (mounted) {
         setState(() => _isRolling = false);
       }
@@ -517,7 +600,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         _lockedStates = List<bool>.filled(_currentPalette.length, true); // lock seeds initially
       });
     } catch (e) {
-      print('Error in _maybeSeedFromInitial: $e');
+      Debug.error('RollerScreen', '_maybeSeedFromInitial', 'Error: $e');
       // Fall back to normal roll if seeding fails
       if (_availablePaints.isNotEmpty) {
         _rollPalette();
@@ -577,6 +660,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
     if (_currentPalette.length > size) {
       _currentPalette = _currentPalette.take(size).toList();
     }
+    
+    // Ensure strip histories match new size
+    _ensureStripHistories();
   }
 
   Widget _buildToolPanel(ActiveTool tool) {
@@ -765,7 +851,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text('Swipe ↑ for next palette',
@@ -779,7 +865,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                   Positioned.fill(
                     child: IgnorePointer(
                       child: Container(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         child: const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         ),
@@ -933,9 +1019,11 @@ class _RollerScreenState extends RollerScreenStatePublic {
             isLocked: isLocked,
             isRolling: _isRolling,
             onTap: () => _toggleLock(i),
-            onSwipeRight: () => _rollStripe(i),
-            onSwipeLeft: _paletteSize > 2 ? () => _removeStripe(i) : null,
+            // Enhanced navigation: Right swipe = forward, Left swipe = backward
+            onSwipeRight: () => _navigateStripForward(i),
+            onSwipeLeft: () => _navigateStripBackward(i),
             onRefine: () => _showRefineSheet(i),
+            onDelete: _paletteSize > 2 ? () => _removeStripe(i) : null,
           ),
         );
       }),
@@ -1140,8 +1228,8 @@ class _StyleOptionTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: selected 
-                            ? Theme.of(context).colorScheme.onPrimaryContainer.withOpacity( 0.7)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity( 0.6),
+                            ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -1277,7 +1365,7 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity( 0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1393,7 +1481,7 @@ class _RailItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: isActive
               ? BoxDecoration(
-                  color: Colors.black.withOpacity( 0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 )
               : null,

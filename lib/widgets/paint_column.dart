@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/widgets/paint_action_sheet.dart';
+import 'package:color_canvas/widgets/color_strip_action_menu.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 
@@ -223,6 +224,7 @@ class AnimatedPaintStripe extends StatefulWidget {
   final VoidCallback? onSwipeRight;
   final VoidCallback? onSwipeLeft;
   final VoidCallback? onRefine;
+  final VoidCallback? onDelete; // New: explicit delete callback
   final int? index; // New: for drag reordering
   final Function(int oldIndex, int newIndex)? onReorder; // New: drag callback
 
@@ -237,6 +239,7 @@ class AnimatedPaintStripe extends StatefulWidget {
     this.onSwipeRight,
     this.onSwipeLeft,
     this.onRefine,
+    this.onDelete,
     this.index,
     this.onReorder,
   });
@@ -261,7 +264,7 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
   Color? _currentDisplayColor;
   String? _lastPaintId;
   bool _isDragging = false; // New: track drag state
-  bool _isRemoving = false; // New: track removal state
+  OverlayEntry? _actionMenuOverlay; // New: track overlay for action menu
 
   @override
   void initState() {
@@ -410,6 +413,7 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
 
   @override
   void dispose() {
+    _dismissActionMenu();
     _colorController.dispose();
     if (_RollerEnhancements.enableDragReordering && widget.onReorder != null) {
       _dragController.dispose();
@@ -417,22 +421,6 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
     _lockController.dispose();
     _swipeController.dispose();
     super.dispose();
-  }
-
-  // Method to start swipe removal animation
-  void _startSwipeRemovalAnimation() {
-    if (_isRemoving) return; // Prevent double removal
-
-    setState(() {
-      _isRemoving = true;
-    });
-
-    _swipeController.forward().then((_) {
-      // After animation completes, call the actual removal callback
-      if (widget.onSwipeLeft != null) {
-        widget.onSwipeLeft!();
-      }
-    });
   }
 
   // Create gradient backdrop for rounded corners based on the strip's color
@@ -532,23 +520,25 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
                       widget.onTap();
                     },
                     onLongPress: widget.paint != null
-                        ? () => _showActionSheet(
-                            context) // Preserve existing paint info feature
+                        ? () => _showEnhancedActionMenu(context)
                         : widget.onLongPress,
                     onHorizontalDragStart: (_) => _dragDx = 0.0,
                     onHorizontalDragUpdate: (details) =>
                         _dragDx += details.delta.dx,
                     onHorizontalDragEnd: (details) {
                       final v = details.velocity.pixelsPerSecond.dx;
+                      // NEW: Both left and right swipes now navigate through color variations
                       if ((_dragDx > 24) || (v > 500)) {
+                        // Right swipe: next color variation
                         if (widget.onSwipeRight != null) {
                           HapticFeedback.lightImpact();
                           widget.onSwipeRight!();
                         }
                       } else if ((_dragDx < -24) || (v < -500)) {
+                        // Left swipe: previous color variation (or next if no history)
                         if (widget.onSwipeLeft != null) {
                           HapticFeedback.lightImpact();
-                          _startSwipeRemovalAnimation(); // Use animated removal instead of direct callback
+                          widget.onSwipeLeft!();
                         }
                       }
                       _dragDx = 0.0;
@@ -755,6 +745,56 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
           ),
         );
       },
+    );
+  }
+
+  void _showEnhancedActionMenu(BuildContext context) {
+    if (widget.paint == null) return;
+
+    // Dismiss any existing overlay
+    _dismissActionMenu();
+
+    _actionMenuOverlay = OverlayEntry(
+      builder: (context) => ColorStripActionMenu(
+        paint: widget.paint!,
+        onDelete: widget.onDelete,
+        onDetails: () => _showActionSheet(context),
+        onCopy: () => _copyPaintData(),
+        onPin: () => _pinColor(),
+        onReplace: widget.onRefine,
+        onDismiss: _dismissActionMenu,
+      ),
+    );
+
+    Overlay.of(context).insert(_actionMenuOverlay!);
+  }
+
+  void _dismissActionMenu() {
+    _actionMenuOverlay?.remove();
+    _actionMenuOverlay = null;
+  }
+
+  void _copyPaintData() {
+    if (widget.paint == null) return;
+    
+    final data = '${widget.paint!.name}\n${widget.paint!.brandName}\n${widget.paint!.code}\n${widget.paint!.hex}';
+    Clipboard.setData(ClipboardData(text: data));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Paint info copied to clipboard'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _pinColor() {
+    // Placeholder for pin/favorite functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Color pinned'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 

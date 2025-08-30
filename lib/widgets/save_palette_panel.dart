@@ -143,6 +143,8 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
 
         // Show subtle success snackbar
         widget.onSaved(); // Close save panel first
+        // After closing, the widget might be disposed; guard context use.
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,7 +153,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
               label: 'Preview',
               onPressed: () {
                 Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => VisualizerScreen(),
+                  builder: (_) => const VisualizerScreen(),
                 ));
               },
             ),

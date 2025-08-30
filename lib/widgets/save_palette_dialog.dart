@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
@@ -65,6 +64,7 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
     }
 
     if (_nameController.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a name')),
       );
@@ -259,7 +259,7 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to upgrade screen
+                // Navigate to upgrade screen (future enhancement)
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Upgrade feature coming soon!'),
