@@ -523,10 +523,18 @@ class _RollerScreenState extends RollerScreenStatePublic {
   }
 
   List<Paint> _getFilteredPaints() {
+    if (_availablePaints.isEmpty) {
+      Debug.warning('RollerScreen', '_getFilteredPaints', 'Available paints list is empty');
+      return [];
+    }
+    
     if (_selectedBrandIds.isEmpty || _selectedBrandIds.length == _availableBrands.length) {
       return _availablePaints;
     }
-    return _availablePaints.where((paint) => _selectedBrandIds.contains(paint.brandId)).toList();
+    
+    final filtered = _availablePaints.where((paint) => _selectedBrandIds.contains(paint.brandId)).toList();
+    Debug.info('RollerScreen', '_getFilteredPaints', 'Filtered ${_availablePaints.length} paints to ${filtered.length}');
+    return filtered;
   }
   
   List<Paint> _visiblePaletteSnapshot() {
@@ -900,9 +908,15 @@ class _RollerScreenState extends RollerScreenStatePublic {
       children: List.generate(_paletteSize, (i) {
         final paint = i < palette.length ? palette[i] : null;
         final isLocked = i < _lockedStates.length ? _lockedStates[i] : false;
+        
+        // Create a more stable key that doesn't change when paint is null
+        final keyString = paint != null 
+            ? '${paint.id}|${paint.hex}|$i' 
+            : 'empty_$i';
+            
         return Expanded(
           child: AnimatedPaintStripe(
-            key: ValueKey('${paint?.id}|${paint?.hex}'),
+            key: ValueKey(keyString),
             paint: paint,
             previousPaint: null,
             isLocked: isLocked,
@@ -926,6 +940,8 @@ class _RollerScreenState extends RollerScreenStatePublic {
     final filtered = _getFilteredPaints();
     if (filtered.isEmpty) {
       Debug.warning('RollerScreen', '_ensurePage', 'No paints available after filtering');
+      Debug.warning('RollerScreen', '_ensurePage', 'Available paints: ${_availablePaints.length}, Selected brands: ${_selectedBrandIds.length}');
+      
       // Only show the message if user has manually applied filters
       if (_hasAppliedFilters && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -359,20 +359,27 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
       }
     }
 
-  // Consider both id and hex; in sample mode ids may collide or be missing
-  final oldKey = oldWidget.paint == null
-    ? null
-    : '${oldWidget.paint!.id}|${oldWidget.paint!.hex}';
-  final newKey = widget.paint == null
-    ? null
-    : '${widget.paint!.id}|${widget.paint!.hex}';
+    // Consider both id and hex; in sample mode ids may collide or be missing
+    final oldKey = oldWidget.paint == null
+      ? null
+      : '${oldWidget.paint!.id}|${oldWidget.paint!.hex}';
+    final newKey = widget.paint == null
+      ? null
+      : '${widget.paint!.id}|${widget.paint!.hex}';
 
-  // Only animate if effective identity changed
-  if (oldKey != newKey && _lastPaintId != widget.paint?.id) {
-      Debug.info('AnimatedPaintStripe', 'didUpdateWidget',
-          'Paint changed, starting animation');
-      _updateColorAnimation();
-      _animateColorChange();
+    // Only animate if effective identity changed and we have a real paint change
+    if (oldKey != newKey && 
+        _lastPaintId != widget.paint?.id && 
+        widget.paint != null) {
+        Debug.info('AnimatedPaintStripe', 'didUpdateWidget',
+            'Paint changed, starting animation');
+        _updateColorAnimation();
+        _animateColorChange();
+        _lastPaintId = widget.paint?.id;
+      }
+    
+    // Update last paint ID even if we don't animate to prevent future unnecessary animations
+    if (widget.paint?.id != null) {
       _lastPaintId = widget.paint?.id;
     }
   }
@@ -478,9 +485,12 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
 
   @override
   Widget build(BuildContext context) {
-    Debug.build('AnimatedPaintStripe', 'build',
-        details:
-            'paint: ${widget.paint?.id}, isLocked: ${widget.isLocked}, isRolling: ${widget.isRolling}');
+    // Only log debug info for significant changes to reduce rapid build noise
+    if (widget.paint?.id != _lastPaintId || widget.isLocked != (_lockController.value > 0.5)) {
+      Debug.build('AnimatedPaintStripe', 'build',
+          details:
+              'paint: ${widget.paint?.id}, isLocked: ${widget.isLocked}, isRolling: ${widget.isRolling}');
+    }
 
     // Wrap with swipe removal animations
     return AnimatedBuilder(
