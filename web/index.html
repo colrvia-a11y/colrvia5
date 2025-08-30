@@ -31,6 +31,21 @@
 
   <title>dreamflow_counter</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase Configuration -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-check.js"></script>
+  
+  <script>
+    // Initialize Firebase App Check for web (PRODUCTION)
+    if (typeof firebase !== 'undefined') {
+      const appCheck = firebase.appCheck();
+      // Production reCAPTCHA site key for ColorCanvas app
+      appCheck.activate('6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4');
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

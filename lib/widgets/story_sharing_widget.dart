@@ -95,7 +95,7 @@ class StoryCardGenerator {
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Color Stories',
                             style: TextStyle(
                               fontSize: 16,
@@ -103,7 +103,7 @@ class StoryCardGenerator {
                               color: Colors.white,
                             ),
                           ),
-                          const Text(
+                          Text(
                             'Immersive Color Experiences',
                             style: TextStyle(
                               fontSize: 12,
@@ -356,7 +356,7 @@ class StoryCardGenerator {
   }
 
   Widget _buildPaletteDisplay(List<Color> palette) {
-    return Container(
+    return SizedBox(
       height: 60,
       child: Row(
         children: palette.take(5).map((color) {
@@ -382,7 +382,7 @@ class StoryCardGenerator {
   }
 
   Widget _buildLargePaletteDisplay(List<Color> palette) {
-    return Container(
+    return SizedBox(
       height: 120,
       child: Row(
         children: palette.take(4).map((color) {

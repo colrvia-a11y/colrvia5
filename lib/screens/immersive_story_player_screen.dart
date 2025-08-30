@@ -148,7 +148,15 @@ class _ImmersiveStoryPlayerScreenState extends State<ImmersiveStoryPlayerScreen>
       }
     }
 
-    _generateParticles();
+    // IMPORTANT: Generating particles uses MediaQuery for screen size.
+    // Accessing MediaQuery during initState triggers a Flutter error
+    // (dependOnInheritedWidgetOfExactType before init completed).
+    // Defer particle generation until after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _generateParticles();
+      setState(() {});
+    });
   }
 
   void _generateParticles() {

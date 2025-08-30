@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:color_canvas/firebase_options.dart';
 import 'package:color_canvas/theme.dart';
 import 'package:color_canvas/screens/auth_wrapper.dart';
@@ -28,6 +29,25 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    
+    // Initialize Firebase App Check for security
+    // Production reCAPTCHA site key for ColorCanvas app
+    const String recaptchaSiteKey = '6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4'; // PRODUCTION KEY
+    
+    await FirebaseAppCheck.instance.activate(
+      // For web: Using production reCAPTCHA v3 site key
+      webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
+      
+      // For Android: Use Play Integrity for production (requires Play Store)
+      // For development/testing, this will use debug token automatically
+      androidProvider: AndroidProvider.playIntegrity,
+      
+      // For iOS: Use DeviceCheck for production
+      appleProvider: AppleProvider.deviceCheck,
+    );
+    
+    Debug.info('App', 'main', 'Firebase App Check activated with PRODUCTION reCAPTCHA key');
+    
     await FirebaseService.enableOfflineSupport();
     isFirebaseInitialized = true;
     Debug.info('App', 'main', 'Firebase initialized successfully');
