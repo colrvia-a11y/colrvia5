@@ -738,59 +738,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                     ),
                   ),
                 ),
-                // Overlay: pinned locked stripes drawn above the PageView
-                Positioned.fill(
-                  child: Column(
-                    children: List.generate(_paletteSize, (i) {
-                      final bool locked = i < _lockedStates.length && _lockedStates[i];
-                      final bool hasPaint = i < _currentPalette.length;
-                      if (!locked || !hasPaint) {
-                        // Transparent, non-interactive spacer so underlying PageView is tappable
-                        return Expanded(
-                          child: IgnorePointer(
-                            ignoring: true,
-                            child: const SizedBox.shrink(),
-                          ),
-                        );
-                      }
-
-                      final color = ColorUtils.getPaintColor(_currentPalette[i].hex);
-
-                      // Locked row: draw a solid color block that stays pinned while pages scroll under it.
-                      return Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => _toggleLock(i), // tap again to unlock
-                          child: Container(
-                            color: color,
-                            // (Optional polish) small lock chip so users see it's locked
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 12, top: 8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.35),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.lock, size: 14, color: Colors.white),
-                                      SizedBox(width: 6),
-                                      Text('Locked', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
+                // Removed legacy pinned "Locked" overlay (duplicate lock system)
                 if (_showSwipeHint)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -954,6 +902,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         final isLocked = i < _lockedStates.length ? _lockedStates[i] : false;
         return Expanded(
           child: AnimatedPaintStripe(
+            key: ValueKey('${paint?.id}|${paint?.hex}'),
             paint: paint,
             previousPaint: null,
             isLocked: isLocked,

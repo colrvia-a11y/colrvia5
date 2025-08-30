@@ -227,7 +227,7 @@ class AnimatedPaintStripe extends StatefulWidget {
   final Function(int oldIndex, int newIndex)? onReorder; // New: drag callback
 
   const AnimatedPaintStripe({
-    super.key,
+  super.key,
     this.paint,
     this.previousPaint,
     required this.isLocked,
@@ -359,9 +359,16 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
       }
     }
 
-    // Only animate if paint actually changed
-    if (oldWidget.paint?.id != widget.paint?.id &&
-        _lastPaintId != widget.paint?.id) {
+  // Consider both id and hex; in sample mode ids may collide or be missing
+  final oldKey = oldWidget.paint == null
+    ? null
+    : '${oldWidget.paint!.id}|${oldWidget.paint!.hex}';
+  final newKey = widget.paint == null
+    ? null
+    : '${widget.paint!.id}|${widget.paint!.hex}';
+
+  // Only animate if effective identity changed
+  if (oldKey != newKey && _lastPaintId != widget.paint?.id) {
       Debug.info('AnimatedPaintStripe', 'didUpdateWidget',
           'Paint changed, starting animation');
       _updateColorAnimation();
@@ -494,6 +501,7 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
                 final textColor =
                     brightness == Brightness.dark ? Colors.white : Colors.black;
 
+                // Key by effective color identity so Flutter rebuilds properly
                 Widget stripContent = Container(
                   margin: _RollerEnhancements.enableRoundedStrips
                       ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)

@@ -175,7 +175,31 @@ class SamplePaints {
   /// Get all sample paints
   static Future<List<Paint>> getAllPaints() async {
     final paintData = await _loadPaintData();
-    return paintData.map((data) => Paint.fromJson(data, data['id'] ?? '')).toList();
+    // Ensure each paint has a stable, non-empty id so UI updates animate correctly
+    final List<Paint> paints = [];
+    for (var i = 0; i < paintData.length; i++) {
+      final original = paintData[i];
+      String? id = (original['id']?.toString().trim().isEmpty ?? true)
+          ? null
+          : original['id'].toString();
+      if (id == null || id.isEmpty) {
+        final brand = (original['brandId'] ?? original['brandName'] ?? '')
+            .toString();
+        final codeOrName = (original['code'] ?? original['name'] ?? '')
+            .toString();
+        final hex = (original['hex'] ?? '').toString();
+        final composite = '${brand}_${codeOrName}_${hex}_$i';
+        id = composite
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+      }
+      final mapWithId = {
+        ...original,
+        'id': id,
+      };
+      paints.add(Paint.fromJson(mapWithId, id));
+    }
+    return paints;
   }
 
   /// Get all unique brands from sample paints
