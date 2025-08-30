@@ -65,16 +65,69 @@ class Paint {
   });
 
   factory Paint.fromJson(Map<String, dynamic> json, String id) {
+    // Normalize and compute color metrics if missing. In some data sources
+    // (assets or Firestore), LAB/LCH may be absent. Many algorithms rely on
+    // LAB/LCH; when they are zeroed, palette generation/adjustment degenerates
+    // to picking the first paint repeatedly. We compute sensible fallbacks.
+
+    // Hex
+    String hex = (json['hex'] ?? '#000000').toString();
+    if (!hex.startsWith('#')) hex = '#$hex';
+
+    // RGB: prefer provided RGB; else derive from hex
+    List<int> rgb;
+    try {
+      final rawRgb = (json['rgb'] as List?)?.cast<num>().toList();
+      if (rawRgb != null && rawRgb.length == 3) {
+        rgb = [rawRgb[0].toInt(), rawRgb[1].toInt(), rawRgb[2].toInt()];
+      } else {
+        rgb = ColorUtils.hexToRgb(hex);
+      }
+    } catch (_) {
+      rgb = ColorUtils.hexToRgb(hex);
+    }
+
+    // LAB: use provided; else compute from RGB
+    List<double> lab;
+    try {
+      final rawLab = (json['lab'] as List?)?.cast<num>().map((e) => e.toDouble()).toList();
+      if (rawLab != null && rawLab.length == 3) {
+        lab = rawLab;
+      } else {
+        lab = ColorUtils.rgbToLab(rgb[0], rgb[1], rgb[2]);
+      }
+    } catch (_) {
+      lab = ColorUtils.rgbToLab(rgb[0], rgb[1], rgb[2]);
+    }
+
+    // If LAB appears to be zeroed, compute it
+    if (lab.length != 3 || (lab[0] == 0.0 && lab[1] == 0.0 && lab[2] == 0.0)) {
+      lab = ColorUtils.rgbToLab(rgb[0], rgb[1], rgb[2]);
+    }
+
+    // LCH: use provided; else compute from LAB
+    List<double> lch;
+    try {
+      final rawLch = (json['lch'] as List?)?.cast<num>().map((e) => e.toDouble()).toList();
+      if (rawLch != null && rawLch.length == 3) {
+        lch = rawLch;
+      } else {
+        lch = ColorUtils.labToLch(lab);
+      }
+    } catch (_) {
+      lch = ColorUtils.labToLch(lab);
+    }
+
     return Paint(
       id: id,
       brandId: json['brandId'] ?? '',
       brandName: json['brandName'] ?? '',
       name: json['name'] ?? '',
-      code: json['code'] ?? '',
-      hex: json['hex'] ?? '#000000',
-      rgb: List<int>.from(json['rgb'] ?? [0, 0, 0]),
-      lab: List<double>.from(json['lab'] ?? [0.0, 0.0, 0.0]),
-      lch: List<double>.from(json['lch'] ?? [0.0, 0.0, 0.0]),
+      code: json['code']?.toString() ?? '',
+      hex: hex,
+      rgb: rgb,
+      lab: lab,
+      lch: lch,
       collection: json['collection'],
       finish: json['finish'],
       metadata: json['metadata'],
