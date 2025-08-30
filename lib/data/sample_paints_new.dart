@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
-import 'package:logging/logging.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:logging/logging.dart' show Logger;
 
 class SamplePaints {
   static final _logger = Logger('SamplePaints');

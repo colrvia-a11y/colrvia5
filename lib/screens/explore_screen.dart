@@ -142,13 +142,13 @@ class _CardSkeleton extends StatelessWidget {
                 ),
               ),
             ),
-            Expanded(
+            const Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text('Beautiful Color Story',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

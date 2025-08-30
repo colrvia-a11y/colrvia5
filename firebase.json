@@ -23,6 +23,9 @@
   "functions": {
     "source": "functions"
   },
+  "dataconnect": {
+    "source": "dataconnect"
+  },
   "emulators": {
     "auth": {
       "port": 9099
@@ -38,6 +41,9 @@
     },
     "functions": {
       "port": 5001
+    },
+    "dataconnect": {
+      "port": 9399
     },
     "ui": {
       "enabled": true

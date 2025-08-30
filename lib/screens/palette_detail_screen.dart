@@ -148,9 +148,9 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                   if (confirmed == true) {
                     try {
                       await FirebaseService.deletePalette(widget.palette.id);
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       Navigator.pop(context);
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Palette deleted'),
@@ -158,7 +158,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                         ),
                       );
                     } catch (e) {
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error deleting palette: $e'),
@@ -289,7 +289,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                       paletteId: widget.palette.id,
                     );
 
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -307,11 +307,11 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                       'project_id': project.id,
                     });
                   } catch (e) {
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content:
-                              const Text('Please sign in to create color stories')),
+                        content: Text('Please sign in to create color stories'),
+                      ),
                     );
                   }
                 },

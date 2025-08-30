@@ -198,13 +198,13 @@ class _ColorStoryMainScreenState extends State<ColorStoryMainScreen> with Ticker
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_stories,
                       color: _warmWhite,
                       size: 24,
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       'Color Stories',
                       style: TextStyle(
                         color: _warmWhite,
@@ -230,19 +230,19 @@ class _ColorStoryMainScreenState extends State<ColorStoryMainScreen> with Ticker
               ),
             ),
             child: const Center(
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40), // Account for status bar
-                  const Icon(
+                  SizedBox(height: 40), // Account for status bar
+                  Icon(
                     Icons.auto_stories,
                     size: 60,
                     color: _warmWhite90,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: 16),
+                  Text(
                     'Immersive Color Experiences',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _warmWhite80,
                       fontSize: 16,
                       fontWeight: FontWeight.w300,
