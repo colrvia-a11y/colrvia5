@@ -70,7 +70,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
           indicatorColor: Theme.of(context).colorScheme.primary,
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor:
-              Theme.of(context).colorScheme.onSurface.withOpacity( 0.6),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           labelStyle:
               const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
@@ -104,23 +104,24 @@ class _FeaturesScreenState extends State<FeaturesScreen>
           Text(
             'Choose which paint brands to include in your palette generation',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity( 0.7),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 32),
-          
+
           // Current Selection Status
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withOpacity( 0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity( 0.2),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -135,15 +136,15 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                   child: Text(
                     '${widget.selectedBrandIds.length} of ${widget.availableBrands.length} brands selected',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
           Row(
             children: [
@@ -153,7 +154,8 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                     // Provide immediate feedback
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Selected all ${widget.availableBrands.length} brands'),
+                        content: Text(
+                            'Selected all ${widget.availableBrands.length} brands'),
                         duration: const Duration(milliseconds: 1500),
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -166,8 +168,12 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                   label: const Text('Select All'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: widget.selectedBrandIds.length == widget.availableBrands.length
-                        ? Theme.of(context).colorScheme.primaryContainer.withOpacity( 0.3)
+                    backgroundColor: widget.selectedBrandIds.length ==
+                            widget.availableBrands.length
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withValues(alpha: 0.3)
                         : null,
                   ),
                 ),
@@ -178,9 +184,9 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                   onPressed: () {
                     // Provide immediate feedback
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Cleared all brand selections'),
-                        duration: const Duration(milliseconds: 1500),
+                      const SnackBar(
+                        content: Text('Cleared all brand selections'),
+                        duration: Duration(milliseconds: 1500),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -191,7 +197,10 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     backgroundColor: widget.selectedBrandIds.isEmpty
-                        ? Theme.of(context).colorScheme.errorContainer.withOpacity( 0.3)
+                        ? Theme.of(context)
+                            .colorScheme
+                            .errorContainer
+                            .withValues(alpha: 0.3)
                         : null,
                   ),
                 ),
@@ -204,13 +213,10 @@ class _FeaturesScreenState extends State<FeaturesScreen>
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
-              ).colorScheme.surfaceContainerHighest.withOpacity( 0.3),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withOpacity( 0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -267,7 +273,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                               ),
                             );
                           }
-                          
+
                           final newSelectedBrands = Set<String>.from(
                             widget.selectedBrandIds,
                           );
@@ -287,10 +293,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                         tileColor: isSelected
                             ? Theme.of(
                                 context,
-                              )
-                                .colorScheme
-                                .primaryContainer
-                                .withOpacity( 0.3)
+                              ).colorScheme.primaryContainer.withValues(alpha: 0.3)
                             : Colors.transparent,
                       );
                     },
@@ -322,10 +325,8 @@ class _FeaturesScreenState extends State<FeaturesScreen>
           Text(
             'Choose how colors in your palette relate to each other',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity( 0.7),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 32),
@@ -338,13 +339,10 @@ class _FeaturesScreenState extends State<FeaturesScreen>
               color: Theme.of(context)
                   .colorScheme
                   .primaryContainer
-                  .withOpacity( 0.3),
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withOpacity( 0.2),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -365,7 +363,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity( 0.6),
+                                  .withValues(alpha: 0.6),
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -383,7 +381,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity( 0.7),
+                                  .withValues(alpha: 0.7),
                             ),
                       ),
                     ],
@@ -426,10 +424,8 @@ class _FeaturesScreenState extends State<FeaturesScreen>
           Text(
             'Adjust the number of colors in your palette (1-5 colors)',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity( 0.7),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 32),
@@ -442,13 +438,10 @@ class _FeaturesScreenState extends State<FeaturesScreen>
               color: Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity( 0.5),
+                  .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withOpacity( 0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -473,7 +466,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity( 0.6),
+                            .withValues(alpha: 0.6),
                       ),
                 ),
               ],
@@ -533,7 +526,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
               color: Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity( 0.3),
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -565,7 +558,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                               : Theme.of(context)
                                   .colorScheme
                                   .outline
-                                  .withOpacity( 0.2),
+                                  .withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: isActive
                               ? null
@@ -573,7 +566,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                                   color: Theme.of(context)
                                       .colorScheme
                                       .outline
-                                      .withOpacity( 0.3),
+                                      .withValues(alpha: 0.3),
                                   style: BorderStyle.solid,
                                 ),
                         ),
@@ -606,10 +599,8 @@ class _FeaturesScreenState extends State<FeaturesScreen>
           Text(
             'Save your current palette to your library for future use',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity( 0.7),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 32),
@@ -622,13 +613,10 @@ class _FeaturesScreenState extends State<FeaturesScreen>
               color: Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity( 0.5),
+                  .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withOpacity( 0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -665,7 +653,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity( 0.6),
+                              .withValues(alpha: 0.6),
                         ),
                   ),
                 ] else ...[
@@ -676,13 +664,13 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                       color: Theme.of(context)
                           .colorScheme
                           .outline
-                          .withOpacity( 0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: Theme.of(context)
                             .colorScheme
                             .outline
-                            .withOpacity( 0.3),
+                            .withValues(alpha: 0.3),
                         style: BorderStyle.solid,
                       ),
                     ),
@@ -693,7 +681,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity( 0.5),
+                                  .withValues(alpha: 0.5),
                             ),
                       ),
                     ),
@@ -731,7 +719,7 @@ class _FeaturesScreenState extends State<FeaturesScreen>
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity( 0.5),
+                          .withValues(alpha: 0.5),
                     ),
               ),
             ),
@@ -796,12 +784,12 @@ class _HarmonyModeOption extends StatelessWidget {
               : Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity( 0.3),
+                  .withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline.withOpacity( 0.2),
+                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -821,7 +809,7 @@ class _HarmonyModeOption extends StatelessWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .outline
-                            .withOpacity( 0.5),
+                            .withValues(alpha: 0.5),
                         width: 2,
                       ),
               ),
@@ -852,11 +840,11 @@ class _HarmonyModeOption extends StatelessWidget {
                               ? Theme.of(context)
                                   .colorScheme
                                   .onPrimaryContainer
-                                  .withOpacity( 0.7)
+                                  .withValues(alpha: 0.7)
                               : Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity( 0.6),
+                                  .withValues(alpha: 0.6),
                         ),
                   ),
                 ],

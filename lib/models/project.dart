@@ -5,20 +5,29 @@ enum FunnelStage { build, story, visualize, share }
 
 FunnelStage funnelStageFromString(String s) {
   switch (s) {
-    case 'build': return FunnelStage.build;
-    case 'story': return FunnelStage.story;
-    case 'visualize': return FunnelStage.visualize;
-    case 'share': return FunnelStage.share;
-    default: return FunnelStage.build;
+    case 'build':
+      return FunnelStage.build;
+    case 'story':
+      return FunnelStage.story;
+    case 'visualize':
+      return FunnelStage.visualize;
+    case 'share':
+      return FunnelStage.share;
+    default:
+      return FunnelStage.build;
   }
 }
 
 String funnelStageToString(FunnelStage s) {
   switch (s) {
-    case FunnelStage.build: return 'build';
-    case FunnelStage.story: return 'story';
-    case FunnelStage.visualize: return 'visualize';
-    case FunnelStage.share: return 'share';
+    case FunnelStage.build:
+      return 'build';
+    case FunnelStage.story:
+      return 'story';
+    case FunnelStage.visualize:
+      return 'visualize';
+    case FunnelStage.share:
+      return 'share';
   }
 }
 
@@ -63,25 +72,26 @@ class ProjectDoc {
       roomType: d['roomType'],
       styleTag: d['styleTag'],
       vibeWords: List<String>.from(d['vibeWords'] ?? const []),
-      funnelStage: funnelStageFromString((d['funnelStage'] ?? 'build') as String),
+      funnelStage:
+          funnelStageFromString((d['funnelStage'] ?? 'build') as String),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (d['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'ownerId': ownerId,
-    'title': title,
-    'activePaletteId': activePaletteId,
-    'paletteIds': paletteIds,
-    'colorStoryId': colorStoryId,
-    'roomType': roomType,
-    'styleTag': styleTag,
-    'vibeWords': vibeWords,
-    'funnelStage': funnelStageToString(funnelStage),
-    'createdAt': Timestamp.fromDate(createdAt),
-    'updatedAt': Timestamp.fromDate(updatedAt),
-  };
+        'ownerId': ownerId,
+        'title': title,
+        'activePaletteId': activePaletteId,
+        'paletteIds': paletteIds,
+        'colorStoryId': colorStoryId,
+        'roomType': roomType,
+        'styleTag': styleTag,
+        'vibeWords': vibeWords,
+        'funnelStage': funnelStageToString(funnelStage),
+        'createdAt': Timestamp.fromDate(createdAt),
+        'updatedAt': Timestamp.fromDate(updatedAt),
+      };
 
   ProjectDoc copyWith({
     String? title,
@@ -93,18 +103,19 @@ class ProjectDoc {
     List<String>? vibeWords,
     FunnelStage? funnelStage,
     DateTime? updatedAt,
-  }) => ProjectDoc(
-    id: id,
-    ownerId: ownerId,
-    title: title ?? this.title,
-    activePaletteId: activePaletteId ?? this.activePaletteId,
-    paletteIds: paletteIds ?? this.paletteIds,
-    colorStoryId: colorStoryId ?? this.colorStoryId,
-    roomType: roomType ?? this.roomType,
-    styleTag: styleTag ?? this.styleTag,
-    vibeWords: vibeWords ?? this.vibeWords,
-    funnelStage: funnelStage ?? this.funnelStage,
-    createdAt: createdAt,
-    updatedAt: updatedAt ?? DateTime.now(),
-  );
+  }) =>
+      ProjectDoc(
+        id: id,
+        ownerId: ownerId,
+        title: title ?? this.title,
+        activePaletteId: activePaletteId ?? this.activePaletteId,
+        paletteIds: paletteIds ?? this.paletteIds,
+        colorStoryId: colorStoryId ?? this.colorStoryId,
+        roomType: roomType ?? this.roomType,
+        styleTag: styleTag ?? this.styleTag,
+        vibeWords: vibeWords ?? this.vibeWords,
+        funnelStage: funnelStage ?? this.funnelStage,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? DateTime.now(),
+      );
 }

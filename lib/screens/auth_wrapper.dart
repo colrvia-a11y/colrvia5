@@ -21,7 +21,7 @@ class AuthWrapper extends StatelessWidget {
             ),
           );
         }
-        
+
         // Show appropriate screen based on auth state
         if (snapshot.hasData && snapshot.data != null) {
           // User is signed in

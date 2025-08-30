@@ -15,11 +15,11 @@ class ContrastStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     Color chipColor;
     String label;
     IconData icon;
-    
+
     switch (level) {
       case ContrastLevel.aaa:
         chipColor = Colors.green;
@@ -41,9 +41,9 @@ class ContrastStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
+        color: chipColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor.withOpacity(0.3)),
+        border: Border.all(color: chipColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -61,7 +61,7 @@ class ContrastStatusChip extends StatelessWidget {
           Text(
             '${ratio.toStringAsFixed(1)}:1',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: chipColor.withOpacity(0.8),
+              color: chipColor.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -83,7 +83,7 @@ class ContrastEvaluationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -100,11 +100,13 @@ class ContrastEvaluationCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: evaluation.color1,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.compare_arrows, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                Icon(Icons.compare_arrows,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                 const SizedBox(width: 4),
                 Container(
                   width: 20,
@@ -112,7 +114,7 @@ class ContrastEvaluationCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: evaluation.color2,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -130,7 +132,8 @@ class ContrastEvaluationCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (evaluation.level == ContrastLevel.fail && onTapSuggestions != null) ...[
+            if (evaluation.level == ContrastLevel.fail &&
+                onTapSuggestions != null) ...[
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
@@ -140,7 +143,8 @@ class ContrastEvaluationCard extends StatelessWidget {
                   label: const Text('View Suggestions'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.colorScheme.primary,
-                    side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.5)),
+                    side: BorderSide(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5)),
                   ),
                 ),
               ),
@@ -165,7 +169,7 @@ class ContrastSuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -198,11 +202,13 @@ class ContrastSuggestionCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: suggestion.currentColor,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.arrow_forward, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                Icon(Icons.arrow_forward,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                 const SizedBox(width: 8),
                 // Suggested color
                 Container(
@@ -211,7 +217,7 @@ class ContrastSuggestionCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: suggestion.suggestedColor,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                   ),
                 ),
                 const Spacer(),
@@ -244,7 +250,8 @@ class ContrastCoachingSection extends StatefulWidget {
   });
 
   @override
-  State<ContrastCoachingSection> createState() => _ContrastCoachingSectionState();
+  State<ContrastCoachingSection> createState() =>
+      _ContrastCoachingSectionState();
 }
 
 class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
@@ -254,8 +261,9 @@ class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final evaluations = ContrastCoachingService.evaluateKeyPairings(widget.story);
-    
+    final evaluations =
+        ContrastCoachingService.evaluateKeyPairings(widget.story);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -275,21 +283,22 @@ class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
         Text(
           'WCAG accessibility compliance for key color pairings',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 12),
-        
         if (evaluations.isEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                  Icon(Icons.info_outline,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   const SizedBox(width: 8),
                   const Expanded(
-                    child: Text('No key pairings found to evaluate. Try assigning colors to trim, doors, or accent roles.'),
+                    child: Text(
+                        'No key pairings found to evaluate. Try assigning colors to trim, doors, or accent roles.'),
                   ),
                 ],
               ),
@@ -300,14 +309,18 @@ class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
           for (final evaluation in evaluations)
             ContrastEvaluationCard(
               evaluation: evaluation,
-              onTapSuggestions: evaluation.level == ContrastLevel.fail ? () {
-                setState(() {
-                  _selectedEvaluation = evaluation;
-                  _suggestions = ContrastCoachingService.suggestImprovements(evaluation, widget.story);
-                });
-              } : null,
+              onTapSuggestions: evaluation.level == ContrastLevel.fail
+                  ? () {
+                      setState(() {
+                        _selectedEvaluation = evaluation;
+                        _suggestions =
+                            ContrastCoachingService.suggestImprovements(
+                                evaluation, widget.story);
+                      });
+                    }
+                  : null,
             ),
-          
+
           // Suggestions section
           if (_selectedEvaluation != null && _suggestions != null) ...[
             const SizedBox(height: 16),
@@ -324,10 +337,12 @@ class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      Icon(Icons.lightbulb_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                      Icon(Icons.lightbulb_outline,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: Text('No suitable swaps found with current palette. Consider adding more contrasting colors.'),
+                        child: Text(
+                            'No suitable swaps found with current palette. Consider adding more contrasting colors.'),
                       ),
                     ],
                   ),
@@ -338,14 +353,14 @@ class _ContrastCoachingSectionState extends State<ContrastCoachingSection> {
                 ContrastSuggestionCard(
                   suggestion: suggestion,
                   onApply: () {
-                    widget.onApplySwap(suggestion.currentRole, suggestion.suggestedRole);
+                    widget.onApplySwap(
+                        suggestion.currentRole, suggestion.suggestedRole);
                     setState(() {
                       _selectedEvaluation = null;
                       _suggestions = null;
                     });
                   },
                 ),
-            
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () {

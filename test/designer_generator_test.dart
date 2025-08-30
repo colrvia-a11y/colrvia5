@@ -21,7 +21,7 @@ void main() {
         lch: [95.0, 0.0, 0.0],
         collection: 'Premium',
       );
-      
+
       final paint2 = Paint(
         id: 'id2', // Different document ID
         brandId: 'brand_a',
@@ -34,14 +34,14 @@ void main() {
         lch: [95.0, 0.0, 0.0],
         collection: 'Premium',
       );
-      
+
       // Should have same identity despite different document IDs
       final identity1 = paintIdentity(paint1);
       final identity2 = paintIdentity(paint2);
       expect(identity1, equals(identity2));
       expect(identity1, equals('brand_a|premium|w100'));
     });
-    
+
     test('Designer mode generates requested palette size', () {
       final testPaints = [
         Paint(
@@ -78,14 +78,14 @@ void main() {
           lch: [20.0, 0.0, 0.0],
         ),
       ];
-      
+
       for (int size = 1; size <= 3; size++) {
         final result = PaletteGenerator.rollPalette(
           availablePaints: testPaints,
           anchors: List.filled(size, null),
           mode: HarmonyMode.designer,
         );
-        
+
         expect(result.length, equals(size));
       }
     });

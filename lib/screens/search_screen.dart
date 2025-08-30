@@ -10,7 +10,7 @@ import 'dart:async';
 
 class SearchScreen extends StatefulWidget {
   final Function(Paint)? onPaintSelectedForRoller;
-  
+
   const SearchScreen({
     super.key,
     this.onPaintSelectedForRoller,
@@ -28,10 +28,10 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isSearching = false;
   bool _showSearchResults = false;
   bool _showClearButton = false;
-  
+
   // Debouncing variables
   Timer? _debounceTimer;
-  
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +41,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onSearchTextChanged() {
-    Debug.info('SearchScreen', '_onSearchTextChanged', 'Text changed: "${_searchController.text}"');
+    Debug.info('SearchScreen', '_onSearchTextChanged',
+        'Text changed: "${_searchController.text}"');
     if (mounted) {
       setState(() {
         _showClearButton = _searchController.text.isNotEmpty;
@@ -59,10 +60,11 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _generatePlaceholderPalettes() {
-    Debug.info('SearchScreen', '_generatePlaceholderPalettes', 'Generating placeholder palettes (disabled)');
+    Debug.info('SearchScreen', '_generatePlaceholderPalettes',
+        'Generating placeholder palettes (disabled)');
     // Temporarily disable palette generation to test infinite loop
     _placeholderPalettes = [];
-    
+
     // // Generate placeholder palettes for the grid - reduced count to prevent infinite loops
     // final random = Random();
     // _placeholderPalettes = List.generate(20, (index) {
@@ -74,14 +76,14 @@ class _SearchScreenState extends State<SearchScreen> {
     //       1.0,
     //     );
     //   });
-    //   
+    //
     //   final paletteNames = [
     //     'Autumn Vibes', 'Ocean Breeze', 'Desert Sunset', 'Forest Dream',
     //     'Urban Chic', 'Pastel Spring', 'Bold Statement', 'Minimalist',
     //     'Retro Wave', 'Earth Tones', 'Neon Nights', 'Cozy Cabin',
     //     'Modern Art', 'Vintage Soul', 'Fresh Morning', 'Twilight Hour'
     //   ];
-    //   
+    //
     //   return ColorPalette(
     //     id: 'placeholder_$index',
     //     name: '${paletteNames[random.nextInt(paletteNames.length)]} ${index + 1}',
@@ -93,10 +95,11 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _performSearch(String query) async {
     Debug.info('SearchScreen', '_performSearch', 'Searching for: "$query"');
     if (!mounted) return;
-    
+
     if (query.trim().isEmpty) {
       if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch', details: 'Clearing search results');
+        Debug.setState('SearchScreen', '_performSearch',
+            details: 'Clearing search results');
         setState(() {
           _searchResults = [];
           _showSearchResults = false;
@@ -106,7 +109,8 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (mounted) {
-      Debug.setState('SearchScreen', '_performSearch', details: 'Starting search');
+      Debug.setState('SearchScreen', '_performSearch',
+          details: 'Starting search');
       setState(() {
         _isSearching = true;
         _showSearchResults = true;
@@ -115,9 +119,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       final results = await FirebaseService.searchPaints(query.trim());
-      Debug.info('SearchScreen', '_performSearch', 'Found ${results.length} results');
+      Debug.info(
+          'SearchScreen', '_performSearch', 'Found ${results.length} results');
       if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch', details: 'Setting search results');
+        Debug.setState('SearchScreen', '_performSearch',
+            details: 'Setting search results');
         setState(() {
           _searchResults = results;
           _isSearching = false;
@@ -126,7 +132,8 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (e) {
       Debug.error('SearchScreen', '_performSearch', 'Search failed: $e');
       if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch', details: 'Search error occurred');
+        Debug.setState('SearchScreen', '_performSearch',
+            details: 'Search error occurred');
         setState(() => _isSearching = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Search error: $e')),
@@ -163,15 +170,19 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       Text(
                         paint.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
                       Text(
                         paint.brandName,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
                       ),
                     ],
                   ),
@@ -207,24 +218,28 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _loadPaintIntoRoller(Paint paint) {
-    Debug.info('SearchScreen', '_loadPaintIntoRoller', 'Attempting to load paint: ${paint.name}');
-    
+    Debug.info('SearchScreen', '_loadPaintIntoRoller',
+        'Attempting to load paint: ${paint.name}');
+
     // First try using the direct callback if available
     if (widget.onPaintSelectedForRoller != null) {
-      Debug.info('SearchScreen', '_loadPaintIntoRoller', 'Using direct callback');
+      Debug.info(
+          'SearchScreen', '_loadPaintIntoRoller', 'Using direct callback');
       widget.onPaintSelectedForRoller!(paint);
       return;
     }
-    
+
     // Fallback: Find the HomeScreen state in the widget tree
     final homeScreenState = context.findAncestorStateOfType<HomeScreenState>();
-    
+
     if (homeScreenState != null) {
-      Debug.info('SearchScreen', '_loadPaintIntoRoller', 'Found HomeScreenState, calling onPaintSelectedFromSearch');
+      Debug.info('SearchScreen', '_loadPaintIntoRoller',
+          'Found HomeScreenState, calling onPaintSelectedFromSearch');
       homeScreenState.onPaintSelectedFromSearch(paint);
     } else {
-      Debug.error('SearchScreen', '_loadPaintIntoRoller', 'HomeScreenState not found in widget tree and no callback provided');
-      
+      Debug.error('SearchScreen', '_loadPaintIntoRoller',
+          'HomeScreenState not found in widget tree and no callback provided');
+
       // Fallback: show snackbar with error information
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -260,8 +275,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Debug.build('SearchScreen', 'build', details: 'showSearchResults: $_showSearchResults, searchResults: ${_searchResults.length}, placeholderPalettes: ${_placeholderPalettes.length}');
-    
+    Debug.build('SearchScreen', 'build',
+        details:
+            'showSearchResults: $_showSearchResults, searchResults: ${_searchResults.length}, placeholderPalettes: ${_placeholderPalettes.length}');
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
@@ -274,7 +291,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(
                   bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                    color:
+                        Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
               ),
@@ -284,11 +302,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search by name, brand, code, or hex...',
                   hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                   prefixIcon: Icon(
                     Icons.search,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                   suffixIcon: _showClearButton
                       ? IconButton(
@@ -306,17 +330,21 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 onChanged: (value) {
                   // Cancel previous timer
                   _debounceTimer?.cancel();
-                  
+
                   // Start new timer for debounced search
                   _debounceTimer = Timer(const Duration(milliseconds: 500), () {
                     _performSearch(value);
@@ -327,10 +355,12 @@ class _SearchScreenState extends State<SearchScreen> {
                 },
               ),
             ),
-            
+
             // Content Area
             Expanded(
-              child: _showSearchResults ? _buildSearchResults() : _buildPaletteGrid(),
+              child: _showSearchResults
+                  ? _buildSearchResults()
+                  : _buildPaletteGrid(),
             ),
           ],
         ),
@@ -360,21 +390,27 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.search_off,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
               'No results found',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try different keywords',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
             ),
           ],
         ),
@@ -411,13 +447,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   color: color,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    color:
+                        Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Paint info
               Expanded(
                 child: Column(
@@ -426,23 +463,30 @@ class _SearchScreenState extends State<SearchScreen> {
                     Text(
                       paint.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${paint.brandName} • ${paint.code}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -457,17 +501,21 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             'LRV ${paint.computedLrv.toStringAsFixed(0)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                           ),
                         ),
                       ],
@@ -475,11 +523,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              
+
               // Tap indicator
               Icon(
                 Icons.touch_app,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -498,27 +546,33 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.palette_outlined,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
               'No palettes available',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Palettes temporarily disabled',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
             ),
           ],
         ),
       );
     }
-    
+
     return CustomScrollView(
       slivers: [
         // Header
@@ -528,12 +582,12 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Text(
               'Discover Palettes',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
         ),
-        
+
         // Grid of palettes
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -553,7 +607,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
         ),
-        
+
         // Bottom padding
         const SliverToBoxAdapter(
           child: SizedBox(height: 80),
@@ -584,7 +638,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 }).toList(),
               ),
             ),
-            
+
             // Palette info - fixed height to prevent layout loops
             Container(
               height: 80,
@@ -596,8 +650,8 @@ class _SearchScreenState extends State<SearchScreen> {
                   Text(
                     palette.name,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -612,8 +666,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       Text(
                         '${palette.colors.length} colors',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
                       ),
                     ],
                   ),

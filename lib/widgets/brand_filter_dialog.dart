@@ -42,7 +42,8 @@ class _BrandFilterDialogState extends State<BrandFilterDialog> {
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      _selectedBrands = widget.availableBrands.map((b) => b.id).toSet();
+                      _selectedBrands =
+                          widget.availableBrands.map((b) => b.id).toSet();
                     });
                   },
                   child: const Text('Select All'),
@@ -58,7 +59,7 @@ class _BrandFilterDialogState extends State<BrandFilterDialog> {
               ],
             ),
             const Divider(),
-            
+
             // Brand list
             Expanded(
               child: ListView.builder(
@@ -67,7 +68,7 @@ class _BrandFilterDialogState extends State<BrandFilterDialog> {
                 itemBuilder: (context, index) {
                   final brand = widget.availableBrands[index];
                   final isSelected = _selectedBrands.contains(brand.id);
-                  
+
                   return CheckboxListTile(
                     title: Text(brand.name),
                     value: isSelected,
@@ -98,7 +99,9 @@ class _BrandFilterDialogState extends State<BrandFilterDialog> {
             widget.onBrandsSelected(_selectedBrands);
             Navigator.of(context).pop();
           },
-          child: Text(_selectedBrands.isEmpty ? 'Show All' : 'Apply (${_selectedBrands.length})'),
+          child: Text(_selectedBrands.isEmpty
+              ? 'Show All'
+              : 'Apply (${_selectedBrands.length})'),
         ),
       ],
     );
@@ -141,16 +144,18 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Filter Brands', style: Theme.of(context).textTheme.headlineSmall),
+          Text('Filter Brands',
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
-          
+
           // Quick actions
           Row(
             children: [
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _selectedBrands = widget.availableBrands.map((b) => b.id).toSet();
+                    _selectedBrands =
+                        widget.availableBrands.map((b) => b.id).toSet();
                   });
                   widget.onBrandsSelected(_selectedBrands);
                 },
@@ -168,7 +173,7 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
             ],
           ),
           const Divider(),
-          
+
           // Brand list
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 250),
@@ -178,7 +183,7 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
               itemBuilder: (context, index) {
                 final brand = widget.availableBrands[index];
                 final isSelected = _selectedBrands.contains(brand.id);
-                
+
                 return CheckboxListTile(
                   title: Text(brand.name),
                   value: isSelected,
@@ -197,7 +202,7 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
               },
             ),
           ),
-          
+
           if (widget.showActions) ...[
             const SizedBox(height: 16),
             Row(
@@ -212,7 +217,9 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
                 Expanded(
                   child: FilledButton(
                     onPressed: widget.onDone,
-                    child: Text(_selectedBrands.isEmpty ? 'Show All' : 'Apply (${_selectedBrands.length})'),
+                    child: Text(_selectedBrands.isEmpty
+                        ? 'Show All'
+                        : 'Apply (${_selectedBrands.length})'),
                   ),
                 ),
               ],

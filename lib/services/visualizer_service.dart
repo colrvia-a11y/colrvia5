@@ -7,9 +7,11 @@ class VisualizerService {
   static final _storage = FirebaseStorage.instance;
 
   /// Uploads a picked file to gs:// under the user path and returns gsPath
-  static Future<String> uploadInputBytes(String uid, String filename, List<int> bytes) async {
+  static Future<String> uploadInputBytes(
+      String uid, String filename, List<int> bytes) async {
     final ref = _storage.ref('visualizer/$uid/inputs/$filename');
-    await ref.putData(Uint8List.fromList(bytes), SettableMetadata(contentType: 'image/png'));
+    await ref.putData(
+        Uint8List.fromList(bytes), SettableMetadata(contentType: 'image/png'));
     final bucket = _storage.bucket;
     return 'gs://$bucket/${ref.fullPath}';
   }
@@ -39,7 +41,8 @@ class VisualizerService {
     required List<String> variants,
   }) async {
     final callable = _f.httpsCallable('visualizerMockup');
-    final res = await callable.call({ 'roomType': roomType, 'style': style, 'variants': variants });
+    final res = await callable
+        .call({'roomType': roomType, 'style': style, 'variants': variants});
     final data = Map<String, dynamic>.from(res.data as Map);
     return List<Map<String, dynamic>>.from(data['results'] as List);
   }

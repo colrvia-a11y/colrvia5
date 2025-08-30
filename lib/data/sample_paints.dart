@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:color_canvas/firestore/firestore_data_schema.dart';
-import 'package:color_canvas/utils/color_utils.dart';
-import 'package:color_canvas/utils/slug_utils.dart';
+import 'package:logging/logging.dart';
+import '../firestore/firestore_data_schema.dart';
 
 class SamplePaints {
+  static final _logger = Logger('SamplePaints');
   static List<Map<String, dynamic>>? _cachedPaintData;
 
   /// Load paint data from JSON assets files
@@ -15,9 +15,12 @@ class SamplePaints {
 
     try {
       // Load all three brand JSON files
-      final sherwinData = await rootBundle.loadString('assets/documents/paints_sherwin-williams_mapped.json');
-      final benjaminData = await rootBundle.loadString('assets/documents/paints_benjamin_moore_mapped.json');
-      final behrData = await rootBundle.loadString('assets/documents/behr.json');
+      final sherwinData = await rootBundle
+          .loadString('assets/documents/paints_sherwin-williams_mapped.json');
+      final benjaminData = await rootBundle
+          .loadString('assets/documents/paints_benjamin_moore_mapped.json');
+      final behrData =
+          await rootBundle.loadString('assets/documents/behr.json');
 
       // Parse JSON data
       final List<dynamic> sherwinPaints = json.decode(sherwinData);
@@ -34,8 +37,8 @@ class SamplePaints {
       _cachedPaintData = allPaints;
       return allPaints;
     } catch (e) {
-      print('Error loading paint data: $e');
-      // Return fallback sample data if files can\'t be loaded
+      _logger.severe('Error loading paint data: $e');
+      // Return fallback sample data if files can't be loaded
       return _getFallbackPaintData();
     }
   }
@@ -45,133 +48,180 @@ class SamplePaints {
     return [
       // Sherwin-Williams samples
       {
+        'name': 'Oyster White',
         'brandName': 'Sherwin-Williams',
+        'code': 'SW 7004',
+        'hex': 'E8E3D9',
+        'rgb': [232, 227, 217],
+        'hsl': [45, 25, 89],
+        'lrv': 78.5,
+        'computedLrv': 78.5,
+        'family': 'Whites',
+        'finish': 'Flat',
+        'collection': 'Greens',
+        'tags': ['white', 'neutral', 'warm'],
+        'description': 'A warm white with subtle green undertones',
+      },
+      {
         'name': 'Alabaster',
+        'brandName': 'Sherwin-Williams',
         'code': 'SW 7008',
-        'hex': '#F2F0E8',
+        'hex': 'EDEAE0',
+        'rgb': [237, 234, 224],
+        'hsl': [48, 22, 91],
+        'lrv': 83.2,
+        'computedLrv': 83.2,
+        'family': 'Whites',
+        'finish': 'Flat',
+        'collection': 'Greens',
+        'tags': ['white', 'neutral', 'warm'],
+        'description': 'A soft, warm white with slight green undertones',
       },
       {
+        'name': 'Sea Salt',
         'brandName': 'Sherwin-Williams',
-        'name': 'Agreeable Gray',
-        'code': 'SW 7029',
-        'hex': '#D0CDB7',
-      },
-      {
-        'brandName': 'Sherwin-Williams',
-        'name': 'Naval',
-        'code': 'SW 6244',
-        'hex': '#1F2937',
+        'code': 'SW 6204',
+        'hex': 'D1CFBD',
+        'rgb': [209, 207, 189],
+        'hsl': [52, 19, 76],
+        'lrv': 67.8,
+        'computedLrv': 67.8,
+        'family': 'Greens',
+        'finish': 'Flat',
+        'collection': 'Greens',
+        'tags': ['green', 'neutral', 'calming'],
+        'description': 'A soft green with calming, natural undertones',
       },
       // Benjamin Moore samples
       {
-        'brandName': 'Benjamin Moore',
         'name': 'White Dove',
+        'brandName': 'Benjamin Moore',
         'code': 'OC-17',
-        'hex': '#F9F7F4',
+        'hex': 'E6E4DC',
+        'rgb': [230, 228, 220],
+        'hsl': [48, 18, 88],
+        'lrv': 81.4,
+        'computedLrv': 81.4,
+        'family': 'Whites',
+        'finish': 'Flat',
+        'collection': 'Classics',
+        'tags': ['white', 'neutral', 'timeless'],
+        'description': 'A classic white with subtle warmth',
       },
       {
+        'name': 'Simply White',
         'brandName': 'Benjamin Moore',
+        'code': 'OC-117',
+        'hex': 'EFEFE7',
+        'rgb': [239, 239, 231],
+        'hsl': [60, 20, 93],
+        'lrv': 86.1,
+        'computedLrv': 86.1,
+        'family': 'Whites',
+        'finish': 'Flat',
+        'collection': 'Classics',
+        'tags': ['white', 'neutral', 'clean'],
+        'description': 'A clean, crisp white with slight warmth',
+      },
+      {
         'name': 'Revere Pewter',
-        'code': 'HC-172',
-        'hex': '#D1C7B8',
-      },
-      {
         'brandName': 'Benjamin Moore',
-        'name': 'Hale Navy',
-        'code': 'HC-154',
-        'hex': '#2F4F4F',
+        'code': 'HC-172',
+        'hex': 'CBC9C0',
+        'rgb': [203, 201, 192],
+        'hsl': [48, 10, 77],
+        'lrv': 65.2,
+        'computedLrv': 65.2,
+        'family': 'Greys',
+        'finish': 'Flat',
+        'collection': 'Historical',
+        'tags': ['grey', 'neutral', 'sophisticated'],
+        'description': 'A sophisticated grey with warm undertones',
       },
       // Behr samples
       {
-        'brandName': 'Behr',
         'name': 'Ultra Pure White',
-        'code': 'PR-W15',
-        'hex': '#FFFFFF',
+        'brandName': 'Behr',
+        'code': 'PPU18-01',
+        'hex': 'F2F2F2',
+        'rgb': [242, 242, 242],
+        'hsl': [0, 0, 95],
+        'lrv': 88.7,
+        'computedLrv': 88.7,
+        'family': 'Whites',
+        'finish': 'Flat',
+        'collection': 'Premium Plus',
+        'tags': ['white', 'neutral', 'pure'],
+        'description': 'A pure, clean white with excellent coverage',
       },
       {
+        'name': 'Classic French Gray',
         'brandName': 'Behr',
-        'name': 'Perfect Taupe',
-        'code': 'N350-2',
-        'hex': '#C5B49A',
-      },
-      {
-        'brandName': 'Behr',
-        'name': 'Atmospheric',
-        'code': 'PPU25-14',
-        'hex': '#C7D1D0',
+        'code': 'MQ5-26',
+        'hex': 'C4C0B8',
+        'rgb': [196, 192, 184],
+        'hsl': [45, 9, 75],
+        'lrv': 60.1,
+        'computedLrv': 60.1,
+        'family': 'Greys',
+        'finish': 'Flat',
+        'collection': 'Marquee',
+        'tags': ['grey', 'neutral', 'classic'],
+        'description': 'A classic grey with timeless appeal',
       },
     ];
   }
 
-  /// Load and return all paint data from JSON files
-  static Future<List<Paint>> getSamplePaints() async {
+  /// Get all sample paints
+  static Future<List<Paint>> getAllPaints() async {
     final paintData = await _loadPaintData();
-
-    return paintData.asMap().entries.map((entry) {
-      final index = entry.key;
-      final data = entry.value;
-      
-      // Process color values
-      final hex = data['hex'] as String;
-      final rgb = ColorUtils.hexToRgb(hex);
-      final lab = ColorUtils.rgbToLab(rgb[0], rgb[1], rgb[2]);
-      
-      return Paint(
-        id: 'paint_$index',
-        brandId: SlugUtils.brandKey(data['brandName']),
-        brandName: data['brandName'],
-        name: data['name'],
-        code: data['code'],
-        hex: hex,
-        rgb: rgb,
-        lab: lab,
-        lch: ColorUtils.labToLch(lab),
-        collection: null,
-        finish: 'Eggshell',
-        metadata: {
-          'isSample': true,
-        },
-      );
-    }).toList();
+    return paintData.map((data) => Paint.fromJson(data, data['id'] ?? '')).toList();
   }
 
-  /// Get paint data by brand name
-  static Future<List<Paint>> getPaintsByBrand(String brandName) async {
-    final allPaints = await getSamplePaints();
-    return allPaints.where((paint) => paint.brandName == brandName).toList();
+  /// Get all unique brands from sample paints
+  static Future<List<Brand>> getSampleBrands() async {
+    final allPaints = await _loadPaintData();
+    final brandNames = allPaints.map((paint) => paint['brandName'] as String).toSet().toList()..sort();
+    return brandNames.map((name) => Brand(
+      id: name.toLowerCase().replaceAll(' ', '-'),
+      name: name,
+      slug: name.toLowerCase().replaceAll(' ', '-'),
+    )).toList();
+  }
+
+  /// Get paints by brand
+  static Future<List<Map<String, dynamic>>> getPaintsByBrand(String brand) async {
+    final allPaints = await _loadPaintData();
+    return allPaints.where((paint) => paint['brandName'] == brand).toList();
+  }
+
+  /// Get paints by family
+  static Future<List<Map<String, dynamic>>> getPaintsByFamily(String family) async {
+    final allPaints = await _loadPaintData();
+    return allPaints.where((paint) => paint['family'] == family).toList();
   }
 
   /// Search paints by name or code
-  static Future<List<Paint>> searchPaints(String query) async {
-    final allPaints = await getSamplePaints();
-    final lowercaseQuery = query.toLowerCase();
-    
+  static Future<List<Map<String, dynamic>>> searchPaints(String query) async {
+    final allPaints = await _loadPaintData();
+    final lowerQuery = query.toLowerCase();
     return allPaints.where((paint) {
-      return paint.name.toLowerCase().contains(lowercaseQuery) ||
-             paint.code.toLowerCase().contains(lowercaseQuery);
+      final name = paint['name'].toString().toLowerCase();
+      final code = paint['code'].toString().toLowerCase();
+      final brand = paint['brandName'].toString().toLowerCase();
+      return name.contains(lowerQuery) ||
+             code.contains(lowerQuery) ||
+             brand.contains(lowerQuery);
     }).toList();
   }
 
-  static List<Brand> getSampleBrands() {
-    return [
-      Brand(
-        id: SlugUtils.brandKey('Sherwin-Williams'),
-        name: 'Sherwin-Williams',
-        slug: SlugUtils.brandSlug('Sherwin-Williams'),
-        website: 'https://www.sherwin-williams.com',
-      ),
-      Brand(
-        id: SlugUtils.brandKey('Benjamin Moore'),
-        name: 'Benjamin Moore',
-        slug: SlugUtils.brandSlug('Benjamin Moore'),
-        website: 'https://www.benjaminmoore.com',
-      ),
-      Brand(
-        id: SlugUtils.brandKey('Behr'),
-        name: 'Behr',
-        slug: SlugUtils.brandSlug('Behr'),
-        website: 'https://www.behr.com',
-      ),
-    ];
+  /// Get paint by ID
+  static Future<Map<String, dynamic>?> getPaintById(String id) async {
+    final allPaints = await _loadPaintData();
+    try {
+      return allPaints.firstWhere((paint) => paint['id'] == id);
+    } catch (e) {
+      return null;
+    }
   }
 }

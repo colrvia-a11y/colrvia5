@@ -2,15 +2,50 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-  # Exclude vendored/flutter SDK sources and non-app code from analysis
-  - flutter/**
-  - .dart_tool/**
-  - build/**
-  # Common generated files
-  - "**/*.g.dart"
-  - "**/*.freezed.dart"
+    # Exclude Flutter SDK and build artifacts
+    - flutter/**
+    - .dart_tool/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+    # Exclude generated files
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.gr.dart"
+    - "**/*.config.dart"
+    # Exclude Firebase and cloud function files
+    - functions/**
+    - functions-visualizer/**
+  language:
+    strict-casts: false
+    strict-inference: false
+    strict-raw-types: false
+  errors:
+    # Treat these as warnings instead of errors to reduce noise
+    unused_import: warning
+    unused_local_variable: warning
+    unused_field: warning
+    dead_code: warning
 
 linter:
-  # Disable all lints to eliminate the info-level noise for now. We can re-enable
-  # a curated subset later without reintroducing hundreds of infos.
-  rules: []
+  rules:
+    # Keep only critical rules to minimize info noise
+    - avoid_print
+    - prefer_const_constructors
+    
+    # Disable noisy rules that cause many info messages
+    - avoid_relative_lib_imports: false
+    - prefer_relative_imports: false
+    - sort_constructors_first: false
+    - sort_unnamed_constructors_first: false
+    - always_declare_return_types: false
+    - prefer_expression_function_bodies: false
+    - prefer_final_fields: false
+    - prefer_final_locals: false
+    - require_trailing_commas: false
+    - flutter_style_todos: false
+    - use_key_in_widget_constructors: false

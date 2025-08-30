@@ -19,9 +19,9 @@ bool isFirebaseInitialized = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   Debug.info('App', 'main', 'Flutter bindings initialized');
-  
+
   // Initialize Firebase with platform-specific options
   try {
     Debug.info('App', 'main', 'Starting Firebase initialization');
@@ -36,27 +36,30 @@ void main() async {
     isFirebaseInitialized = false;
     Debug.error('App', 'main', 'Firebase initialization error: $e');
   }
-  
+
   // Initialize NetworkGuard and clear session overrides
   NetworkGuard.clearSessionOverrides();
   Debug.info('App', 'main', 'NetworkGuard initialized');
-  
+
   Debug.info('App', 'main', 'Running app');
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
     Debug.build('MyApp', 'build', details: 'Building main app widget');
     return Shortcuts(
       shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK): const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
+            const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK):
+            const ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
       },
       child: Actions(
@@ -70,7 +73,7 @@ class MyApp extends StatelessWidget {
                 useSafeArea: true,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                barrierColor: Colors.black.withOpacity(0.2),
+                barrierColor: Colors.black.withValues(alpha: 0.2),
                 builder: (_) => const MoreMenuSheet(autofocusSearch: true),
               );
             }
@@ -95,12 +98,16 @@ class MyApp extends StatelessWidget {
             '/home': (context) => const HomeScreen(),
             '/login': (context) => const LoginScreen(),
             '/colorStoryDetail': (context) {
-              final storyId = ModalRoute.of(context)!.settings.arguments as String;
-              debugPrint('🐛 Route: NavigatingTo ColorStoryDetailScreen with storyId = $storyId');
+              final storyId =
+                  ModalRoute.of(context)!.settings.arguments as String;
+              debugPrint(
+                  '🐛 Route: NavigatingTo ColorStoryDetailScreen with storyId = $storyId');
               return ColorStoryDetailScreen(storyId: storyId);
             },
             '/visualizer': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+              final args = ModalRoute.of(context)?.settings.arguments
+                      as Map<String, dynamic>? ??
+                  {};
               return VisualizerScreen(
                 storyId: args['storyId'] as String?,
                 initialPalette: args['initialPalette'],
@@ -126,18 +133,19 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
   @override
   void initState() {
     super.initState();
-    Debug.info('AuthCheckScreen', 'initState', 'Auth check screen initializing');
+    Debug.info(
+        'AuthCheckScreen', 'initState', 'Auth check screen initializing');
     _checkAuthState();
     _startDebugTimer();
   }
-  
+
   void _startDebugTimer() {
     // Print debug summary every 10 seconds to track infinite loop patterns
     _debugTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       Debug.summary();
     });
   }
-  
+
   @override
   void dispose() {
     _debugTimer?.cancel();
@@ -147,15 +155,19 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
   void _checkAuthState() {
     // Give users immediate access to the app
     // They can choose to sign in later from settings
-    Debug.postFrameCallback('AuthCheckScreen', '_checkAuthState', details: 'Checking auth state');
+    Debug.postFrameCallback('AuthCheckScreen', '_checkAuthState',
+        details: 'Checking auth state');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Debug.info('AuthCheckScreen', '_checkAuthState', 'PostFrameCallback executing');
+      Debug.info(
+          'AuthCheckScreen', '_checkAuthState', 'PostFrameCallback executing');
       if (FirebaseService.currentUser != null) {
-        Debug.info('AuthCheckScreen', '_checkAuthState', 'User signed in, navigating to home');
+        Debug.info('AuthCheckScreen', '_checkAuthState',
+            'User signed in, navigating to home');
         // User is already signed in, go to home
         Navigator.of(context).pushReplacementNamed('/home');
       } else {
-        Debug.info('AuthCheckScreen', '_checkAuthState', 'User not signed in, navigating to home anyway');
+        Debug.info('AuthCheckScreen', '_checkAuthState',
+            'User not signed in, navigating to home anyway');
         // User not signed in, but allow app access
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -191,9 +203,9 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
             Text(
               'Paint Roller',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
             ),
             const SizedBox(height: 32),
             const CircularProgressIndicator(),

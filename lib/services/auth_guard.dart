@@ -10,16 +10,22 @@ class AuthGuard {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Sign in required'),
-        content: const Text('Please sign in to save Color Stories and continue.'),
+        content:
+            const Text('Please sign in to save Color Stories and continue.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Later')),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sign in')),
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Later')),
+          FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Sign in')),
         ],
       ),
     );
     if (ok == true) {
       // Route to your existing auth screen or settings sign-in section
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     }
   }
 }

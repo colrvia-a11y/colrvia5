@@ -17,10 +17,8 @@ enum HarmonyMode {
   designer,
 }
 
-
 class PaletteGenerator {
   static final math.Random _random = math.Random();
-
 
   // Generate a dynamic-size palette with optional locked colors
   static List<Paint> rollPalette({
@@ -31,28 +29,33 @@ class PaletteGenerator {
     List<List<double>>? slotLrvHints, // NEW: optional [min,max] per slot
   }) {
     if (availablePaints.isEmpty) return [];
-    
+
     final int size = anchors.length;
     final List<Paint?> result = List.filled(size, null, growable: false);
-    
+
     // Copy locked anchors into result
     for (int i = 0; i < size; i++) {
       if (i < anchors.length && anchors[i] != null) {
         result[i] = anchors[i]!;
       }
     }
-    
+
     // Seed paint: first locked or random
     Paint? seedPaint;
     for (final a in anchors) {
-      if (a != null) { seedPaint = a; break; }
+      if (a != null) {
+        seedPaint = a;
+        break;
+      }
     }
     seedPaint ??= availablePaints[_random.nextInt(availablePaints.length)];
-    
+
     // Add randomization factor to ensure different results on subsequent rolls
-    final double randomOffset = _random.nextDouble() * 60 - 30; // ±30 degrees hue variation
-    final double randomLightness = _random.nextDouble() * 20 - 10; // ±10 lightness variation
-    
+    final double randomOffset =
+        _random.nextDouble() * 60 - 30; // ±30 degrees hue variation
+    final double randomLightness =
+        _random.nextDouble() * 20 - 10; // ±10 lightness variation
+
     // Branch Designer mode to specialized generator
     if (mode == HarmonyMode.designer) {
       return _rollDesignerWithScoring(
@@ -63,15 +66,18 @@ class PaletteGenerator {
     }
 
     // Get a base set of 5 targets, then remap to requested size
-    final base5 = _generateHarmonyTargets(seedPaint.lab, mode, randomOffset, randomLightness);
-    List<List<double>> targetLabs = _remapTargets(base5, size); // length == size
+    final base5 = _generateHarmonyTargets(
+        seedPaint.lab, mode, randomOffset, randomLightness);
+    List<List<double>> targetLabs =
+        _remapTargets(base5, size); // length == size
 
     // For all non-Designer modes, randomize the display order so it feels organic.
     if (targetLabs.length > 1) {
-      final order = List<int>.generate(targetLabs.length, (i) => i)..shuffle(_random);
+      final order = List<int>.generate(targetLabs.length, (i) => i)
+        ..shuffle(_random);
       targetLabs = order.map((idx) => targetLabs[idx]).toList(growable: false);
     }
-    
+
     // --- NEW: compute per-slot LRV bands from locked anchors ---
     final List<double?> anchorLrv = List<double?>.filled(size, null);
     for (int i = 0; i < size; i++) {
@@ -111,7 +117,7 @@ class PaletteGenerator {
         if (hint.length == 2) {
           final hMin = hint[0].clamp(0.0, 100.0);
           final hMax = hint[1].clamp(0.0, 100.0);
-          final low  = math.max(minLrv[i], hMin);
+          final low = math.max(minLrv[i], hMin);
           final high = math.min(maxLrv[i], hMax);
           if (low <= high) {
             minLrv[i] = low;
@@ -134,7 +140,9 @@ class PaletteGenerator {
 
       List<Paint> candidates = availablePaints;
       if (diversifyBrands && usedBrands.isNotEmpty) {
-        final unused = availablePaints.where((p) => !usedBrands.contains(p.brandName)).toList();
+        final unused = availablePaints
+            .where((p) => !usedBrands.contains(p.brandName))
+            .toList();
         if (unused.isNotEmpty) candidates = unused;
       }
 
@@ -148,13 +156,15 @@ class PaletteGenerator {
 
         // First, get harmony-near candidates
         final Paint? nearest = ColorUtils.nearestByDeltaEMultipleHueWindow(
-          targetLabs[i], candidates);
+            targetLabs[i], candidates);
 
         // Apply band with uniqueness check
         List<Paint> banded = [];
         if (nearest != null) {
           final l = nearest.computedLrv;
-          if (l >= low && l <= high && !usedKeys.contains(paintIdentity(nearest))) {
+          if (l >= low &&
+              l <= high &&
+              !usedKeys.contains(paintIdentity(nearest))) {
             banded = [nearest];
           }
         }
@@ -163,13 +173,15 @@ class PaletteGenerator {
         if (banded.isEmpty) {
           banded = candidates.where((p) {
             final l = p.computedLrv;
-            return l >= low && l <= high && !usedKeys.contains(paintIdentity(p));
+            return l >= low &&
+                l <= high &&
+                !usedKeys.contains(paintIdentity(p));
           }).toList()
-          ..sort((a, b) {
-            final da = ColorUtils.deltaE2000(targetLabs[i], a.lab);
-            final db = ColorUtils.deltaE2000(targetLabs[i], b.lab);
-            return da.compareTo(db);
-          });
+            ..sort((a, b) {
+              final da = ColorUtils.deltaE2000(targetLabs[i], a.lab);
+              final db = ColorUtils.deltaE2000(targetLabs[i], b.lab);
+              return da.compareTo(db);
+            });
         }
 
         if (banded.isNotEmpty) {
@@ -187,46 +199,52 @@ class PaletteGenerator {
         usedKeys.add(paintIdentity(chosen));
       }
     }
-    
+
     // All non-null by construction, but cast defensively
     return result.whereType<Paint>().toList(growable: false);
   }
 
   // Generate target LAB values based on harmony mode
-  static List<List<double>> _generateHarmonyTargets(List<double> seedLab, HarmonyMode mode, 
+  static List<List<double>> _generateHarmonyTargets(
+      List<double> seedLab, HarmonyMode mode,
       [double randomHueOffset = 0, double randomLightnessOffset = 0]) {
     final List<List<double>> targets = [];
     final seedLch = ColorUtils.labToLch(seedLab);
     final double baseLightness = seedLch[0] + randomLightnessOffset;
     final double baseChroma = seedLch[1];
     final double baseHue = seedLch[2] + randomHueOffset;
-    
+
     switch (mode) {
       case HarmonyMode.neutral:
-        targets.addAll(_generateNeutralTargets(baseLightness, baseChroma, baseHue));
+        targets.addAll(
+            _generateNeutralTargets(baseLightness, baseChroma, baseHue));
         break;
       case HarmonyMode.analogous:
-        targets.addAll(_generateAnalogousTargets(baseLightness, baseChroma, baseHue));
+        targets.addAll(
+            _generateAnalogousTargets(baseLightness, baseChroma, baseHue));
         break;
       case HarmonyMode.complementary:
-        targets.addAll(_generateComplementaryTargets(baseLightness, baseChroma, baseHue));
+        targets.addAll(
+            _generateComplementaryTargets(baseLightness, baseChroma, baseHue));
         break;
       case HarmonyMode.triad:
-        targets.addAll(_generateTriadTargets(baseLightness, baseChroma, baseHue));
+        targets
+            .addAll(_generateTriadTargets(baseLightness, baseChroma, baseHue));
         break;
       case HarmonyMode.designer:
         // Designer mode handled separately in rollPalette() - should not reach here
         assert(false, 'Designer mode should not use _generateHarmonyTargets');
         break;
     }
-    
+
     return targets;
   }
 
   // Generate neutral blend targets
-  static List<List<double>> _generateNeutralTargets(double l, double c, double h) {
+  static List<List<double>> _generateNeutralTargets(
+      double l, double c, double h) {
     final List<List<double>> targets = [];
-    
+
     // Create a range of lightness values with subtle hue shifts
     final List<double> lightnessSteps = [
       math.max(20, l - 30),
@@ -235,68 +253,86 @@ class PaletteGenerator {
       math.min(90, l + 15),
       math.min(95, l + 30),
     ];
-    
+
     for (int i = 0; i < 5; i++) {
       final double targetL = lightnessSteps[i];
-      final double targetC = math.max(5, c * (0.3 + 0.1 * i)); // Reduce chroma for neutrals
+      final double targetC =
+          math.max(5, c * (0.3 + 0.1 * i)); // Reduce chroma for neutrals
       final double targetH = (h + (i - 2) * 10) % 360; // Subtle hue shift
-      
+
       targets.add(_lchToLab(targetL, targetC, targetH));
     }
-    
+
     return targets;
   }
 
   // Generate analogous harmony targets
-  static List<List<double>> _generateAnalogousTargets(double l, double c, double h) {
+  static List<List<double>> _generateAnalogousTargets(
+      double l, double c, double h) {
     final List<List<double>> targets = [];
-    
+
     for (int i = 0; i < 5; i++) {
       final double targetL = l + (i - 2) * 10; // Vary lightness
       final double targetC = c * (0.7 + 0.1 * i); // Slightly vary chroma
       final double targetH = (h + (i - 2) * 30) % 360; // ±60° hue range
-      
-      targets.add(_lchToLab(math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
+
+      targets.add(_lchToLab(
+          math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
     }
-    
+
     return targets;
   }
 
   // Generate complementary harmony targets
-  static List<List<double>> _generateComplementaryTargets(double l, double c, double h) {
+  static List<List<double>> _generateComplementaryTargets(
+      double l, double c, double h) {
     final List<List<double>> targets = [];
     final double complementH = (h + 180) % 360;
-    
+
     // Mix of original and complementary hues
-    final List<double> hues = [h, h, complementH, complementH, (h + complementH) / 2];
-    
+    final List<double> hues = [
+      h,
+      h,
+      complementH,
+      complementH,
+      (h + complementH) / 2
+    ];
+
     for (int i = 0; i < 5; i++) {
       final double targetL = l + (i - 2) * 8;
       final double targetC = c * (0.8 + 0.1 * (i % 2));
       final double targetH = hues[i];
-      
-      targets.add(_lchToLab(math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
+
+      targets.add(_lchToLab(
+          math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
     }
-    
+
     return targets;
   }
 
   // Generate triad harmony targets
-  static List<List<double>> _generateTriadTargets(double l, double c, double h) {
+  static List<List<double>> _generateTriadTargets(
+      double l, double c, double h) {
     final List<List<double>> targets = [];
-    final List<double> hues = [h, (h + 120) % 360, (h + 240) % 360, h, (h + 60) % 360];
-    
+    final List<double> hues = [
+      h,
+      (h + 120) % 360,
+      (h + 240) % 360,
+      h,
+      (h + 60) % 360
+    ];
+
     for (int i = 0; i < 5; i++) {
       final double targetL = l + (i - 2) * 8;
       final double targetC = c * (0.7 + 0.15 * (i % 2));
       final double targetH = hues[i];
-      
-      targets.add(_lchToLab(math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
+
+      targets.add(_lchToLab(
+          math.max(0, math.min(100, targetL)), math.max(0, targetC), targetH));
     }
-    
+
     return targets;
   }
-
 
   // Remap base 5 targets to any size (1-9)
   static List<List<double>> _remapTargets(List<List<double>> base5, int size) {
@@ -323,37 +359,37 @@ class PaletteGenerator {
     return out;
   }
 
-
   // Find paint with slightly higher hue (next hue up)
   static Paint? nudgeLighter(Paint paint, List<Paint> availablePaints) {
     final currentLch = ColorUtils.labToLch(paint.lab);
     final currentHue = currentLch[2];
-    
+
     // Find paints with slightly higher hue (up to +45 degrees)
     final candidates = availablePaints
         .where((p) => p.id != paint.id)
         .map((p) {
           final lch = ColorUtils.labToLch(p.lab);
           final hue = lch[2];
-          
+
           // Calculate hue difference (handling wraparound)
           double hueDiff = hue - currentHue;
           if (hueDiff < 0) hueDiff += 360;
           if (hueDiff > 180) hueDiff -= 360;
-          
+
           return {'paint': p, 'hueDiff': hueDiff, 'lch': lch};
         })
-        .where((data) => data['hueDiff'] as double > 0 && data['hueDiff'] as double <= 45)
+        .where((data) =>
+            data['hueDiff'] as double > 0 && data['hueDiff'] as double <= 45)
         .toList();
-    
+
     if (candidates.isEmpty) return null;
-    
+
     // Sort by closest hue difference, then by lightness similarity
     candidates.sort((a, b) {
       final hueDiffA = (a['hueDiff'] as double).abs();
       final hueDiffB = (b['hueDiff'] as double).abs();
       if (hueDiffA != hueDiffB) return hueDiffA.compareTo(hueDiffB);
-      
+
       // If hue difference is similar, prefer similar lightness
       final lchA = a['lch'] as List<double>;
       final lchB = b['lch'] as List<double>;
@@ -361,7 +397,7 @@ class PaletteGenerator {
       final lightnessDiffB = (lchB[0] - currentLch[0]).abs();
       return lightnessDiffA.compareTo(lightnessDiffB);
     });
-    
+
     return candidates.first['paint'] as Paint;
   }
 
@@ -369,32 +405,33 @@ class PaletteGenerator {
   static Paint? nudgeDarker(Paint paint, List<Paint> availablePaints) {
     final currentLch = ColorUtils.labToLch(paint.lab);
     final currentHue = currentLch[2];
-    
+
     // Find paints with slightly lower hue (down to -45 degrees)
     final candidates = availablePaints
         .where((p) => p.id != paint.id)
         .map((p) {
           final lch = ColorUtils.labToLch(p.lab);
           final hue = lch[2];
-          
+
           // Calculate hue difference (handling wraparound)
           double hueDiff = hue - currentHue;
           if (hueDiff < -180) hueDiff += 360;
           if (hueDiff > 180) hueDiff -= 360;
-          
+
           return {'paint': p, 'hueDiff': hueDiff, 'lch': lch};
         })
-        .where((data) => data['hueDiff'] as double < 0 && data['hueDiff'] as double >= -45)
+        .where((data) =>
+            data['hueDiff'] as double < 0 && data['hueDiff'] as double >= -45)
         .toList();
-    
+
     if (candidates.isEmpty) return null;
-    
+
     // Sort by closest hue difference, then by lightness similarity
     candidates.sort((a, b) {
       final hueDiffA = (a['hueDiff'] as double).abs();
       final hueDiffB = (b['hueDiff'] as double).abs();
       if (hueDiffA != hueDiffB) return hueDiffA.compareTo(hueDiffB);
-      
+
       // If hue difference is similar, prefer similar lightness
       final lchA = a['lch'] as List<double>;
       final lchB = b['lch'] as List<double>;
@@ -402,39 +439,38 @@ class PaletteGenerator {
       final lightnessDiffB = (lchB[0] - currentLch[0]).abs();
       return lightnessDiffA.compareTo(lightnessDiffB);
     });
-    
+
     return candidates.first['paint'] as Paint;
   }
 
   // Swap to different brand with similar color
-  static Paint? swapBrand(Paint paint, List<Paint> availablePaints, {double threshold = 10.0}) {
-    final otherBrandPaints = availablePaints
-        .where((p) => p.brandName != paint.brandName)
-        .toList();
-    
+  static Paint? swapBrand(Paint paint, List<Paint> availablePaints,
+      {double threshold = 10.0}) {
+    final otherBrandPaints =
+        availablePaints.where((p) => p.brandName != paint.brandName).toList();
+
     if (otherBrandPaints.isEmpty) return null;
-    
+
     // Find paints within Delta E threshold
     final similarPaints = otherBrandPaints.where((p) {
       final deltaE = ColorUtils.deltaE2000(paint.lab, p.lab);
       return deltaE <= threshold;
     }).toList();
-    
+
     if (similarPaints.isEmpty) {
       // Return nearest if no close match
       return ColorUtils.nearestByDeltaE(paint.lab, otherBrandPaints);
     }
-    
+
     // Return closest match within threshold
     similarPaints.sort((a, b) {
       final deltaA = ColorUtils.deltaE2000(paint.lab, a.lab);
       final deltaB = ColorUtils.deltaE2000(paint.lab, b.lab);
       return deltaA.compareTo(deltaB);
     });
-    
+
     return similarPaints.first;
   }
-
 
   // Designer-specific generator with scoring heuristics
   static List<Paint> _rollDesignerWithScoring({
@@ -447,11 +483,12 @@ class PaletteGenerator {
 
     // Generate size-based Designer targets (no roles): N evenly spaced values,
     // gentle bias to keep one light anchor and one deep anchor.
-    final seedPaint = anchors.firstWhere((p) => p != null, orElse: () => null) ??
-        availablePaints[_random.nextInt(availablePaints.length)];
+    final seedPaint =
+        anchors.firstWhere((p) => p != null, orElse: () => null) ??
+            availablePaints[_random.nextInt(availablePaints.length)];
     final seedLch = ColorUtils.labToLch(seedPaint.lab);
     final List<List<double>> targetLabs = _designerTargetsForSize(
-      size: size, seedL: seedLch[0], seedC: seedLch[1], seedH: seedLch[2]);
+        size: size, seedL: seedLch[0], seedC: seedLch[1], seedH: seedLch[2]);
 
     // LRV bands per slot from size-based ladder
     final bands = _lrvBandsForSize(size);
@@ -474,18 +511,20 @@ class PaletteGenerator {
       }
       final low = minLrv[i], high = maxLrv[i];
       final nearest = ColorUtils.nearestByDeltaEMultipleHueWindow(
-        targetLabs[i], availablePaints);
-      final band = (nearest != null) ? [nearest].where((p) {
-        final l = p.computedLrv;
-        return l >= low && l <= high;
-      }).toList() : <Paint>[];
+          targetLabs[i], availablePaints);
+      final band = (nearest != null)
+          ? [nearest].where((p) {
+              final l = p.computedLrv;
+              return l >= low && l <= high;
+            }).toList()
+          : <Paint>[];
 
       if (band.isNotEmpty) {
         slotCandidates.add(band);
       } else {
         final sorted = [...availablePaints]..sort((a, b) =>
-          ColorUtils.deltaE2000(targetLabs[i], a.lab)
-            .compareTo(ColorUtils.deltaE2000(targetLabs[i], b.lab)));
+            ColorUtils.deltaE2000(targetLabs[i], a.lab)
+                .compareTo(ColorUtils.deltaE2000(targetLabs[i], b.lab)));
         slotCandidates.add(sorted.take(24).toList());
       }
     }
@@ -499,18 +538,19 @@ class PaletteGenerator {
 
       // 1) Adjacent LRV spacing: target ≥ 6
       for (var i = 1; i < seq.length; i++) {
-        final d = (seq[i-1].computedLrv - seq[i].computedLrv).abs();
+        final d = (seq[i - 1].computedLrv - seq[i].computedLrv).abs();
         s += (d >= 6) ? 5.0 : -(6.0 - d);
       }
 
       // 2) Undertone continuity; allow tension at the end (for accents)
       for (var i = 1; i < seq.length; i++) {
-        final u1 = undertone(seq[i-1].lch[2]), u2 = undertone(seq[i].lch[2]);
+        final u1 = undertone(seq[i - 1].lch[2]), u2 = undertone(seq[i].lch[2]);
         s += (u1 == u2) ? 2.0 : (i >= seq.length - 2 ? 1.0 : -1.5);
       }
 
       // 3) Hue spread on non-accent body (exclude last 1–2)
-      final base = seq.take(seq.length > 2 ? seq.length - 2 : seq.length).toList();
+      final base =
+          seq.take(seq.length > 2 ? seq.length - 2 : seq.length).toList();
       if (base.length >= 2) {
         var minH = 360.0, maxH = 0.0;
         for (final p in base) {
@@ -525,8 +565,10 @@ class PaletteGenerator {
     }
 
     // Seed used identities with any locked paints to prevent duplication.
-    final Set<String> lockedKeys = locked.values.map((p) => paintIdentity(p)).toSet();
-    final Set<String> lockedBrands = locked.values.map((p) => p.brandName).toSet();
+    final Set<String> lockedKeys =
+        locked.values.map((p) => paintIdentity(p)).toSet();
+    final Set<String> lockedBrands =
+        locked.values.map((p) => p.brandName).toSet();
 
     // Beam search with dedup
     const bw = 8;
@@ -551,9 +593,8 @@ class PaletteGenerator {
         final cands = baseCands
             .where((p) => !usedKeys.contains(paintIdentity(p)))
             .toList()
-          ..sort((a, b) => ColorUtils
-                .deltaE2000(targetLabs[slot], a.lab)
-                .compareTo(ColorUtils.deltaE2000(targetLabs[slot], b.lab)));
+          ..sort((a, b) => ColorUtils.deltaE2000(targetLabs[slot], a.lab)
+              .compareTo(ColorUtils.deltaE2000(targetLabs[slot], b.lab)));
         for (final p in cands) {
           // Optional: light brand diversification
           if (diversifyBrands && usedBrands.contains(p.brandName)) continue;
@@ -568,18 +609,21 @@ class PaletteGenerator {
           });
         }
       }
-      nextBeams.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+      nextBeams.sort(
+          (a, b) => (b['score'] as double).compareTo(a['score'] as double));
       beams = nextBeams.take(bw).toList();
       if (beams.isEmpty) break;
     }
 
-    if (beams.isEmpty) return slotCandidates.map((l) => l.first).toList().take(size).toList();
+    if (beams.isEmpty) {
+      return slotCandidates.map((l) => l.first).toList().take(size).toList();
+    }
     final best = beams.first['seq'] as List<Paint>;
     return best.length == size ? best : best.take(size).toList();
   }
 
   // Size-based LRV ladder: top ≈ 92, bottom ≈ 8
-  static List<(double,double)> _lrvBandsForSize(int size) {
+  static List<(double, double)> _lrvBandsForSize(int size) {
     if (size <= 0) return const [];
     if (size == 1) return const [(45, 65)]; // mid band for single color
     const top = 92.0, bottom = 8.0;
@@ -587,17 +631,22 @@ class PaletteGenerator {
     final targets = List<double>.generate(size, (i) => top - i * step);
 
     // Convert to [min,max] bands with tighter ends, wider middle
-    return targets.map<(double,double)>((t) {
+    return targets.map<(double, double)>((t) {
       final tight = t > 80 || t < 20;
       final tol = tight ? 4.0 : 7.0;
-      return ( (t - tol).clamp(0, 100).toDouble(),
-               (t + tol).clamp(0, 100).toDouble() );
+      return (
+        (t - tol).clamp(0, 100).toDouble(),
+        (t + tol).clamp(0, 100).toDouble()
+      );
     }).toList();
   }
 
   // Size-based LAB targets around a seed; spreads hue a bit to avoid "all analogous"
   static List<List<double>> _designerTargetsForSize({
-    required int size, required double seedL, required double seedC, required double seedH,
+    required int size,
+    required double seedL,
+    required double seedC,
+    required double seedH,
   }) {
     if (size <= 0) return const [];
     // Base LRV ladder converted to L* and nudged hue ± to create warm/cool interplay
@@ -622,5 +671,4 @@ class PaletteGenerator {
     final b = C * math.sin(h);
     return [L, a, b];
   }
-
 }

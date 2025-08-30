@@ -15,8 +15,9 @@ class ColorStoryWizardScreen extends StatefulWidget {
   final String projectId;
   final String? paletteId; // Pre-selected palette
   final String? remixStoryId; // Story ID for remix mode
-  
-  const ColorStoryWizardScreen({super.key, required this.projectId, this.paletteId, this.remixStoryId});
+
+  const ColorStoryWizardScreen(
+      {super.key, required this.projectId, this.paletteId, this.remixStoryId});
 
   @override
   State<ColorStoryWizardScreen> createState() => _ColorStoryWizardScreenState();
@@ -24,30 +25,30 @@ class ColorStoryWizardScreen extends StatefulWidget {
 
 class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
   final PageController _pageController = PageController();
-  
+
   // Form data
   String? _selectedPaletteId;
   UserPalette? _selectedPalette;
   String _roomType = 'living';
   String _styleTag = 'modern-farmhouse';
   Map<String, double> _vibeValues = {
-    'calm_energetic': 0.5,      // calm ↔ energetic
-    'warm_cool': 0.5,           // warm ↔ cool  
-    'airy_cozy': 0.5,           // airy ↔ cozy
+    'calm_energetic': 0.5, // calm ↔ energetic
+    'warm_cool': 0.5, // warm ↔ cool
+    'airy_cozy': 0.5, // airy ↔ cozy
   };
   final Set<String> _brandHints = {};
   String _guidanceLevel = 'balanced';
-  
+
   // UI state
   int _currentStep = 0;
   bool _isLoading = false;
   bool _isGenerating = false;
   List<UserPalette> _availablePalettes = [];
-  
+
   // Remix mode
   bool get _isRemixMode => widget.remixStoryId != null;
   model.ColorStory? _originalStory;
-  
+
   // Room types
   final List<Map<String, dynamic>> _roomTypes = [
     {'id': 'living', 'label': 'Living Room', 'icon': Icons.weekend},
@@ -58,16 +59,36 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
     {'id': 'office', 'label': 'Home Office', 'icon': Icons.desk},
     {'id': 'exterior', 'label': 'Exterior', 'icon': Icons.home},
   ];
-  
+
   // Style tags
   final List<Map<String, dynamic>> _styleTags = [
     {'id': 'coastal', 'label': 'Coastal', 'description': 'Breezy and relaxed'},
-    {'id': 'modern-farmhouse', 'label': 'Modern Farmhouse', 'description': 'Rustic meets contemporary'},
-    {'id': 'traditional', 'label': 'Traditional', 'description': 'Timeless and elegant'},
-    {'id': 'contemporary', 'label': 'Contemporary', 'description': 'Clean and current'},
+    {
+      'id': 'modern-farmhouse',
+      'label': 'Modern Farmhouse',
+      'description': 'Rustic meets contemporary'
+    },
+    {
+      'id': 'traditional',
+      'label': 'Traditional',
+      'description': 'Timeless and elegant'
+    },
+    {
+      'id': 'contemporary',
+      'label': 'Contemporary',
+      'description': 'Clean and current'
+    },
     {'id': 'rustic', 'label': 'Rustic', 'description': 'Natural and warm'},
-    {'id': 'minimalist', 'label': 'Minimalist', 'description': 'Simple and uncluttered'},
-    {'id': 'japandi', 'label': 'Japandi', 'description': 'Japanese-Scandinavian fusion'},
+    {
+      'id': 'minimalist',
+      'label': 'Minimalist',
+      'description': 'Simple and uncluttered'
+    },
+    {
+      'id': 'japandi',
+      'label': 'Japandi',
+      'description': 'Japanese-Scandinavian fusion'
+    },
   ];
 
   @override
@@ -75,10 +96,14 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
     super.initState();
     _selectedPaletteId = widget.paletteId;
     _loadData();
-    
+
     // Track wizard open
     AnalyticsService.instance.logEvent('wizard_open', {
-      'source': _isRemixMode ? 'remix' : widget.paletteId != null ? 'palette_detail' : 'explore_fab',
+      'source': _isRemixMode
+          ? 'remix'
+          : widget.paletteId != null
+              ? 'palette_detail'
+              : 'explore_fab',
       'pre_selected_palette': widget.paletteId != null,
       'remix_mode': _isRemixMode,
     });
@@ -86,14 +111,14 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       // Load user palettes
       final userId = FirebaseService.currentUser?.uid;
       if (userId != null) {
         final palettes = await FirebaseService.getUserPalettes(userId);
         setState(() => _availablePalettes = palettes);
-        
+
         // If palette ID provided, find and set it
         if (_selectedPaletteId != null) {
           try {
@@ -113,18 +138,20 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           _selectedPaletteId = palettes.first.id;
         }
       }
-      
+
       // Load original story for remix mode
       if (_isRemixMode && widget.remixStoryId != null) {
         try {
-          _originalStory = await FirebaseService.getColorStory(widget.remixStoryId!);
+          _originalStory =
+              await FirebaseService.getColorStory(widget.remixStoryId!);
           if (_originalStory != null) {
             _prefillFromOriginalStory();
           }
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error loading original story: \$e')),
+              const SnackBar(
+                  content: Text('Error loading original story: \$e')),
             );
           }
         }
@@ -132,7 +159,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: \$e')),
+          const SnackBar(content: Text('Error loading data: \$e')),
         );
       }
     } finally {
@@ -143,9 +170,9 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
   /// Prefill form with original story inputs for remix mode
   void _prefillFromOriginalStory() {
     if (_originalStory == null) return;
-    
+
     final story = _originalStory!;
-    
+
     setState(() {
       // Set room type and style from original story
       if (story.room.isNotEmpty) {
@@ -154,17 +181,17 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
       if (story.style.isNotEmpty) {
         _styleTag = story.style;
       }
-      
+
       // Try to reconstruct vibe values from vibe words
       if (story.vibeWords.isNotEmpty) {
         _reconstructVibeValues(story.vibeWords);
       }
-      
+
       // Note: model.ColorStory doesn't have brandHints or sourcePaletteId
       // so we keep the current palette selection
     });
   }
-  
+
   /// Reconstruct vibe slider values from vibe words
   void _reconstructVibeValues(List<String> vibeWords) {
     // Reset to defaults
@@ -173,7 +200,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
       'warm_cool': 0.5,
       'airy_cozy': 0.5,
     };
-    
+
     // Adjust based on vibe words
     for (final word in vibeWords) {
       switch (word.toLowerCase()) {
@@ -207,13 +234,14 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
 
   Future<void> _generateColorStory() async {
     // 🐛 DEBUG: Enhanced validation with detailed logging
-    print('🐛 Wizard: _generateColorStory called');
-    print('🐛 Wizard: _canGenerate() = ${_canGenerate()}');
-    print('🐛 Wizard: _selectedPalette = $_selectedPalette');
-    print('🐛 Wizard: _selectedPalette?.colors.length = ${_selectedPalette?.colors.length}');
-    print('🐛 Wizard: _roomType = "$_roomType"');
-    print('🐛 Wizard: _styleTag = "$_styleTag"');
-    
+    debugPrint('🐛 Wizard: _generateColorStory called');
+    debugPrint('🐛 Wizard: _canGenerate() = ${_canGenerate()}');
+    debugPrint('🐛 Wizard: _selectedPalette = $_selectedPalette');
+    debugPrint(
+        '🐛 Wizard: _selectedPalette?.colors.length = ${_selectedPalette?.colors.length}');
+    debugPrint('🐛 Wizard: _roomType = "$_roomType"');
+    debugPrint('🐛 Wizard: _styleTag = "$_styleTag"');
+
     // Check authentication before generating
     final user = FirebaseService.currentUser;
     if (user == null) {
@@ -222,7 +250,8 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Sign In Required'),
-          content: const Text('You need to sign in to generate color stories. Your stories will be saved to your account so you can access them later.'),
+          content: const Text(
+              'You need to sign in to generate color stories. Your stories will be saved to your account so you can access them later.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -235,18 +264,19 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           ],
         ),
       );
-      
+
       if (shouldSignIn == true && mounted) {
         // Navigate to settings screen for sign in
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SettingsScreen()),
         );
-        
+
         // Check if user signed in after returning from settings
         if (FirebaseService.currentUser == null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Sign in required to generate color stories')),
+              const SnackBar(
+                  content: Text('Sign in required to generate color stories')),
             );
           }
           return;
@@ -255,55 +285,64 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
         return; // User cancelled
       }
     }
-    
+
     if (!_canGenerate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pick a palette with at least one color first.'),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pick a palette with at least one color first.'),
+          ),
+        );
+      }
       return;
     }
-    
+
     // Extra safety check
     final palette = _selectedPalette;
     if (palette == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No palette selected')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No palette selected')),
+        );
+      }
       return;
     }
-    
+
     if (palette.colors.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selected palette has no colors')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selected palette has no colors')),
+        );
+      }
       return;
     }
-    
+
     // Validate palette colors for null safety
     for (int i = 0; i < palette.colors.length; i++) {
       final color = palette.colors[i];
-      print('🐛 Wizard: Color[$i] - hex: "${color.hex}", name: "${color.name}", brand: "${color.brand}", code: "${color.code}"');
-      
+      debugPrint(
+          '🐛 Wizard: Color[$i] - hex: "${color.hex}", name: "${color.name}", brand: "${color.brand}", code: "${color.code}"');
+
       if (color.hex.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Color ${i + 1} is missing hex value')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Color ${i + 1} is missing hex value')),
+          );
+        }
         return;
       }
     }
-    
+
     setState(() => _isGenerating = true);
-    
+
     try {
       final vibeWords = _getVibeWords();
       final brandHints = _brandHints.toList();
-      
-      print('🐛 Wizard: vibeWords = $vibeWords');
-      print('🐛 Wizard: brandHints = $brandHints');
-      print('🐛 Wizard: About to call AiService.generateColorStory');
-      
+
+      debugPrint('🐛 Wizard: vibeWords = $vibeWords');
+      debugPrint('🐛 Wizard: brandHints = $brandHints');
+      debugPrint('🐛 Wizard: About to call AiService.generateColorStory');
+
       // Track generation start
       AnalyticsService.instance.logEvent('story_generate_start', {
         'palette_id': _selectedPaletteId,
@@ -313,7 +352,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
         'brand_hints': brandHints,
         'guidance_level': _guidanceLevel,
       });
-      
+
       // Use the new simplified AiService API
       final storyId = await AiService.generateColorStory(
         palette: palette,
@@ -322,11 +361,11 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
         vibeWords: vibeWords,
         brandHints: brandHints,
       );
-      
-      print('🐛 Wizard: AiService returned storyId = $storyId');
-      
+
+      debugPrint('🐛 Wizard: AiService returned storyId = $storyId');
+
       if (!mounted) return;
-      
+
       // Update project with story ID
       try {
         // Use constructor projectId (no lookups)
@@ -335,18 +374,20 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
       } catch (e) {
         debugPrint('Failed to update project with story: $e');
       }
-      
-      print('🐛 Wizard: About to navigate to ColorStoryDetailScreen with storyId = $storyId');
-      
+
+      debugPrint(
+          '🐛 Wizard: About to navigate to ColorStoryDetailScreen with storyId = $storyId');
+
       // TEST: Create a public test document to verify rules work
-      print('🐛 Wizard: Testing Firestore rules by creating a public test document');
-      
+      debugPrint(
+          '🐛 Wizard: Testing Firestore rules by creating a public test document');
+
       try {
         final testDocId = 'test_${DateTime.now().millisecondsSinceEpoch}';
         final currentUser = FirebaseService.currentUser;
-        
-        print('🐛 Wizard: Current user for test: ${currentUser?.uid}');
-        
+
+        debugPrint('🐛 Wizard: Current user for test: ${currentUser?.uid}');
+
         // Create a test document with public access
         await FirebaseFirestore.instance
             .collection('colorStories')
@@ -361,107 +402,116 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
-        
-        print('🐛 Wizard: Test document created successfully');
-        
+
+        debugPrint('🐛 Wizard: Test document created successfully');
+
         // Try to read it back
         final testDoc = await FirebaseFirestore.instance
             .collection('colorStories')
             .doc(testDocId)
             .get();
-        
-        print('🐛 Wizard: Test document read result:');
-        print('🐛 Wizard: - Exists: ${testDoc.exists}');
+
+        debugPrint('🐛 Wizard: Test document read result:');
+        debugPrint('🐛 Wizard: - Exists: ${testDoc.exists}');
         if (testDoc.exists) {
           final data = testDoc.data() ?? {};
-          print('🐛 Wizard: - Access: ${data['access']}');
-          print('🐛 Wizard: - OwnerId: ${data['ownerId']}');
-          print('🐛 Wizard: SUCCESS - Firestore rules work for public documents');
+          debugPrint('🐛 Wizard: - Access: ${data['access']}');
+          debugPrint('🐛 Wizard: - OwnerId: ${data['ownerId']}');
+          debugPrint(
+              '🐛 Wizard: SUCCESS - Firestore rules work for public documents');
         }
-        
+
         // Clean up test document
         await FirebaseFirestore.instance
             .collection('colorStories')
             .doc(testDocId)
             .delete();
-        print('🐛 Wizard: Test document cleaned up');
-        
+        debugPrint('🐛 Wizard: Test document cleaned up');
       } catch (e) {
-        print('🐛 Wizard: Test document error: $e');
-        print('🐛 Wizard: This suggests a fundamental Firestore rules or auth issue');
+        debugPrint('🐛 Wizard: Test document error: $e');
+        debugPrint(
+            '🐛 Wizard: This suggests a fundamental Firestore rules or auth issue');
       }
-      
+
       // Now test the cloud function generated document with retry for timing
-      print('🐛 Wizard: Testing cloud function generated document: $storyId');
-      
+      debugPrint(
+          '🐛 Wizard: Testing cloud function generated document: $storyId');
+
       // Try multiple times with increasing delays to account for cloud function timing
       bool documentFound = false;
       for (int attempt = 1; attempt <= 5 && !documentFound; attempt++) {
         try {
           if (attempt > 1) {
             final delay = attempt * 1000; // 1s, 2s, 3s, 4s, 5s
-            print('🐛 Wizard: Waiting ${delay}ms before attempt $attempt');
+            debugPrint('🐛 Wizard: Waiting ${delay}ms before attempt $attempt');
             await Future.delayed(Duration(milliseconds: delay));
           }
-          
+
           final directDoc = await FirebaseFirestore.instance
               .collection('colorStories')
               .doc(storyId)
               .get();
-          
-          print('🐛 Wizard: Cloud function document result (attempt $attempt):');
-          print('🐛 Wizard: - Document exists: ${directDoc.exists}');
-          
+
+          debugPrint(
+              '🐛 Wizard: Cloud function document result (attempt $attempt):');
+          debugPrint('🐛 Wizard: - Document exists: ${directDoc.exists}');
+
           if (directDoc.exists) {
             documentFound = true;
             final data = directDoc.data() ?? {};
-            print('🐛 Wizard: - Document ownerId: ${data['ownerId']}');
-            print('🐛 Wizard: - Document access: ${data['access']}');
-            print('🐛 Wizard: - Current user: ${FirebaseService.currentUser?.uid}');
-            print('🐛 Wizard: - User match: ${data['ownerId'] == FirebaseService.currentUser?.uid}');
-            print('🐛 Wizard: - Document status: ${data['status']}');
-            print('🐛 Wizard: SUCCESS - Document found after $attempt attempts');
+            debugPrint('🐛 Wizard: - Document ownerId: ${data['ownerId']}');
+            debugPrint('🐛 Wizard: - Document access: ${data['access']}');
+            debugPrint(
+                '🐛 Wizard: - Current user: ${FirebaseService.currentUser?.uid}');
+            debugPrint(
+                '🐛 Wizard: - User match: ${data['ownerId'] == FirebaseService.currentUser?.uid}');
+            debugPrint('🐛 Wizard: - Document status: ${data['status']}');
+            debugPrint(
+                '🐛 Wizard: SUCCESS - Document found after $attempt attempts');
             break;
           } else {
-            print('🐛 Wizard: - Document does not exist on attempt $attempt');
+            debugPrint(
+                '🐛 Wizard: - Document does not exist on attempt $attempt');
           }
         } catch (e) {
-          print('🐛 Wizard: Document access error on attempt $attempt: $e');
+          debugPrint(
+              '🐛 Wizard: Document access error on attempt $attempt: $e');
         }
       }
-      
+
       if (!documentFound) {
-        print('🐛 Wizard: CRITICAL: Cloud function document never appeared after 5 attempts');
-        print('🐛 Wizard: This indicates the cloud function is not actually creating the document');
+        debugPrint(
+            '🐛 Wizard: CRITICAL: Cloud function document never appeared after 5 attempts');
+        debugPrint(
+            '🐛 Wizard: This indicates the cloud function is not actually creating the document');
       }
-      
+
       if (!mounted) return;
-      
+
       // Navigate to the color story detail screen
       Navigator.pushReplacementNamed(
         context,
         '/colorStoryDetail',
         arguments: storyId,
       );
-      
-      print('🐛 Wizard: Navigation call completed');
-      
+
+      debugPrint('🐛 Wizard: Navigation call completed');
     } catch (e) {
       if (mounted) {
         String errorMessage;
-        if (e.toString().contains('unauthenticated') || 
-            e.toString().contains('Authentication') || 
+        if (e.toString().contains('unauthenticated') ||
+            e.toString().contains('Authentication') ||
             e.toString().contains('sign in')) {
           errorMessage = 'Please sign in to generate color stories';
         } else if (e.toString().contains('Palette not found')) {
           errorMessage = 'Selected palette not found';
-        } else if (e.toString().contains('network') || 
-                   e.toString().contains('connection')) {
+        } else if (e.toString().contains('network') ||
+            e.toString().contains('connection')) {
           errorMessage = 'Check your internet connection and try again';
         } else {
           errorMessage = e.toString().replaceAll('Exception: ', '');
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -472,7 +522,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             ),
           ),
         );
-        
+
         // Track error with more details
         AnalyticsService.instance.logEvent('story_generate_error', {
           'error': e.toString(),
@@ -488,31 +538,31 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
 
   List<String> _getVibeWords() {
     final words = <String>[];
-    
+
     // Convert slider values to descriptive words
     if (_vibeValues['calm_energetic']! < 0.3) {
       words.add('calm');
     } else if (_vibeValues['calm_energetic']! > 0.7) {
       words.add('energetic');
     }
-    
+
     if (_vibeValues['warm_cool']! < 0.3) {
       words.add('cool');
     } else if (_vibeValues['warm_cool']! > 0.7) {
       words.add('warm');
     }
-    
+
     if (_vibeValues['airy_cozy']! < 0.3) {
       words.add('airy');
     } else if (_vibeValues['airy_cozy']! > 0.7) {
       words.add('cozy');
     }
-    
+
     // Add some defaults if no strong preferences
     if (words.isEmpty) {
       words.addAll(['balanced', 'harmonious']);
     }
-    
+
     return words;
   }
 
@@ -539,11 +589,11 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
   }
 
   bool _canGenerate() {
-    return _selectedPalette != null && 
-           _selectedPalette!.colors.isNotEmpty &&
-           _roomType.isNotEmpty && 
-           _styleTag.isNotEmpty && 
-           !_isGenerating;
+    return _selectedPalette != null &&
+        _selectedPalette!.colors.isNotEmpty &&
+        _roomType.isNotEmpty &&
+        _styleTag.isNotEmpty &&
+        !_isGenerating;
   }
 
   @override
@@ -573,8 +623,14 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                          Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3),
+                          Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withValues(alpha: 0.3),
+                          Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer
+                              .withValues(alpha: 0.3),
                         ],
                       ),
                     ),
@@ -589,29 +645,33 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
                         Expanded(
                           child: Text(
                             'Remix keeps your palette—tweak the vibe.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                
+
                 // Progress indicator
                 LinearProgressIndicator(
                   value: (_currentStep + 1) / 4,
-                  backgroundColor: Colors.grey.withOpacity( 0.2),
+                  backgroundColor: Colors.grey.withValues(alpha: 0.2),
                 ),
-                
+
                 Expanded(
                   child: PageView(
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildPaletteSelectionStep(),
-                      _buildRoomAndStyleStep(), 
+                      _buildRoomAndStyleStep(),
                       _buildVibeStep(),
                       _buildConstraintsStep(),
                     ],
@@ -635,13 +695,12 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _isRemixMode 
-              ? 'This palette will be used for the remix (read-only)'
-              : 'Select the color palette you want to turn into a story',
+            _isRemixMode
+                ? 'This palette will be used for the remix (read-only)'
+                : 'Select the color palette you want to turn into a story',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-          
           if (_availablePalettes.isEmpty)
             const Center(
               child: Column(
@@ -661,73 +720,78 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
                 itemBuilder: (context, index) {
                   final palette = _availablePalettes[index];
                   final isSelected = palette.id == _selectedPaletteId;
-                  
+
                   return Opacity(
                     opacity: (_isRemixMode && !isSelected) ? 0.4 : 1.0,
                     child: Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
-                        onTap: _isRemixMode ? null : () {
-                          setState(() {
-                            _selectedPaletteId = palette.id;
-                            _selectedPalette = palette;
-                          });
-                        },
+                        onTap: _isRemixMode
+                            ? null
+                            : () {
+                                setState(() {
+                                  _selectedPaletteId = palette.id;
+                                  _selectedPalette = palette;
+                                });
+                              },
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            // Color preview
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: palette.colors.take(5).map((color) {
-                                return Container(
-                                  width: 24,
-                                  height: 24,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: ColorUtils.hexToColor(color.hex),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: Colors.grey.withOpacity( 0.3),
-                                      width: 0.5,
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              // Color preview
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: palette.colors.take(5).map((color) {
+                                  return Container(
+                                    width: 24,
+                                    height: 24,
+                                    margin: const EdgeInsets.only(right: 4),
+                                    decoration: BoxDecoration(
+                                      color: ColorUtils.hexToColor(color.hex),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: Colors.grey.withValues(alpha: 0.3),
+                                        width: 0.5,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(width: 16),
-                            
-                            // Palette info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    palette.name,
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  Text(
-                                    '\${palette.colors.length} colors',
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ],
+                                  );
+                                }).toList(),
                               ),
-                            ),
-                            
-                            // Selection indicator
-                            if (isSelected)
-                              Icon(
-                                Icons.check_circle,
-                                color: Theme.of(context).colorScheme.primary,
+                              const SizedBox(width: 16),
+
+                              // Palette info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      palette.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    Text(
+                                      '\${palette.colors.length} colors',
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
                               ),
-                          ],
+
+                              // Selection indicator
+                              if (isSelected)
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
+                  );
                 },
               ),
             ),
@@ -752,7 +816,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-          
+
           // Room Type
           Text(
             'Room Type',
@@ -782,9 +846,9 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               );
             }).toList(),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Style
           Text(
             'Style',
@@ -797,15 +861,16 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               itemBuilder: (context, index) {
                 final style = _styleTags[index];
                 final isSelected = _styleTag == style['id'];
-                
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     selected: isSelected,
                     title: Text(style['label']),
                     subtitle: Text(style['description']),
-                    trailing: isSelected 
-                        ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                    trailing: isSelected
+                        ? Icon(Icons.check,
+                            color: Theme.of(context).colorScheme.primary)
                         : null,
                     onTap: () => setState(() => _styleTag = style['id']),
                   ),
@@ -834,19 +899,19 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 32),
-          
+
           // Vibe sliders
           _buildVibeSlider(
             'Energy Level',
             'Calm',
-            'Energetic', 
+            'Energetic',
             'calm_energetic',
             Icons.self_improvement,
             Icons.flash_on,
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           _buildVibeSlider(
             'Temperature',
             'Cool',
@@ -855,9 +920,9 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             Icons.ac_unit,
             Icons.whatshot,
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           _buildVibeSlider(
             'Atmosphere',
             'Airy',
@@ -866,12 +931,11 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             Icons.air,
             Icons.home,
           ),
-          
+
           const Spacer(),
-          
+
           // Live preview card
-          if (_selectedPalette != null)
-            _buildPreviewCard(),
+          if (_selectedPalette != null) _buildPreviewCard(),
         ],
       ),
     );
@@ -880,7 +944,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
   Widget _buildVibeSlider(
     String title,
     String leftLabel,
-    String rightLabel, 
+    String rightLabel,
     String key,
     IconData leftIcon,
     IconData rightIcon,
@@ -929,7 +993,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-          
+
           // Brand hints
           Text(
             'Preferred Brands (optional)',
@@ -939,7 +1003,8 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['Sherwin-Williams', 'Benjamin Moore', 'Behr'].map((brand) {
+            children:
+                ['Sherwin-Williams', 'Benjamin Moore', 'Behr'].map((brand) {
               final isSelected = _brandHints.contains(brand);
               return FilterChip(
                 selected: isSelected,
@@ -956,46 +1021,48 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               );
             }).toList(),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Guidance level
           Text(
             'Detail Level',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          Column(
-            children: [
-              RadioListTile<String>(
-                title: const Text('Minimal'),
-                subtitle: const Text('Essential guidance only'),
-                value: 'minimal',
-                groupValue: _guidanceLevel,
-                onChanged: (value) => setState(() => _guidanceLevel = value!),
-              ),
-              RadioListTile<String>(
-                title: const Text('Balanced'),
-                subtitle: const Text('Good mix of inspiration and practical tips'),
-                value: 'balanced',
-                groupValue: _guidanceLevel,
-                onChanged: (value) => setState(() => _guidanceLevel = value!),
-              ),
-              RadioListTile<String>(
-                title: const Text('Detailed'),
-                subtitle: const Text('Comprehensive room design guide'),
-                value: 'detailed',
-                groupValue: _guidanceLevel,
-                onChanged: (value) => setState(() => _guidanceLevel = value!),
-              ),
-            ],
+          RadioGroup<String>(
+            onChanged: (value) => setState(() => _guidanceLevel = value!),
+            child: const Column(
+              children: [
+                ListTile(
+                  title: Text('Minimal'),
+                  subtitle: Text('Essential guidance only'),
+                  leading: Radio<String>(
+                    value: 'minimal',
+                  ),
+                ),
+                ListTile(
+                  title: Text('Balanced'),
+                  subtitle: Text('Good mix of inspiration and practical tips'),
+                  leading: Radio<String>(
+                    value: 'balanced',
+                  ),
+                ),
+                ListTile(
+                  title: Text('Detailed'),
+                  subtitle: Text('Comprehensive room design guide'),
+                  leading: Radio<String>(
+                    value: 'detailed',
+                  ),
+                ),
+              ],
+            ),
           ),
-          
+
           const Spacer(),
-          
+
           // Generate button
-          if (_selectedPalette != null)
-            _buildPreviewCard(),
+          if (_selectedPalette != null) _buildPreviewCard(),
         ],
       ),
     );
@@ -1003,11 +1070,11 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
 
   Widget _buildPreviewCard() {
     if (_selectedPalette == null) return const SizedBox();
-    
+
     final colors = _selectedPalette!.colors;
     final lightestColor = colors.first.hex;
     final darkestColor = colors.last.hex;
-    
+
     return Container(
       height: 120,
       margin: const EdgeInsets.symmetric(vertical: 16),
@@ -1016,8 +1083,8 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            ColorUtils.hexToColor(lightestColor).withOpacity( 0.8),
-            ColorUtils.hexToColor(darkestColor).withOpacity( 0.8),
+            ColorUtils.hexToColor(lightestColor).withValues(alpha: 0.8),
+            ColorUtils.hexToColor(darkestColor).withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
@@ -1043,7 +1110,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               }).toList(),
             ),
           ),
-          
+
           // Live preview text
           Positioned(
             bottom: 16,
@@ -1053,9 +1120,9 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   '\${_selectedPalette!.name} Story',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1084,7 +1151,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity( 0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -1097,9 +1164,7 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
               onPressed: _previousStep,
               child: const Text('Back'),
             ),
-          
           const Spacer(),
-          
           if (_currentStep < 3)
             FilledButton(
               onPressed: _canGenerate() ? _nextStep : null,

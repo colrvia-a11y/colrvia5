@@ -55,7 +55,7 @@ class _GradientFallbackHeroState extends State<GradientFallbackHero>
   @override
   void didUpdateWidget(GradientFallbackHero oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Check if hero image URL changed and trigger fade if needed
     if (oldWidget.heroImageUrl != widget.heroImageUrl) {
       final hasNewHeroImage = widget.heroImageUrl?.isNotEmpty == true;
@@ -79,7 +79,8 @@ class _GradientFallbackHeroState extends State<GradientFallbackHero>
     try {
       final dataUri = widget.fallbackSvgDataUri;
       if (dataUri.startsWith('data:image/svg+xml;base64,')) {
-        final base64Data = dataUri.substring('data:image/svg+xml;base64,'.length);
+        final base64Data =
+            dataUri.substring('data:image/svg+xml;base64,'.length);
         svgContent = utf8.decode(base64Decode(base64Data));
       }
     } catch (e) {
@@ -140,7 +141,7 @@ class _GradientFallbackHeroState extends State<GradientFallbackHero>
   @override
   Widget build(BuildContext context) {
     final hasHeroImage = widget.heroImageUrl?.isNotEmpty == true;
-    
+
     return ClipRRect(
       borderRadius: widget.borderRadius ?? BorderRadius.zero,
       child: SizedBox(
@@ -150,7 +151,7 @@ class _GradientFallbackHeroState extends State<GradientFallbackHero>
           children: [
             // Always show fallback first (instant render)
             _buildFallbackHero(),
-            
+
             // Fade in the hero image when available
             if (hasHeroImage)
               FadeTransition(

@@ -43,7 +43,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
     authDomain: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebaseapp.com',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
 
@@ -52,7 +53,8 @@ class DefaultFirebaseOptions {
     appId: '1:596436988958:android:e5a7c74a7c5b7a9e6a0f',
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
 
@@ -61,7 +63,8 @@ class DefaultFirebaseOptions {
     appId: '1:596436988958:ios:c8a2d9f5b4e3a6c19e6a0f',
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
     iosBundleId: 'com.example.colorCanvas',
   );
@@ -71,7 +74,8 @@ class DefaultFirebaseOptions {
     appId: '1:596436988958:ios:c8a2d9f5b4e3a6c19e6a0f',
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
     iosBundleId: 'com.example.colorCanvas',
   );
@@ -82,7 +86,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
     authDomain: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebaseapp.com',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
 
@@ -92,8 +97,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
     authDomain: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebaseapp.com',
-    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL:
+        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
-
 }

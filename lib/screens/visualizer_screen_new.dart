@@ -2,7 +2,6 @@
 // Revolutionary Gemini 2.5 Flash integration with photorealistic space transformation
 // Award-winning UI/UX design optimized for 2030
 
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,39 +22,38 @@ class VisualizerScreen extends StatefulWidget {
   State<VisualizerScreen> createState() => _VisualizerScreenState();
 }
 
-class _VisualizerScreenState extends State<VisualizerScreen> 
+class _VisualizerScreenState extends State<VisualizerScreen>
     with TickerProviderStateMixin {
-  
   // 🚀 AWARD-WINNING ANIMATION SYSTEM
   late AnimationController _masterController;
   late AnimationController _breathingController;
   late AnimationController _progressController;
   late AnimationController _resultsController;
-  
+
   late Animation<double> _fadeIn;
   late Animation<double> _slideUp;
   late Animation<double> _breathe;
   late Animation<double> _progressAnim;
   late Animation<Color?> _accentGlow;
-  
+
   // 🎯 CORE STATE MANAGEMENT
   final PageController _pageController = PageController();
-  
+
   // 📸 IMAGE & AI STATE
   Uint8List? _originalImage;
   ImageAnalysisResult? _analysisResult;
   List<GeneratedVariant> _variants = [];
   int _selectedVariantIndex = 0;
-  
+
   // 🎨 COLOR & SURFACE STATE
-  Map<SurfaceType, String> _selectedColors = {};
+  final Map<SurfaceType, String> _selectedColors = {};
   UserPalette? _activePalette;
   List<String> _recentColors = [];
-  
+
   // 🔧 PROCESSING STATE
   bool _isAnalyzing = false;
   String _currentStep = '';
-  
+
   // 🎪 UI STATE
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -72,47 +70,52 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
-    
+
     // Breathing animation for waiting states
     _breathingController = AnimationController(
       duration: const Duration(milliseconds: 3000),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     // Progress animation
     _progressController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     // Results entrance
     _resultsController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     // Animation curves
     _fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _masterController, curve: const Interval(0.0, 0.6, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _masterController,
+          curve: const Interval(0.0, 0.6, curve: Curves.easeOut)),
     );
-    
+
     _slideUp = Tween<double>(begin: 100.0, end: 0.0).animate(
-      CurvedAnimation(parent: _masterController, curve: const Interval(0.2, 0.8, curve: Curves.easeOutBack)),
+      CurvedAnimation(
+          parent: _masterController,
+          curve: const Interval(0.2, 0.8, curve: Curves.easeOutBack)),
     );
-    
+
     _breathe = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
     );
-    
+
     _progressAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
     );
-    
+
     _accentGlow = ColorTween(
       begin: const Color(0xFF6C5CE7),
       end: const Color(0xFFA29BFE),
-    ).animate(CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut));
-    
+    ).animate(
+        CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut));
+
     _masterController.forward();
   }
 
@@ -124,8 +127,18 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   Future<void> _loadRecentColors() async {
     // Load from local storage in production
     _recentColors = [
-      '#FF6B35', '#F7931E', '#FFD23F', '#06FFA5', '#118AB2', '#073B4C',
-      '#E74C3C', '#9B59B6', '#3498DB', '#1ABC9C', '#F39C12', '#2ECC71'
+      '#FF6B35',
+      '#F7931E',
+      '#FFD23F',
+      '#06FFA5',
+      '#118AB2',
+      '#073B4C',
+      '#E74C3C',
+      '#9B59B6',
+      '#3498DB',
+      '#1ABC9C',
+      '#F39C12',
+      '#2ECC71'
     ];
   }
 
@@ -159,11 +172,12 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           ),
-          child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+          child: const Icon(Icons.arrow_back_ios_new,
+              color: Colors.white, size: 18),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -182,9 +196,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: const Icon(Icons.tune, color: Colors.white, size: 18),
           ),
@@ -228,7 +242,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Column(
         children: [
           const SizedBox(height: 120),
-          
+
           // Hero Animation
           AnimatedBuilder(
             animation: _breathingController,
@@ -243,7 +257,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     gradient: RadialGradient(
                       colors: [
                         _accentGlow.value ?? const Color(0xFF6C5CE7),
-                        _accentGlow.value?.withOpacity(0.3) ?? const Color(0xFF6C5CE7).withOpacity(0.3),
+                        _accentGlow.value?.withValues(alpha: 0.3) ??
+                            const Color(0xFF6C5CE7).withValues(alpha: 0.3),
                         Colors.transparent,
                       ],
                     ),
@@ -252,8 +267,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     margin: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
-                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                      color: Colors.white.withValues(alpha: 0.1),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2), width: 2),
                     ),
                     child: const Icon(
                       Icons.auto_awesome,
@@ -265,9 +281,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               );
             },
           ),
-          
+
           const SizedBox(height: 40),
-          
+
           // Title
           ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
@@ -285,26 +301,26 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           Text(
             'Upload a photo or let AI create your dream space.\nSee any color palette in stunning realism.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               height: 1.5,
             ),
           ),
-          
+
           const SizedBox(height: 60),
-          
+
           // Action Buttons
           _buildWelcomeActions(),
-          
+
           const SizedBox(height: 40),
-          
+
           // Features Preview
           _buildFeaturePreview(),
         ],
@@ -325,9 +341,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Generate Mockup Button
         _buildPrimaryButton(
           icon: Icons.auto_awesome,
@@ -359,7 +375,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: gradient.colors.first.withOpacity(0.3),
+              color: gradient.colors.first.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -370,7 +386,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
@@ -391,7 +407,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -407,18 +423,34 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Widget _buildFeaturePreview() {
     final features = [
-      {'icon': Icons.palette, 'title': 'Smart Colors', 'desc': 'AI understands your style'},
-      {'icon': Icons.view_in_ar, 'title': 'Realistic Results', 'desc': 'Photorealistic transformations'},
-      {'icon': Icons.compare, 'title': 'Compare Options', 'desc': 'See multiple variations'},
-      {'icon': Icons.save, 'title': 'Save & Share', 'desc': 'Keep your favorites'},
+      {
+        'icon': Icons.palette,
+        'title': 'Smart Colors',
+        'desc': 'AI understands your style'
+      },
+      {
+        'icon': Icons.view_in_ar,
+        'title': 'Realistic Results',
+        'desc': 'Photorealistic transformations'
+      },
+      {
+        'icon': Icons.compare,
+        'title': 'Compare Options',
+        'desc': 'See multiple variations'
+      },
+      {
+        'icon': Icons.save,
+        'title': 'Save & Share',
+        'desc': 'Keep your favorites'
+      },
     ];
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,44 +458,45 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           Text(
             'Powered by AI',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 16),
-          ...features.map((feature) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Icon(feature['icon'] as IconData, 
-                     color: const Color(0xFF6C5CE7), size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        feature['title'] as String,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+          ...features
+              .map((feature) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(feature['icon'] as IconData,
+                            color: const Color(0xFF6C5CE7), size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                feature['title'] as String,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                feature['desc'] as String,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Text(
-                        feature['desc'] as String,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          )).toList(),
+                      ],
+                    ),
+                  )),
         ],
       ),
     );
@@ -476,14 +509,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Column(
         children: [
           const SizedBox(height: 100),
-          
+
           // Upload Area
           Expanded(
-            child: _originalImage == null ? _buildUploadArea() : _buildImagePreview(),
+            child: _originalImage == null
+                ? _buildUploadArea()
+                : _buildImagePreview(),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action Buttons
           _buildUploadActions(),
         ],
@@ -497,10 +532,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             width: 2,
             style: BorderStyle.solid,
           ),
@@ -519,7 +554,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFF6C5CE7).withOpacity(0.2),
+                          const Color(0xFF6C5CE7).withValues(alpha: 0.2),
                           Colors.transparent,
                         ],
                       ),
@@ -546,7 +581,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             Text(
               'Upload any interior or exterior space photo',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 16,
               ),
             ),
@@ -564,11 +599,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       'Include full walls when possible',
       'Avoid blurry or dark photos',
     ];
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -576,30 +611,31 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           Text(
             'Tips for best results:',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          ...tips.map((tip) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle, 
-                     color: Color(0xFF00B894), size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  tip,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          )).toList(),
+          ...tips
+              .map((tip) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle,
+                            color: Color(0xFF00B894), size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          tip,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
         ],
       ),
     );
@@ -612,7 +648,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -628,7 +664,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               height: double.infinity,
               fit: BoxFit.cover,
             ),
-            
+
             // Overlay controls
             Positioned(
               top: 16,
@@ -647,7 +683,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 ],
               ),
             ),
-            
+
             // Analysis badge
             if (_analysisResult != null)
               Positioned(
@@ -661,13 +697,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     );
   }
 
-  Widget _buildOverlayButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildOverlayButton(
+      {required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
+          color: Colors.black.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: Colors.white, size: 20),
@@ -677,7 +714,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Widget _buildAnalysisBadge() {
     if (_analysisResult == null) return const SizedBox();
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -716,7 +753,6 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           const SizedBox(height: 12),
         ],
-        
         _buildSecondaryButton(
           title: 'Create Mockup Instead',
           onTap: _generateMockup,
@@ -743,7 +779,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -762,7 +798,6 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               )
             else
               Icon(icon, color: Colors.white, size: 24),
-            
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -779,7 +814,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -792,16 +827,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     );
   }
 
-  Widget _buildSecondaryButton({required String title, required VoidCallback onTap}) {
+  Widget _buildSecondaryButton(
+      {required String title, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         ),
         child: Text(
           title,
@@ -823,7 +859,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Column(
         children: [
           const SizedBox(height: 100),
-          
+
           // Analysis Animation
           Expanded(
             child: Column(
@@ -837,7 +873,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ],
             ),
           ),
-          
+
           if (_analysisResult != null) _buildAnalysisActions(),
         ],
       ),
@@ -857,8 +893,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFF6C5CE7).withOpacity(0.3),
-                  const Color(0xFF6C5CE7).withOpacity(0.1),
+                  const Color(0xFF6C5CE7).withValues(alpha: 0.3),
+                  const Color(0xFF6C5CE7).withValues(alpha: 0.1),
                   Colors.transparent,
                 ],
               ),
@@ -867,8 +903,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               margin: const EdgeInsets.all(40),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                color: Colors.white.withValues(alpha: 0.1),
+                border:
+                    Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
               ),
               child: const Icon(
                 Icons.psychology,
@@ -895,16 +932,15 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          _isAnalyzing 
-            ? 'AI is understanding your room layout and identifying paintable surfaces'
-            : 'Ready to apply colors to your space',
+          _isAnalyzing
+              ? 'AI is understanding your room layout and identifying paintable surfaces'
+              : 'Ready to apply colors to your space',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 16,
           ),
         ),
-        
         if (_isAnalyzing) ...[
           const SizedBox(height: 24),
           AnimatedBuilder(
@@ -914,7 +950,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 width: 200,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
                 child: FractionallySizedBox(
@@ -939,14 +975,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Widget _buildSurfaceSelection() {
     if (_analysisResult == null) return const SizedBox();
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -968,16 +1004,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               return GestureDetector(
                 onTap: () => _selectSurface(surface),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? const Color(0xFF6C5CE7) 
-                        : Colors.white.withOpacity(0.1),
+                    color: isSelected
+                        ? const Color(0xFF6C5CE7)
+                        : Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected 
-                          ? const Color(0xFF6C5CE7) 
-                          : Colors.white.withOpacity(0.2),
+                      color: isSelected
+                          ? const Color(0xFF6C5CE7)
+                          : Colors.white.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -1028,7 +1065,6 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Column(
         children: [
           const SizedBox(height: 100),
-          
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1098,12 +1134,12 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ),
         const SizedBox(height: 12),
         Text(
-          _currentStep.isEmpty 
-            ? 'AI is transforming your space with photorealistic precision'
-            : _currentStep,
+          _currentStep.isEmpty
+              ? 'AI is transforming your space with photorealistic precision'
+              : _currentStep,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 16,
           ),
         ),
@@ -1121,7 +1157,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               width: 250,
               height: 6,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(3),
               ),
               child: FractionallySizedBox(
@@ -1130,7 +1166,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE), Color(0xFF00B894)],
+                      colors: [
+                        Color(0xFF6C5CE7),
+                        Color(0xFFA29BFE),
+                        Color(0xFF00B894)
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(3),
                   ),
@@ -1146,7 +1186,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             return Text(
               '${(_progressAnim.value * 100).toInt()}%',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1162,7 +1202,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return Column(
       children: [
         const SizedBox(height: 100),
-        
+
         // Results Header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1181,14 +1221,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ],
           ),
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Results Content
         Expanded(
           child: _buildResultsContent(),
         ),
-        
+
         // Action Bar
         _buildResultsActions(),
       ],
@@ -1199,7 +1239,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -1238,7 +1278,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ),
       );
     }
-    
+
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1255,22 +1295,24 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   Widget _buildResultCard(int index) {
     final variant = _variants[index];
     final isSelected = _selectedVariantIndex == index;
-    
+
     return GestureDetector(
       onTap: () => setState(() => _selectedVariantIndex = index),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: isSelected 
+          border: isSelected
               ? Border.all(color: const Color(0xFF6C5CE7), width: 3)
-              : Border.all(color: Colors.white.withOpacity(0.2)),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: const Color(0xFF6C5CE7).withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ] : null,
+              : Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -1282,7 +1324,6 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 height: double.infinity,
                 fit: BoxFit.cover,
               ),
-              
               if (isSelected)
                 Positioned(
                   top: 8,
@@ -1293,10 +1334,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       color: Color(0xFF6C5CE7),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check, color: Colors.white, size: 16),
+                    child:
+                        const Icon(Icons.check, color: Colors.white, size: 16),
                   ),
                 ),
-              
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -1308,7 +1349,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withValues(alpha: 0.8),
                         Colors.transparent,
                       ],
                     ),
@@ -1334,9 +1375,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1)),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
       ),
       child: Row(
@@ -1376,45 +1417,46 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
+    final file =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
     if (file == null) return;
-    
+
     final bytes = await file.readAsBytes();
     setState(() => _originalImage = bytes);
   }
 
   Future<void> _analyzeImage() async {
     if (_originalImage == null) return;
-    
+
     setState(() => _isAnalyzing = true);
     _navigateToMode(VisualizerMode.analyze);
-    
+
     try {
       _progressController.forward();
-      
+
       // Simulate analysis steps
       await Future.delayed(const Duration(milliseconds: 500));
       setState(() => _currentStep = 'Identifying room type...');
-      
+
       await Future.delayed(const Duration(milliseconds: 800));
       setState(() => _currentStep = 'Detecting surfaces...');
-      
+
       await Future.delayed(const Duration(milliseconds: 600));
       setState(() => _currentStep = 'Analyzing lighting...');
-      
+
       // Actual AI analysis
-      _analysisResult = await SurfaceDetectionService.analyzeImage(_originalImage!);
-      
+      _analysisResult =
+          await SurfaceDetectionService.analyzeImage(_originalImage!);
+
       // Pre-select walls by default
       if (_analysisResult!.availableSurfaces.contains(SurfaceType.walls)) {
         _selectedColors[SurfaceType.walls] = _getDefaultColor();
       }
-      
+
       setState(() {
         _isAnalyzing = false;
         _currentStep = '';
       });
-      
     } catch (e) {
       setState(() => _isAnalyzing = false);
       _showError('Failed to analyze image. Please try again.');
@@ -1443,42 +1485,42 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _showError('Please select at least one surface to paint.');
       return;
     }
-    
+
     _navigateToMode(VisualizerMode.generate);
-    
+
     try {
       _progressController.reset();
       _progressController.forward();
-      
+
       // Generate multiple variants
       final variants = <GeneratedVariant>[];
-      
+
       for (int i = 0; i < _selectedColors.length; i++) {
         await Future.delayed(const Duration(milliseconds: 800));
         setState(() => _currentStep = 'Rendering variant ${i + 1}...');
-        
+
         final imageData = await GeminiAIService.transformSpace(
           originalImage: _originalImage!,
           spaceType: _analysisResult!.spaceType.toString().split('.').last,
-          surfaceColors: _selectedColors.map((k, v) => MapEntry(k.toString().split('.').last, v)),
+          surfaceColors: _selectedColors
+              .map((k, v) => MapEntry(k.toString().split('.').last, v)),
           style: _analysisResult!.style,
         );
-        
+
         variants.add(GeneratedVariant(
           imageData: imageData,
           colors: Map.from(_selectedColors),
           description: 'Variant ${i + 1}',
         ));
       }
-      
+
       setState(() {
         _variants = variants;
         _currentStep = '';
       });
-      
+
       _navigateToMode(VisualizerMode.results);
       _resultsController.forward();
-      
     } catch (e) {
       _showError('Failed to generate visualizations. Please try again.');
     }
@@ -1539,7 +1581,7 @@ class GeneratedVariant {
   final Uint8List imageData;
   final Map<SurfaceType, String> colors;
   final String description;
-  
+
   GeneratedVariant({
     required this.imageData,
     required this.colors,

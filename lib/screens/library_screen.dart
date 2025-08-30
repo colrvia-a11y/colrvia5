@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 // Add a prefixed import for core widgets to avoid any local shadowing
-import 'package:flutter/material.dart' as m show Text, Column, SizedBox, Container, Positioned;
+import 'package:flutter/material.dart' as m
+    show Text, Column, SizedBox, Container, Positioned;
+import 'package:logging/logging.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/services/project_service.dart';
@@ -25,6 +27,8 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
+  static final _logger = Logger('LibraryScreen');
+  
   bool _isLoading = true;
   bool _hasPermissionError = false;
   late LibraryFilter _filter;
@@ -42,7 +46,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: m.Text('Firebase not configured. Items may not sync across devices.'),
+            content: m.Text(
+                'Firebase not configured. Items may not sync across devices.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -56,21 +61,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
     try {
       final firebaseStatus = await FirebaseService.getFirebaseStatus();
-      print('Firebase Status in library: $firebaseStatus');
-      print('User ID: ${user.uid}, Email: ${user.email}');
+      _logger.info('Firebase Status in library: $firebaseStatus');
+      _logger.info('User ID: ${user.uid}, Email: ${user.email}');
       List<UserPalette> palettes = [];
       List<Paint> savedColors = [];
       List<ProjectDoc> colorStories = [];
       try {
         palettes = await FirebaseService.getUserPalettes(user.uid);
-        print('Successfully loaded ${palettes.length} palettes');
+        _logger.info('Successfully loaded ${palettes.length} palettes');
       } catch (paletteError) {
-        print('Error loading palettes: $paletteError');
+        _logger.warning('Error loading palettes: $paletteError');
         if (paletteError.toString().contains('permission-denied')) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: m.Text('Access denied. Please check your account permissions.'),
+                content: m.Text(
+                    'Access denied. Please check your account permissions.'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -79,14 +85,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
       }
       try {
         savedColors = await FirebaseService.getUserFavoriteColors(user.uid);
-        print('Successfully loaded ${savedColors.length} favorite colors');
+        _logger.info('Successfully loaded ${savedColors.length} favorite colors');
       } catch (colorsError) {
-        print('Error loading favorite colors: $colorsError');
+        _logger.warning('Error loading favorite colors: $colorsError');
         if (colorsError.toString().contains('permission-denied')) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: m.Text('Access denied for saved colors. Please try signing out and back in.'),
+                content: m.Text(
+                    'Access denied for saved colors. Please try signing out and back in.'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -94,18 +101,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
         }
       }
       try {
-        final allProjects = await ProjectService.myProjectsStream(limit: 50).first;
-        colorStories = allProjects.where((p) => p.colorStoryId != null).toList();
-        print('Successfully loaded ${colorStories.length} color stories');
+        final allProjects =
+            await ProjectService.myProjectsStream(limit: 50).first;
+        colorStories =
+            allProjects.where((p) => p.colorStoryId != null).toList();
+        _logger.info('Successfully loaded ${colorStories.length} color stories');
       } catch (storiesError) {
-        print('Error loading color stories: $storiesError');
+        _logger.warning('Error loading color stories: $storiesError');
       }
       setState(() {
         _isLoading = false;
-        _hasPermissionError = palettes.isEmpty && savedColors.isEmpty && colorStories.isEmpty;
+        _hasPermissionError =
+            palettes.isEmpty && savedColors.isEmpty && colorStories.isEmpty;
       });
     } catch (e) {
-      print('General error loading library data: $e');
+      _logger.severe('General error loading library data: $e');
       setState(() => _isLoading = false);
       if (e.toString().contains('permission-denied')) {
         if (mounted) {
@@ -115,7 +125,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: m.Text('Error loading data: ${e.toString().split(':').first}'),
+              content: m.Text(
+                  'Error loading data: ${e.toString().split(':').first}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -126,33 +137,46 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildFilterChips(BuildContext context) {
     Chip chip(LibraryFilter f, String label) => Chip(
-      label: m.Text(label),
-      backgroundColor: _filter == f
-        ? Theme.of(context).colorScheme.primaryContainer
-        : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.6),
-    );
+          label: m.Text(label),
+          backgroundColor: _filter == f
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.6),
+        );
     return Wrap(spacing: 8, children: [
-      InkWell(onTap: () => setState(() => _filter = LibraryFilter.all),      child: chip(LibraryFilter.all, 'All')),
-      InkWell(onTap: () => setState(() => _filter = LibraryFilter.palettes), child: chip(LibraryFilter.palettes, 'Palettes')),
-      InkWell(onTap: () => setState(() => _filter = LibraryFilter.stories),  child: chip(LibraryFilter.stories, 'Color Stories')),
+      InkWell(
+          onTap: () => setState(() => _filter = LibraryFilter.all),
+          child: chip(LibraryFilter.all, 'All')),
+      InkWell(
+          onTap: () => setState(() => _filter = LibraryFilter.palettes),
+          child: chip(LibraryFilter.palettes, 'Palettes')),
+      InkWell(
+          onTap: () => setState(() => _filter = LibraryFilter.stories),
+          child: chip(LibraryFilter.stories, 'Color Stories')),
     ]);
   }
 
   Widget _buildFilteredContent() {
-    final showPalettes = _filter == LibraryFilter.all || _filter == LibraryFilter.palettes;
-    final showStories  = _filter == LibraryFilter.all || _filter == LibraryFilter.stories;
+    final showPalettes =
+        _filter == LibraryFilter.all || _filter == LibraryFilter.palettes;
+    final showStories =
+        _filter == LibraryFilter.all || _filter == LibraryFilter.stories;
     final projectsStream = ProjectService.myProjectsStream();
     final children = <Widget>[];
     if (showStories) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-  child: m.Text('Color Stories', style: Theme.of(context).textTheme.titleLarge),
+        child: m.Text('Color Stories',
+            style: Theme.of(context).textTheme.titleLarge),
       ));
       children.add(StreamBuilder<List<ProjectDoc>>(
         stream: projectsStream,
         builder: (context, snap) {
           final list = (snap.data ?? <ProjectDoc>[])
-              .where((p) => p.colorStoryId != null && p.colorStoryId!.isNotEmpty)
+              .where(
+                  (p) => p.colorStoryId != null && p.colorStoryId!.isNotEmpty)
               .toList();
           if (list.isEmpty) {
             return const m.SizedBox.shrink();
@@ -166,12 +190,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (showPalettes) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-  child: m.Text('Palettes', style: Theme.of(context).textTheme.titleLarge),
+        child:
+            m.Text('Palettes', style: Theme.of(context).textTheme.titleLarge),
       ));
       children.add(_PalettesSection());
     }
     if (children.isEmpty) {
-  return const SliverToBoxAdapter(child: m.SizedBox.shrink());
+      return const SliverToBoxAdapter(child: m.SizedBox.shrink());
     }
     return SliverList(
       delegate: SliverChildListDelegate(children),
@@ -183,7 +208,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final user = FirebaseService.currentUser;
     if (user == null) {
       return Scaffold(
-  appBar: AppBar(title: const m.Text('My Library')),
+        appBar: AppBar(title: const m.Text('My Library')),
         body: const Center(
           child: m.Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -198,19 +223,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-  title: const m.Text('My Library'),
+        title: const m.Text('My Library'),
         actions: [
           if (_hasPermissionError)
             IconButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: m.Text('Some data may not be available due to permission issues. Try signing out and back in.'),
+                    content: m.Text(
+                        'Some data may not be available due to permission issues. Try signing out and back in.'),
                     duration: Duration(seconds: 4),
                   ),
                 );
               },
-              icon: const Icon(Icons.warning_amber_outlined, color: Colors.orange),
+              icon: const Icon(Icons.warning_amber_outlined,
+                  color: Colors.orange),
               tooltip: 'Permission Issues',
             ),
         ],
@@ -220,7 +247,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           : SafeArea(
               child: CustomScrollView(
                 slivers: [
-                  SliverToBoxAdapter(child: Padding(
+                  SliverToBoxAdapter(
+                      child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: _buildFilterChips(context),
                   )),
@@ -235,30 +263,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-    title: const Row(
+        title: const Row(
           children: [
             Icon(Icons.warning_amber_outlined, color: Colors.orange),
-      m.SizedBox(width: 8),
-      m.Text('Access Denied'),
+            m.SizedBox(width: 8),
+            m.Text('Access Denied'),
           ],
         ),
-    content: const m.Column(
+        content: const m.Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-      m.Text(
+            m.Text(
               'Your account doesn\'t have permission to access saved palettes and colors.',
             ),
-      m.SizedBox(height: 12),
-      m.Text(
+            m.SizedBox(height: 12),
+            m.Text(
               'This might be because:',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
-      m.Text('• You need to verify your email address'),
-      m.Text('• Your account is still being set up'),
-      m.Text('• There\'s a temporary server issue'),
-      m.SizedBox(height: 12),
-      m.Text(
+            m.Text('• You need to verify your email address'),
+            m.Text('• Your account is still being set up'),
+            m.Text('• There\'s a temporary server issue'),
+            m.SizedBox(height: 12),
+            m.Text(
               'Try signing out and signing back in, or contact support if the issue persists.',
             ),
           ],
@@ -268,7 +296,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: () {
               Navigator.pop(context);
               Navigator.of(context).pop();
-              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+              Navigator.of(context)
+                  .pushNamedAndRemoveUntil('/home', (route) => false);
             },
             child: const m.Text('Go to Settings'),
           ),
@@ -299,23 +328,32 @@ class _ProjectCard extends StatelessWidget {
 
     final chips = <Widget>[];
     if ((project.roomType ?? '').isNotEmpty) {
-      chips.add(Chip(label: m.Text(project.roomType!), visualDensity: VisualDensity.compact));
+      chips.add(Chip(
+          label: m.Text(project.roomType!),
+          visualDensity: VisualDensity.compact));
     }
     if ((project.styleTag ?? '').isNotEmpty) {
-      chips.add(Chip(label: m.Text(project.styleTag!), visualDensity: VisualDensity.compact));
+      chips.add(Chip(
+          label: m.Text(project.styleTag!),
+          visualDensity: VisualDensity.compact));
     }
 
     return m.Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: m.Text(project.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        subtitle: m.Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        title: m.Text(project.title,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
+        subtitle:
+            m.Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           m.Text(status),
           const m.SizedBox(height: 4),
-          if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: -6, children: chips),
+          if (chips.isNotEmpty)
+            Wrap(spacing: 6, runSpacing: -6, children: chips),
           const m.SizedBox(height: 4),
-          m.Text('Updated ${_timeAgo(project.updatedAt)}', style: theme.textTheme.bodySmall),
+          m.Text('Updated ${_timeAgo(project.updatedAt)}',
+              style: theme.textTheme.bodySmall),
         ]),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _openStage(context, project),
@@ -327,21 +365,24 @@ class _ProjectCard extends StatelessWidget {
     final d = DateTime.now().difference(dt);
     if (d.inMinutes < 1) return 'just now';
     if (d.inMinutes < 60) return '${d.inMinutes}m ago';
-    if (d.inHours   < 24) return '${d.inHours}h ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
     return '${d.inDays}d ago';
   }
 
   static void _openStage(BuildContext context, ProjectDoc project) {
     switch (project.funnelStage) {
       case FunnelStage.build:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => RollerScreen(projectId: project.id)));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => RollerScreen(projectId: project.id)));
         break;
       case FunnelStage.story:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ColorStoryWizardScreen(projectId: project.id)));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ColorStoryWizardScreen(projectId: project.id)));
         break;
       case FunnelStage.visualize:
       case FunnelStage.share:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => VisualizerScreen()));
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => VisualizerScreen()));
         break;
     }
   }
@@ -355,15 +396,15 @@ class _PalettesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseService.currentUser;
     if (user == null) {
-    return const Center(
+      return const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
-      child: m.Column(
+          child: m.Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.account_circle, size: 64, color: Colors.grey),
-        m.SizedBox(height: 16),
-        m.Text('Please sign in to view your palettes'),
+              m.SizedBox(height: 16),
+              m.Text('Please sign in to view your palettes'),
             ],
           ),
         ),
@@ -376,26 +417,27 @@ class _PalettesSection extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final palettes = snapshot.data ?? [];
         if (palettes.isEmpty) {
-      return const Center(
+          return const Center(
             child: Padding(
               padding: EdgeInsets.all(32),
-        child: m.Column(
+              child: m.Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.palette_outlined, size: 64, color: Colors.grey),
-          m.SizedBox(height: 16),
-          m.Text('No palettes yet'),
-          m.SizedBox(height: 8),
-          m.Text('Save color combinations from the Roller to see them here.'),
+                  m.SizedBox(height: 16),
+                  m.Text('No palettes yet'),
+                  m.SizedBox(height: 8),
+                  m.Text(
+                      'Save color combinations from the Roller to see them here.'),
                 ],
               ),
             ),
           );
         }
-        
+
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           shrinkWrap: true,
@@ -421,7 +463,7 @@ class _PalettesSection extends StatelessWidget {
       },
     );
   }
-  
+
   void _openPaletteDetail(BuildContext context, UserPalette palette) {
     Navigator.push(
       context,
@@ -432,7 +474,8 @@ class _PalettesSection extends StatelessWidget {
   }
 
   void _openPaletteInRoller(BuildContext context, UserPalette palette) {
-    Navigator.of(context).popUntil((route) => route.settings.name == '/' || route.isFirst);
+    Navigator.of(context)
+        .popUntil((route) => route.settings.name == '/' || route.isFirst);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -445,8 +488,8 @@ class _PalettesSection extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-  title: const m.Text('Delete Palette'),
-  content: m.Text('Are you sure you want to delete "${palette.name}"?'),
+        title: const m.Text('Delete Palette'),
+        content: m.Text('Are you sure you want to delete "${palette.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -478,7 +521,8 @@ class _PalettesSection extends StatelessWidget {
     }
   }
 
-  Future<void> _editPaletteTags(BuildContext context, UserPalette palette) async {
+  Future<void> _editPaletteTags(
+      BuildContext context, UserPalette palette) async {
     final result = await showDialog<List<String>>(
       context: context,
       builder: (context) => EditTagsDialog(
@@ -486,7 +530,7 @@ class _PalettesSection extends StatelessWidget {
         availableTags: [],
       ),
     );
-    
+
     if (result != null) {
       try {
         final updatedPalette = palette.copyWith(
@@ -529,7 +573,7 @@ class EnhancedPaletteCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-  child: m.Column(
+        child: m.Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Large color preview (top half)
@@ -543,7 +587,7 @@ class EnhancedPaletteCard extends StatelessWidget {
                 child: Row(
                   children: palette.colors.map((paletteColor) {
                     final color = ColorUtils.hexToColor(paletteColor.hex);
-                    
+
                     return Expanded(
                       child: m.Container(
                         height: double.infinity,
@@ -554,7 +598,7 @@ class EnhancedPaletteCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Content section (bottom half) - Made more flexible
             Flexible(
               flex: 2,
@@ -570,9 +614,12 @@ class EnhancedPaletteCard extends StatelessWidget {
                         Expanded(
                           child: m.Text(
                             palette.name,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -594,13 +641,13 @@ class EnhancedPaletteCard extends StatelessWidget {
                             }
                           },
                           itemBuilder: (context) => [
-            const PopupMenuItem(
+                            const PopupMenuItem(
                               value: 'roller',
                               child: Row(
                                 children: [
                                   Icon(Icons.casino, size: 16),
                                   m.SizedBox(width: 8),
-              m.Text('Open in Roller'),
+                                  m.Text('Open in Roller'),
                                 ],
                               ),
                             ),
@@ -610,7 +657,7 @@ class EnhancedPaletteCard extends StatelessWidget {
                                 children: [
                                   Icon(Icons.edit, size: 16),
                                   m.SizedBox(width: 8),
-              m.Text('Edit Tags'),
+                                  m.Text('Edit Tags'),
                                 ],
                               ),
                             ),
@@ -618,9 +665,11 @@ class EnhancedPaletteCard extends StatelessWidget {
                               value: 'delete',
                               child: Row(
                                 children: [
-                                  Icon(Icons.delete, size: 16, color: Colors.red),
+                                  Icon(Icons.delete,
+                                      size: 16, color: Colors.red),
                                   m.SizedBox(width: 8),
-              m.Text('Delete', style: TextStyle(color: Colors.red)),
+                                  m.Text('Delete',
+                                      style: TextStyle(color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -628,37 +677,46 @@ class EnhancedPaletteCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     const m.SizedBox(height: 4),
-                    
+
                     // Metadata
                     m.Text(
                       '${palette.colors.length} colors • ${_formatDate(palette.createdAt)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                            color: Colors.grey[600],
+                          ),
                     ),
-                    
+
                     if (palette.tags.isNotEmpty) ...[
                       const m.SizedBox(height: 4),
                       Wrap(
                         spacing: 4,
                         runSpacing: 2,
-                        children: palette.tags.take(2).map((tag) => m.Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer.withOpacity( 0.7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: m.Text(
-                            tag,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w500,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                        )).toList(),
+                        children: palette.tags
+                            .take(2)
+                            .map((tag) => m.Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                        .withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: m.Text(
+                                    tag,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
                       ),
                     ],
                   ],
@@ -676,7 +734,7 @@ class EnhancedPaletteCard extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
-    
+
     if (diff.inDays > 0) {
       return '${diff.inDays}d ago';
     } else if (diff.inHours > 0) {
@@ -710,7 +768,7 @@ class SavedColorCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-  child: m.Column(
+        child: m.Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Color swatch
@@ -724,9 +782,9 @@ class SavedColorCard extends StatelessWidget {
                     topRight: Radius.circular(8),
                   ),
                 ),
-        child: Stack(
+                child: Stack(
                   children: [
-          m.Positioned(
+                    m.Positioned(
                       top: 4,
                       right: 4,
                       child: GestureDetector(
@@ -734,7 +792,7 @@ class SavedColorCard extends StatelessWidget {
                         child: m.Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity( 0.3),
+                            color: Colors.black.withValues(alpha: 0.3),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -749,7 +807,7 @@ class SavedColorCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Paint info
             Expanded(
               flex: 2,
@@ -762,8 +820,8 @@ class SavedColorCard extends StatelessWidget {
                     m.Text(
                       paint.name,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -772,18 +830,20 @@ class SavedColorCard extends StatelessWidget {
                       children: [
                         m.Text(
                           paint.brandName,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                            fontSize: 10,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                    fontSize: 10,
+                                  ),
                         ),
                         m.Text(
                           paint.code,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[500],
-                            fontSize: 9,
-                            fontFamily: 'monospace',
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[500],
+                                    fontSize: 9,
+                                    fontFamily: 'monospace',
+                                  ),
                         ),
                       ],
                     ),
@@ -815,12 +875,23 @@ class EditTagsDialog extends StatefulWidget {
 class _EditTagsDialogState extends State<EditTagsDialog> {
   late List<String> _selectedTags;
   final _customTagController = TextEditingController();
-  
+
   // Common tag suggestions
   final List<String> _commonTags = [
-    'living room', 'bedroom', 'kitchen', 'bathroom', 
-    'office', 'neutral', 'warm', 'cool', 'bold', 
-    'modern', 'traditional', 'cozy', 'bright', 'dark'
+    'living room',
+    'bedroom',
+    'kitchen',
+    'bathroom',
+    'office',
+    'neutral',
+    'warm',
+    'cool',
+    'bold',
+    'modern',
+    'traditional',
+    'cozy',
+    'bright',
+    'dark'
   ];
 
   @override
@@ -859,10 +930,11 @@ class _EditTagsDialogState extends State<EditTagsDialog> {
   Widget build(BuildContext context) {
     final suggestedTags = {..._commonTags, ...widget.availableTags}
         .where((tag) => !_selectedTags.contains(tag))
-        .toList()..sort();
+        .toList()
+      ..sort();
 
     return AlertDialog(
-  title: const m.Text('Edit Tags'),
+      title: const m.Text('Edit Tags'),
       content: SingleChildScrollView(
         child: m.Column(
           mainAxisSize: MainAxisSize.min,
@@ -870,22 +942,26 @@ class _EditTagsDialogState extends State<EditTagsDialog> {
           children: [
             // Selected tags
             if (_selectedTags.isNotEmpty) ...[
-              const m.Text('Selected Tags:', style: TextStyle(fontWeight: FontWeight.w500)),
+              const m.Text('Selected Tags:',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
               const m.SizedBox(height: 8),
               Wrap(
                 spacing: 4,
                 runSpacing: 4,
-                children: _selectedTags.map((tag) => Chip(
-                  label: m.Text(tag),
-                  onDeleted: () => _toggleTag(tag),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                )).toList(),
+                children: _selectedTags
+                    .map((tag) => Chip(
+                          label: m.Text(tag),
+                          onDeleted: () => _toggleTag(tag),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                        ))
+                    .toList(),
               ),
               const m.SizedBox(height: 16),
             ],
 
             // Add custom tag
-            const m.Text('Add Custom Tag:', style: TextStyle(fontWeight: FontWeight.w500)),
+            const m.Text('Add Custom Tag:',
+                style: TextStyle(fontWeight: FontWeight.w500)),
             const m.SizedBox(height: 8),
             Row(
               children: [
@@ -907,19 +983,22 @@ class _EditTagsDialogState extends State<EditTagsDialog> {
                 ),
               ],
             ),
-            
+
             const m.SizedBox(height: 16),
-            
+
             // Suggested tags
-            const m.Text('Suggested Tags:', style: TextStyle(fontWeight: FontWeight.w500)),
+            const m.Text('Suggested Tags:',
+                style: TextStyle(fontWeight: FontWeight.w500)),
             const m.SizedBox(height: 8),
             Wrap(
               spacing: 4,
               runSpacing: 4,
-              children: suggestedTags.map((tag) => FilterChip(
-                label: m.Text(tag),
-                onSelected: (_) => _toggleTag(tag),
-              )).toList(),
+              children: suggestedTags
+                  .map((tag) => FilterChip(
+                        label: m.Text(tag),
+                        onSelected: (_) => _toggleTag(tag),
+                      ))
+                  .toList(),
             ),
           ],
         ),
@@ -952,16 +1031,16 @@ class ColorDetailDialog extends StatelessWidget {
 
     return AlertDialog(
       contentPadding: EdgeInsets.zero,
-    content: m.Column(
+      content: m.Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Large color swatch
-      m.Container(
+          m.Container(
             height: 200,
             width: double.infinity,
             color: color,
           ),
-          
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: m.Column(
@@ -970,23 +1049,20 @@ class ColorDetailDialog extends StatelessWidget {
                 m.Text(
                   paint.name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
                 const m.SizedBox(height: 8),
-                
                 _buildDetailRow('Brand', paint.brandName),
                 _buildDetailRow('Code', paint.code),
                 _buildDetailRow('Hex', paint.hex),
-                
                 const m.SizedBox(height: 16),
-                
-      m.SizedBox(
+                m.SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
-        label: const m.Text('Close'),
+                    label: const m.Text('Close'),
                   ),
                 ),
               ],
@@ -1034,10 +1110,12 @@ class _RollerWithInitialColorsWrapper extends StatefulWidget {
   });
 
   @override
-  State<_RollerWithInitialColorsWrapper> createState() => _RollerWithInitialColorsWrapperState();
+  State<_RollerWithInitialColorsWrapper> createState() =>
+      _RollerWithInitialColorsWrapperState();
 }
 
-class _RollerWithInitialColorsWrapperState extends State<_RollerWithInitialColorsWrapper> {
+class _RollerWithInitialColorsWrapperState
+    extends State<_RollerWithInitialColorsWrapper> {
   @override
   void initState() {
     super.initState();
@@ -1072,10 +1150,12 @@ class _HomeScreenWithRollerInitialColors extends StatefulWidget {
   });
 
   @override
-  State<_HomeScreenWithRollerInitialColors> createState() => _HomeScreenWithRollerInitialColorsState();
+  State<_HomeScreenWithRollerInitialColors> createState() =>
+      _HomeScreenWithRollerInitialColorsState();
 }
 
-class _HomeScreenWithRollerInitialColorsState extends State<_HomeScreenWithRollerInitialColors> {
+class _HomeScreenWithRollerInitialColorsState
+    extends State<_HomeScreenWithRollerInitialColors> {
   int _currentIndex = 0; // Start with roller tab
   late final List<Widget> _screens = [
     RollerScreen(initialPaintIds: widget.initialPaintIds),
@@ -1110,7 +1190,8 @@ class _HomeScreenWithRollerInitialColorsState extends State<_HomeScreenWithRolle
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity( 0.6),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [

@@ -29,28 +29,29 @@ class UsageGuideWidget extends StatelessWidget {
             Text(
               'How to Use These Colors',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // Usage guide cards
         ...usageGuide.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
           return Padding(
-            padding: EdgeInsets.only(bottom: index < usageGuide.length - 1 ? 16 : 0),
+            padding:
+                EdgeInsets.only(bottom: index < usageGuide.length - 1 ? 16 : 0),
             child: _UsageGuideCard(
               item: item,
               index: index + 1,
             ),
           );
         }),
-        
+
         const SizedBox(height: 24),
-        
+
         // Action button
         if (onUseInRoller != null)
           SizedBox(
@@ -82,8 +83,9 @@ class _UsageGuideCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = ColorUtils.hexToColor(item.hex);
     final brightness = ThemeData.estimateBrightnessForColor(color);
-    final textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
-    
+    final textColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -115,9 +117,9 @@ class _UsageGuideCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // Color info
                 Expanded(
                   child: Column(
@@ -128,9 +130,12 @@ class _UsageGuideCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               item.name,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ),
                           _RoleBadge(role: item.role),
@@ -140,8 +145,8 @@ class _UsageGuideCard extends StatelessWidget {
                       Text(
                         '${item.brandName} ${item.code}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -157,15 +162,18 @@ class _UsageGuideCard extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Application instructions
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity( 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -174,9 +182,9 @@ class _UsageGuideCard extends StatelessWidget {
                   Text(
                     'Application',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -186,9 +194,9 @@ class _UsageGuideCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Finish recommendations
             Row(
               children: [
@@ -213,35 +221,51 @@ class _UsageGuideCard extends StatelessWidget {
       ),
     );
   }
-  
+
   IconData _getFinishIcon(String finish) {
     switch (finish.toLowerCase()) {
-      case 'matte': return Icons.texture;
-      case 'eggshell': return Icons.egg;
-      case 'satin': return Icons.water_drop_outlined;
-      case 'semi-gloss': return Icons.water_drop;
-      case 'gloss': return Icons.lightbulb_outline;
-      default: return Icons.brush;
+      case 'matte':
+        return Icons.texture;
+      case 'eggshell':
+        return Icons.egg;
+      case 'satin':
+        return Icons.water_drop_outlined;
+      case 'semi-gloss':
+        return Icons.water_drop;
+      case 'gloss':
+        return Icons.lightbulb_outline;
+      default:
+        return Icons.brush;
     }
   }
-  
+
   IconData _getSheenIcon(String sheen) {
     switch (sheen.toLowerCase()) {
-      case 'low': return Icons.brightness_low;
-      case 'medium': return Icons.brightness_medium;
-      case 'high': return Icons.brightness_high;
-      default: return Icons.brightness_auto;
+      case 'low':
+        return Icons.brightness_low;
+      case 'medium':
+        return Icons.brightness_medium;
+      case 'high':
+        return Icons.brightness_high;
+      default:
+        return Icons.brightness_auto;
     }
   }
-  
+
   IconData _getSurfaceIcon(String surface) {
     switch (surface.toLowerCase()) {
-      case 'wall': return Icons.crop_square;
-      case 'trim': return Icons.border_outer;
-      case 'ceiling': return Icons.horizontal_rule;
-      case 'cabinet': return Icons.kitchen;
-      case 'accent': return Icons.star_outline;
-      default: return Icons.format_paint;
+      case 'wall':
+        return Icons.crop_square;
+      case 'trim':
+        return Icons.border_outer;
+      case 'ceiling':
+        return Icons.horizontal_rule;
+      case 'cabinet':
+        return Icons.kitchen;
+      case 'accent':
+        return Icons.star_outline;
+      default:
+        return Icons.format_paint;
     }
   }
 }
@@ -254,13 +278,13 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _getRoleColor(role);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity( 0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity( 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         role,
@@ -272,16 +296,23 @@ class _RoleBadge extends StatelessWidget {
       ),
     );
   }
-  
+
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
-      case 'main wall': return Colors.blue;
-      case 'accent wall': return Colors.orange;
-      case 'trim': return Colors.green;
-      case 'ceiling': return Colors.purple;
-      case 'furniture': return Colors.brown;
-      case 'accessories': return Colors.red;
-      default: return Colors.grey;
+      case 'main wall':
+        return Colors.blue;
+      case 'accent wall':
+        return Colors.orange;
+      case 'trim':
+        return Colors.green;
+      case 'ceiling':
+        return Colors.purple;
+      case 'furniture':
+        return Colors.brown;
+      case 'accessories':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 }
@@ -303,7 +334,7 @@ class _FinishChip extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity( 0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -318,8 +349,8 @@ class _FinishChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
         ],
       ),

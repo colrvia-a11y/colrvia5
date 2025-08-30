@@ -15,13 +15,14 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStateMixin {
+class _AdminScreenState extends State<AdminScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _jsonController = TextEditingController();
   bool _isLoading = false;
   Map<String, int> _dataCount = {'paints': 0, 'brands': 0};
   bool _isAdmin = false;
   bool _checkingAdmin = true;
-  
+
   late TabController _tabController;
 
   @override
@@ -36,7 +37,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     setState(() {
       _checkingAdmin = true;
     });
-    
+
     try {
       final isAdmin = await FirebaseService.isCurrentUserAdmin();
       setState(() {
@@ -90,14 +91,14 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       } else if (jsonData is Map && jsonData['paints'] != null) {
         paintList = List<Map<String, dynamic>>.from(jsonData['paints']);
       } else {
-        throw Exception('Invalid JSON format. Expected array or object with "paints" key.');
+        throw Exception(
+            'Invalid JSON format. Expected array or object with "paints" key.');
       }
 
       await PaintDataImporter.importFromJson(paintList);
       _setStatus('✅ Successfully imported ${paintList.length} paints!');
       _jsonController.clear();
       await _loadDataCount();
-
     } catch (e) {
       _setStatus('❌ Import failed: $e', isError: true);
     } finally {
@@ -112,7 +113,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear All Data'),
-        content: const Text('This will permanently delete ALL paint and brand data. This action cannot be undone.'),
+        content: const Text(
+            'This will permanently delete ALL paint and brand data. This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -151,7 +153,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Fix Brand IDs'),
-        content: const Text('This will standardize brand IDs and fix any inconsistencies, especially for Sherwin-Williams. This is safe to run.'),
+        content: const Text(
+            'This will standardize brand IDs and fix any inconsistencies, especially for Sherwin-Williams. This is safe to run.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -190,7 +193,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       builder: (context) => AlertDialog(
         title: const Text('Expected Data Format'),
         content: const SingleChildScrollView(
-          child: Text('''Your JSON should be an array of objects with these fields:
+          child:
+              Text('''Your JSON should be an array of objects with these fields:
 
 [
   {
@@ -254,11 +258,11 @@ Required fields:
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         final contents = await file.readAsString();
-        
+
         setState(() {
           _jsonController.text = contents;
         });
-        
+
         _setStatus('✅ File loaded successfully');
       }
     } catch (e) {
@@ -290,7 +294,7 @@ Required fields:
   @override
   Widget build(BuildContext context) {
     final user = FirebaseService.currentUser;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Panel'),
@@ -299,7 +303,8 @@ Required fields:
           if (user == null)
             TextButton(
               onPressed: _showAuthDialog,
-              child: const Text('Sign In', style: TextStyle(color: Colors.white)),
+              child:
+                  const Text('Sign In', style: TextStyle(color: Colors.white)),
             ),
         ],
         bottom: _checkingAdmin || user == null || !_isAdmin
@@ -315,20 +320,20 @@ Required fields:
               ),
       ),
       body: _checkingAdmin
-        ? _buildLoadingView()
-        : user == null 
-        ? _buildAuthRequiredView()
-        : !_isAdmin
-        ? _buildNotAuthorizedView()
-        : TabBarView(
-            controller: _tabController,
-            children: [
-              _buildDataImportTab(),
-              _buildStoryStudioTab(),
-              _buildMaintenanceTab(),
-              _buildUserManagementTab(),
-            ],
-          ),
+          ? _buildLoadingView()
+          : user == null
+              ? _buildAuthRequiredView()
+              : !_isAdmin
+                  ? _buildNotAuthorizedView()
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildDataImportTab(),
+                        _buildStoryStudioTab(),
+                        _buildMaintenanceTab(),
+                        _buildUserManagementTab(),
+                      ],
+                    ),
     );
   }
 
@@ -365,7 +370,8 @@ Required fields:
                         icon: const Icon(Icons.build),
                         label: const Text('Fix Brand IDs'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.secondary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -399,7 +405,7 @@ Required fields:
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Import options buttons
                     Row(
                       children: [
@@ -409,7 +415,8 @@ Required fields:
                             icon: const Icon(Icons.file_upload),
                             label: const Text('Import File'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
@@ -420,17 +427,19 @@ Required fields:
                             icon: const Icon(Icons.paste),
                             label: const Text('Paste Data'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
-                    const Text('Import JSON data from file or paste directly below:'),
+
+                    const Text(
+                        'Import JSON data from file or paste directly below:'),
                     const SizedBox(height: 8),
-                    
+
                     Expanded(
                       child: TextField(
                         controller: _jsonController,
@@ -443,28 +452,29 @@ Required fields:
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     Row(
                       children: [
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _importData,
-                            child: _isLoading 
-                              ? const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Importing...'),
-                                  ],
-                                )
-                              : const Text('Import Data'),
+                            child: _isLoading
+                                ? const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('Importing...'),
+                                    ],
+                                  )
+                                : const Text('Import Data'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -510,18 +520,19 @@ Required fields:
                       const SizedBox(height: 24),
                       Text(
                         'Story Studio',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Create beautiful Color Stories for users to discover and explore. Build curated palettes with themes, moods, and room contexts.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                       const SizedBox(height: 32),
                       SizedBox(
@@ -532,7 +543,8 @@ Required fields:
                           label: const Text('Create Color Story'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -541,9 +553,9 @@ Required fields:
                       Text(
                         'Multi-step wizard coming soon',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[500],
-                          fontStyle: FontStyle.italic,
-                        ),
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
                       ),
                     ],
                   ),
@@ -587,8 +599,8 @@ Required fields:
                   Text(
                     'One-tap tools for maintaining data integrity and performance.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                   ),
                 ],
               ),
@@ -603,15 +615,20 @@ Required fields:
                 // Backfill Facets
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.auto_fix_high, color: Colors.blue),
+                    leading:
+                        const Icon(Icons.auto_fix_high, color: Colors.blue),
                     title: const Text('Backfill Facets'),
-                    subtitle: const Text('Update all Color Stories with facets field for efficient filtering'),
+                    subtitle: const Text(
+                        'Update all Color Stories with facets field for efficient filtering'),
                     trailing: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _confirmAndRun(
-                        title: 'Backfill Facets',
-                        message: 'This will update all Color Stories with the facets field. This is safe to run multiple times.',
-                        action: _backfillFacets,
-                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _confirmAndRun(
+                                title: 'Backfill Facets',
+                                message:
+                                    'This will update all Color Stories with the facets field. This is safe to run multiple times.',
+                                action: _backfillFacets,
+                              ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade50,
                         foregroundColor: Colors.blue.shade700,
@@ -627,13 +644,17 @@ Required fields:
                   child: ListTile(
                     leading: const Icon(Icons.search, color: Colors.orange),
                     title: const Text('Verify Indexes'),
-                    subtitle: const Text('Check if required Firestore indexes are properly configured'),
+                    subtitle: const Text(
+                        'Check if required Firestore indexes are properly configured'),
                     trailing: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _confirmAndRun(
-                        title: 'Verify Indexes',
-                        message: 'This will test the Explore query to verify indexes are configured correctly.',
-                        action: _verifyIndexes,
-                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _confirmAndRun(
+                                title: 'Verify Indexes',
+                                message:
+                                    'This will test the Explore query to verify indexes are configured correctly.',
+                                action: _verifyIndexes,
+                              ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade50,
                         foregroundColor: Colors.orange.shade700,
@@ -649,13 +670,17 @@ Required fields:
                   child: ListTile(
                     leading: const Icon(Icons.warning, color: Colors.red),
                     title: const Text('Find Missing Required Roles'),
-                    subtitle: const Text('Identify Color Stories missing main or trim roles'),
+                    subtitle: const Text(
+                        'Identify Color Stories missing main or trim roles'),
                     trailing: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _confirmAndRun(
-                        title: 'Find Missing Roles',
-                        message: 'This will scan all Color Stories for missing main or trim roles.',
-                        action: _findMissingRequiredRoles,
-                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _confirmAndRun(
+                                title: 'Find Missing Roles',
+                                message:
+                                    'This will scan all Color Stories for missing main or trim roles.',
+                                action: _findMissingRequiredRoles,
+                              ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade50,
                         foregroundColor: Colors.red.shade700,
@@ -715,7 +740,8 @@ Required fields:
               icon: const Icon(Icons.login),
               label: const Text('Sign In'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
             ),
           ],
@@ -788,7 +814,7 @@ Required fields:
       setState(() {
         _isLoading = true;
       });
-      
+
       try {
         await action();
       } catch (e) {
@@ -808,7 +834,8 @@ Required fields:
       final processed = result['processedCount'] ?? 0;
       final updated = result['updatedCount'] ?? 0;
       final skipped = processed - updated;
-      _setStatus('✅ Backfilled facets for $updated stories ($skipped already had facets)');
+      _setStatus(
+          '✅ Backfilled facets for $updated stories ($skipped already had facets)');
     } catch (e) {
       throw Exception('Facets backfill failed: $e');
     }
@@ -821,12 +848,15 @@ Required fields:
       await FirebaseService.getColorStoriesWithCursor(
         limit: 1,
       );
-      
-      _setStatus('✅ Indexes verified successfully - query executed without errors');
+
+      _setStatus(
+          '✅ Indexes verified successfully - query executed without errors');
     } catch (e) {
       final errorMessage = e.toString();
-      
-      if (errorMessage.contains('index') || errorMessage.contains('requires an index')) {
+
+      if (errorMessage.contains('index') ||
+          errorMessage.contains('requires an index')) {
+        if (!mounted) return;
         // Show detailed index error dialog
         showDialog(
           context: context,
@@ -887,17 +917,18 @@ Required fields:
   Future<void> _findMissingRequiredRoles() async {
     try {
       // Get all color stories to check their roles
-      final allStories = await FirebaseService.getAllColorStoriesForMaintenance();
+      final allStories =
+          await FirebaseService.getAllColorStoriesForMaintenance();
       final missingRoles = <Map<String, dynamic>>[];
-      
+
       for (final story in allStories) {
         final palette = story['palette'] as List? ?? [];
         final roles = palette.map((p) => p['role']).toSet();
         final missingMainOrTrim = <String>[];
-        
+
         if (!roles.contains('main')) missingMainOrTrim.add('main');
         if (!roles.contains('trim')) missingMainOrTrim.add('trim');
-        
+
         if (missingMainOrTrim.isNotEmpty) {
           missingRoles.add({
             'title': story['title'],
@@ -907,15 +938,17 @@ Required fields:
           });
         }
       }
-      
+
       if (missingRoles.isEmpty) {
         _setStatus('✅ All Color Stories have required main and trim roles');
       } else {
+        if (!mounted) return;
         // Show detailed results dialog
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Missing Required Roles (${missingRoles.length} stories)'),
+            title:
+                Text('Missing Required Roles (${missingRoles.length} stories)'),
             content: SizedBox(
               width: double.maxFinite,
               height: 300,
@@ -923,12 +956,14 @@ Required fields:
                 itemCount: missingRoles.length,
                 itemBuilder: (context, index) {
                   final story = missingRoles[index];
-                  final missing = (story['missingRoles'] as List<String>).join(', ');
-                  
+                  final missing =
+                      (story['missingRoles'] as List<String>).join(', ');
+
                   return ListTile(
                     dense: true,
                     title: Text(story['title']),
-                    subtitle: Text('Slug: ${story['slug']} • Missing: $missing'),
+                    subtitle:
+                        Text('Slug: ${story['slug']} • Missing: $missing'),
                     leading: Icon(
                       Icons.warning,
                       color: Colors.orange[700],
@@ -946,8 +981,9 @@ Required fields:
             ],
           ),
         );
-        
-        _setStatus('⚠️ Found ${missingRoles.length} stories with missing required roles');
+
+        _setStatus(
+            '⚠️ Found ${missingRoles.length} stories with missing required roles');
       }
     } catch (e) {
       throw Exception('Role audit failed: $e');
@@ -985,8 +1021,8 @@ Required fields:
                   Text(
                     'Manage user accounts, subscriptions, and permissions.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                   ),
                 ],
               ),
@@ -1003,13 +1039,17 @@ Required fields:
                   child: ListTile(
                     leading: const Icon(Icons.star, color: Colors.amber),
                     title: const Text('Upgrade Testing Account to Pro'),
-                    subtitle: const Text('Upgrade tchamilton64@gmail.com to Pro status for unlimited testing'),
+                    subtitle: const Text(
+                        'Upgrade tchamilton64@gmail.com to Pro status for unlimited testing'),
                     trailing: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _confirmAndRun(
-                        title: 'Upgrade User to Pro',
-                        message: 'This will upgrade tchamilton64@gmail.com to Pro status with unlimited generations and palettes.\n\nThis is for testing purposes only.',
-                        action: _upgradeTestUserToPro,
-                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _confirmAndRun(
+                                title: 'Upgrade User to Pro',
+                                message:
+                                    'This will upgrade tchamilton64@gmail.com to Pro status with unlimited generations and palettes.\n\nThis is for testing purposes only.',
+                                action: _upgradeTestUserToPro,
+                              ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade50,
                         foregroundColor: Colors.amber.shade700,
@@ -1019,7 +1059,7 @@ Required fields:
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Info Card
                 Card(
                   color: Colors.blue.shade50,
@@ -1067,7 +1107,8 @@ Required fields:
   Future<void> _upgradeTestUserToPro() async {
     try {
       await FirebaseService.upgradeUserToPro('tchamilton64@gmail.com');
-      _setStatus('✅ Successfully upgraded tchamilton64@gmail.com to Pro status! You now have unlimited generations and palettes.');
+      _setStatus(
+          '✅ Successfully upgraded tchamilton64@gmail.com to Pro status! You now have unlimited generations and palettes.');
     } catch (e) {
       throw Exception('Failed to upgrade user: $e');
     }

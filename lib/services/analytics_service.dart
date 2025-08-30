@@ -2,7 +2,7 @@ import 'dart:developer' as developer;
 import '../models/project.dart';
 
 /// A comprehensive analytics tracking service for Color Stories feature.
-/// 
+///
 /// This service provides analytics tracking for Color Stories interactions.
 /// It uses a mock implementation that logs events to the console since Firebase Analytics
 /// is not currently installed in the project. When Firebase Analytics is added to the project,
@@ -15,7 +15,7 @@ class AnalyticsService {
   static AnalyticsService get instance => _instance;
 
   bool _isEnabled = true;
-  
+
   /// Enable or disable analytics tracking
   void setAnalyticsCollectionEnabled(bool enabled) {
     _isEnabled = enabled;
@@ -40,7 +40,8 @@ class AnalyticsService {
         'slug': slug,
         if (title != null) 'story_title': title,
         if (themes != null && themes.isNotEmpty) 'themes': themes.join(','),
-        if (families != null && families.isNotEmpty) 'families': families.join(','),
+        if (families != null && families.isNotEmpty)
+          'families': families.join(','),
         if (rooms != null && rooms.isNotEmpty) 'rooms': rooms.join(','),
         if (isFeatured != null) 'is_featured': isFeatured,
         if (source != null) 'source': source,
@@ -48,7 +49,8 @@ class AnalyticsService {
 
       await _logEvent('color_story_open', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackColorStoryOpen: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackColorStoryOpen: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -74,7 +76,8 @@ class AnalyticsService {
 
       await _logEvent('color_story_use_click', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackColorStoryUseClick: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackColorStoryUseClick: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -97,7 +100,8 @@ class AnalyticsService {
 
       await _logEvent('color_story_save_click', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackColorStorySaveClick: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackColorStorySaveClick: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -120,7 +124,8 @@ class AnalyticsService {
 
       await _logEvent('color_story_share_click', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackColorStoryShareClick: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackColorStoryShareClick: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -130,7 +135,8 @@ class AnalyticsService {
     List<String>? selectedFamilies,
     List<String>? selectedRooms,
     bool? featuredOnly,
-    String? changeType, // e.g., 'theme_added', 'family_removed', 'featured_toggled'
+    String?
+        changeType, // e.g., 'theme_added', 'family_removed', 'featured_toggled'
     int? totalResultCount,
   }) async {
     if (!_isEnabled) return;
@@ -138,19 +144,24 @@ class AnalyticsService {
     try {
       final Map<String, dynamic> parameters = {
         if (selectedThemes != null) 'selected_themes': selectedThemes.join(','),
-        if (selectedFamilies != null) 'selected_families': selectedFamilies.join(','),
+        if (selectedFamilies != null)
+          'selected_families': selectedFamilies.join(','),
         if (selectedRooms != null) 'selected_rooms': selectedRooms.join(','),
         if (featuredOnly != null) 'featured_only': featuredOnly,
         if (changeType != null) 'change_type': changeType,
         if (totalResultCount != null) 'result_count': totalResultCount,
         'active_filter_count': _calculateActiveFilterCount(
-          selectedThemes, selectedFamilies, selectedRooms, featuredOnly,
+          selectedThemes,
+          selectedFamilies,
+          selectedRooms,
+          featuredOnly,
         ),
       };
 
       await _logEvent('explore_filter_change', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackExploreFilterChange: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackExploreFilterChange: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -168,14 +179,16 @@ class AnalyticsService {
         'search_query': searchQuery.toLowerCase().trim(),
         'query_length': searchQuery.trim().length,
         if (resultCount != null) 'result_count': resultCount,
-        if (searchDurationMs != null) 'search_duration_ms': searchDurationMs.round(),
+        if (searchDurationMs != null)
+          'search_duration_ms': searchDurationMs.round(),
         if (activeFilters != null && activeFilters.isNotEmpty)
           'active_filters': activeFilters.join(','),
       };
 
       await _logEvent('explore_search', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackExploreSearch: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackExploreSearch: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -191,30 +204,36 @@ class AnalyticsService {
 
     try {
       final Map<String, dynamic> parameters = {
-        if (selectedThemes != null && selectedThemes.isNotEmpty) 
+        if (selectedThemes != null && selectedThemes.isNotEmpty)
           'selected_themes': selectedThemes.join(','),
-        if (selectedFamilies != null && selectedFamilies.isNotEmpty) 
+        if (selectedFamilies != null && selectedFamilies.isNotEmpty)
           'selected_families': selectedFamilies.join(','),
-        if (selectedRooms != null && selectedRooms.isNotEmpty) 
+        if (selectedRooms != null && selectedRooms.isNotEmpty)
           'selected_rooms': selectedRooms.join(','),
-        if (searchQuery != null && searchQuery.isNotEmpty) 
+        if (searchQuery != null && searchQuery.isNotEmpty)
           'search_query': searchQuery.toLowerCase().trim(),
         if (suggestedAction != null) 'suggested_action': suggestedAction,
         'active_filter_count': _calculateActiveFilterCount(
-          selectedThemes, selectedFamilies, selectedRooms, null,
+          selectedThemes,
+          selectedFamilies,
+          selectedRooms,
+          null,
         ),
-        'has_search_query': searchQuery != null && searchQuery.trim().isNotEmpty,
+        'has_search_query':
+            searchQuery != null && searchQuery.trim().isNotEmpty,
       };
 
       await _logEvent('explore_empty_state_shown', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackExploreEmptyStateShown: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackExploreEmptyStateShown: $e',
+          name: 'AnalyticsService');
     }
   }
 
   /// Track general user engagement with color stories feature
   Future<void> trackColorStoriesEngagement({
-    required String action, // e.g., 'feature_accessed', 'story_favorited', 'palette_exported'
+    required String
+        action, // e.g., 'feature_accessed', 'story_favorited', 'palette_exported'
     String? storyId,
     Map<String, dynamic>? additionalData,
   }) async {
@@ -233,7 +252,8 @@ class AnalyticsService {
 
       await _logEvent('color_stories_engagement', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackColorStoriesEngagement: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackColorStoriesEngagement: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -253,7 +273,8 @@ class AnalyticsService {
 
       await _logEvent('roller_harmony_sorted_by_lrv', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackRollerHarmonySortedByLrv: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackRollerHarmonySortedByLrv: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -263,12 +284,14 @@ class AnalyticsService {
 
     try {
       // Mock implementation - log the user property
-      developer.log('Setting user property: $name = $value', name: 'AnalyticsService');
-      
+      developer.log('Setting user property: $name = $value',
+          name: 'AnalyticsService');
+
       // TODO: When Firebase Analytics is added, replace with:
       // await FirebaseAnalytics.instance.setUserProperty(name: name, value: value);
     } catch (e) {
-      developer.log('Analytics error in setUserProperty: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in setUserProperty: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -280,16 +303,18 @@ class AnalyticsService {
     if (!_isEnabled) return;
 
     try {
-      developer.log('Screen view: $screenName${screenClass != null ? ' ($screenClass)' : ''}', 
-                   name: 'AnalyticsService');
-      
+      developer.log(
+          'Screen view: $screenName${screenClass != null ? ' ($screenClass)' : ''}',
+          name: 'AnalyticsService');
+
       // TODO: When Firebase Analytics is added, replace with:
       // await FirebaseAnalytics.instance.logScreenView(
       //   screenName: screenName,
       //   screenClass: screenClass,
       // );
     } catch (e) {
-      developer.log('Analytics error in setCurrentScreen: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in setCurrentScreen: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -309,15 +334,18 @@ class AnalyticsService {
         'palette_id': paletteId,
         'style_tag': styleTag,
         'room_type': roomType,
-        if (vibeWords != null && vibeWords.isNotEmpty) 'vibe_words': vibeWords.join(','),
-        if (brandHints != null && brandHints.isNotEmpty) 'brand_hints': brandHints.join(','),
+        if (vibeWords != null && vibeWords.isNotEmpty)
+          'vibe_words': vibeWords.join(','),
+        if (brandHints != null && brandHints.isNotEmpty)
+          'brand_hints': brandHints.join(','),
         if (guidanceLevel != null) 'guidance_level': guidanceLevel,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
 
       await _logEvent('story_generate_start', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateStart: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryGenerateStart: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -339,7 +367,8 @@ class AnalyticsService {
 
       await _logEvent('story_generate_complete', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateComplete: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryGenerateComplete: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -361,7 +390,8 @@ class AnalyticsService {
 
       await _logEvent('story_generate_error', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateError: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryGenerateError: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -381,7 +411,8 @@ class AnalyticsService {
 
       await _logEvent('story_play', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryPlay: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryPlay: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -401,7 +432,8 @@ class AnalyticsService {
 
       await _logEvent('story_like', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryLike: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryLike: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -423,7 +455,8 @@ class AnalyticsService {
 
       await _logEvent('story_apply_visualizer', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryApplyVisualizer: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryApplyVisualizer: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -443,7 +476,8 @@ class AnalyticsService {
 
       await _logEvent('story_remix', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackStoryRemix: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackStoryRemix: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -457,13 +491,15 @@ class AnalyticsService {
     try {
       final Map<String, dynamic> parameters = {
         if (source != null) 'source': source,
-        if (preselectedPaletteId != null) 'preselected_palette_id': preselectedPaletteId,
+        if (preselectedPaletteId != null)
+          'preselected_palette_id': preselectedPaletteId,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
 
       await _logEvent('wizard_open', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackWizardOpen: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackWizardOpen: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -485,7 +521,8 @@ class AnalyticsService {
 
       await _logEvent('reveal_open', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackRevealOpen: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackRevealOpen: $e',
+          name: 'AnalyticsService');
     }
   }
 
@@ -503,23 +540,25 @@ class AnalyticsService {
 
       await _logEvent('explore_sort_changed', parameters);
     } catch (e) {
-      developer.log('Analytics error in trackExploreSortChanged: $e', name: 'AnalyticsService');
+      developer.log('Analytics error in trackExploreSortChanged: $e',
+          name: 'AnalyticsService');
     }
   }
 
   /// Public method to log custom events with parameters
-  Future<void> logEvent(String eventName, [Map<String, dynamic>? parameters]) async {
+  Future<void> logEvent(String eventName,
+      [Map<String, dynamic>? parameters]) async {
     await _logEvent(eventName, parameters ?? {});
   }
 
   /// Internal method to log events - currently uses mock implementation
-  Future<void> _logEvent(String eventName, Map<String, dynamic> parameters) async {
+  Future<void> _logEvent(
+      String eventName, Map<String, dynamic> parameters) async {
     try {
       // Mock implementation - log to console with structured format
-      final parametersStr = parameters.entries
-          .map((e) => '${e.key}: ${e.value}')
-          .join(', ');
-      
+      final parametersStr =
+          parameters.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+
       developer.log(
         'EVENT: $eventName | $parametersStr',
         name: 'AnalyticsService',
@@ -530,9 +569,9 @@ class AnalyticsService {
       //   name: eventName,
       //   parameters: parameters,
       // );
-      
     } catch (e) {
-      developer.log('Failed to log analytics event $eventName: $e', name: 'AnalyticsService');
+      developer.log('Failed to log analytics event $eventName: $e',
+          name: 'AnalyticsService');
       // Don't rethrow - analytics failures should not crash the app
     }
   }
@@ -540,7 +579,7 @@ class AnalyticsService {
   /// Helper method to calculate the number of active filters
   int _calculateActiveFilterCount(
     List<String>? themes,
-    List<String>? families, 
+    List<String>? families,
     List<String>? rooms,
     bool? featuredOnly,
   ) {
@@ -561,7 +600,7 @@ class AnalyticsService {
   }
 
   // Funnel Analytics Methods
-  
+
   /// Track when dashboard is opened
   Future<void> logDashboardOpened() async {
     await _logEvent('dashboard_opened', {});
@@ -575,7 +614,8 @@ class AnalyticsService {
   }
 
   /// Track when a project changes funnel stage
-  Future<void> logProjectStageChanged(String projectId, FunnelStage stage) async {
+  Future<void> logProjectStageChanged(
+      String projectId, FunnelStage stage) async {
     await _logEvent('project_stage_changed', {
       'project_id': projectId,
       'stage': funnelStageToString(stage),
@@ -583,7 +623,8 @@ class AnalyticsService {
   }
 
   /// Track when user starts from explore story
-  Future<void> logStartFromExplore(String sourceStoryId, String projectId) async {
+  Future<void> logStartFromExplore(
+      String sourceStoryId, String projectId) async {
     await _logEvent('start_from_explore', {
       'source_story_id': sourceStoryId,
       'project_id': projectId,
@@ -591,7 +632,8 @@ class AnalyticsService {
   }
 
   /// Track when roller saves to project
-  Future<void> logRollerSaveToProject(String projectId, String paletteId) async {
+  Future<void> logRollerSaveToProject(
+      String projectId, String paletteId) async {
     await _logEvent('roller_save_to_project', {
       'project_id': projectId,
       'palette_id': paletteId,
@@ -629,7 +671,8 @@ extension AnalyticsServiceExtension on AnalyticsService {
   }
 
   /// Quick method to track button clicks
-  Future<void> buttonClick(String buttonName, {Map<String, dynamic>? data}) async {
+  Future<void> buttonClick(String buttonName,
+      {Map<String, dynamic>? data}) async {
     await trackColorStoriesEngagement(
       action: 'button_click',
       additionalData: {'button_name': buttonName, ...?data},

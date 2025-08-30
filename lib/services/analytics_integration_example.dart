@@ -3,6 +3,7 @@
 
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
+import 'package:flutter/foundation.dart';
 
 /// Example integration for Color Story Detail Screen
 class ColorStoryDetailScreenAnalyticsExample {
@@ -25,7 +26,7 @@ class ColorStoryDetailScreenAnalyticsExample {
   /// Call this when user clicks "Use This Palette"
   Future<void> trackUseClick(ColorStory colorStory) async {
     final colorHexCodes = colorStory.palette.map((color) => color.hex).toList();
-    
+
     await _analytics.trackColorStoryUseClick(
       storyId: colorStory.id,
       slug: colorStory.slug,
@@ -36,7 +37,8 @@ class ColorStoryDetailScreenAnalyticsExample {
   }
 
   /// Call this when user clicks "Save to Library"
-  Future<void> trackSaveClick(ColorStory colorStory, {bool? isAlreadySaved}) async {
+  Future<void> trackSaveClick(ColorStory colorStory,
+      {bool? isAlreadySaved}) async {
     await _analytics.trackColorStorySaveClick(
       storyId: colorStory.id,
       slug: colorStory.slug,
@@ -123,7 +125,8 @@ class UserAnalyticsExample {
       await _analytics.setUserProperty('user_type', userType);
     }
     if (paletteCount != null) {
-      await _analytics.setUserProperty('palette_count', paletteCount.toString());
+      await _analytics.setUserProperty(
+          'palette_count', paletteCount.toString());
     }
     if (isAdmin != null) {
       await _analytics.setUserProperty('is_admin', isAdmin.toString());
@@ -140,7 +143,7 @@ class IntegrationPatterns {
     try {
       // Your existing business logic
       // Navigator.popUntil(context, (route) => route.isFirst);
-      
+
       // Add analytics tracking
       await _analytics.trackColorStoryUseClick(
         storyId: story.id,
@@ -150,7 +153,7 @@ class IntegrationPatterns {
       );
     } catch (e) {
       // Handle errors, analytics failures should not break functionality
-      print('Error in handleUseThisPalette: $e');
+      debugPrint('Error in handleUseThisPalette: $e');
     }
   }
 
@@ -158,7 +161,7 @@ class IntegrationPatterns {
   void handleShareClick(ColorStory story) {
     // Your existing business logic
     // showShareDialog(story);
-    
+
     // Fire-and-forget analytics (runs in background)
     _analytics.trackColorStoryShareClick(
       storyId: story.id,
@@ -169,10 +172,11 @@ class IntegrationPatterns {
   }
 
   /// Pattern 3: Track with additional context
-  Future<void> handleFilterChange(List<String> themes, String addedTheme) async {
+  Future<void> handleFilterChange(
+      List<String> themes, String addedTheme) async {
     // Your existing filter logic
     // setState(() { _selectedThemes.add(addedTheme); });
-    
+
     // Track with context about what changed
     await _analytics.trackExploreFilterChange(
       selectedThemes: themes,

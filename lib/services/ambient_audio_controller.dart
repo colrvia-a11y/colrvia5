@@ -8,22 +8,22 @@ class AmbientLoopController {
   bool _isPlaying = false;
   String? _currentUrl;
   bool _autoplayBlocked = false;
-  
+
   /// Start playing ambient audio loop
   Future<void> start(String loopUrl, double gain) async {
     try {
       _gain = gain;
       _currentUrl = loopUrl;
       _autoplayBlocked = false;
-      
+
       // Initialize player if needed
       _player ??= AudioPlayer();
-      
+
       // Set up the audio
       await _player!.setUrl(loopUrl);
       await _player!.setVolume(_gain);
       await _player!.setLoopMode(LoopMode.one);
-      
+
       // Attempt to play (may fail due to autoplay policies)
       try {
         await _player!.play();
@@ -40,7 +40,7 @@ class AmbientLoopController {
       _autoplayBlocked = true;
     }
   }
-  
+
   /// Stop ambient audio
   Future<void> stop() async {
     try {
@@ -53,7 +53,7 @@ class AmbientLoopController {
       debugPrint('🎵 Error stopping ambient audio: $e');
     }
   }
-  
+
   /// Pause ambient audio (for app backgrounding)
   Future<void> pause() async {
     try {
@@ -65,7 +65,7 @@ class AmbientLoopController {
       debugPrint('🎵 Error pausing ambient audio: $e');
     }
   }
-  
+
   /// Resume ambient audio
   Future<void> resume() async {
     try {
@@ -78,7 +78,7 @@ class AmbientLoopController {
       debugPrint('🎵 Error resuming ambient audio: $e');
     }
   }
-  
+
   /// Set volume/gain
   Future<void> setGain(double gain) async {
     try {
@@ -91,7 +91,7 @@ class AmbientLoopController {
       debugPrint('🎵 Error setting ambient audio gain: $e');
     }
   }
-  
+
   /// Manually start playback (for user-initiated play after autoplay block)
   Future<void> manualPlay() async {
     try {
@@ -105,16 +105,16 @@ class AmbientLoopController {
       debugPrint('🎵 Error with manual ambient audio play: $e');
     }
   }
-  
+
   /// Check if autoplay was blocked
   bool get isAutoplayBlocked => _autoplayBlocked;
-  
+
   /// Check if currently playing
   bool get isPlaying => _isPlaying;
-  
+
   /// Current gain level
   double get currentGain => _gain;
-  
+
   /// Dispose of resources
   Future<void> dispose() async {
     try {

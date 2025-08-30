@@ -7,9 +7,10 @@ import '../services/network_utils.dart';
 class NetworkAwareAudio extends StatefulWidget {
   final String audioUrl;
   final bool wifiOnlyPref;
-  final Widget Function(BuildContext context, AudioPlayer player, bool canLoad)? builder;
+  final Widget Function(BuildContext context, AudioPlayer player, bool canLoad)?
+      builder;
   final VoidCallback? onLoadBlocked;
-  
+
   const NetworkAwareAudio({
     super.key,
     required this.audioUrl,
@@ -47,7 +48,7 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
       wifiOnlyPref: widget.wifiOnlyPref,
       assetKey: widget.audioUrl,
     );
-    
+
     if (mounted) {
       setState(() {
         _shouldLoad = shouldLoad;
@@ -56,7 +57,7 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
           widget.onLoadBlocked?.call();
         }
       });
-      
+
       if (shouldLoad) {
         await _loadAudio();
       }
@@ -80,19 +81,19 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
 
   Future<void> _onTapToLoad() async {
     setState(() => _isLoading = true);
-    
+
     // Override the cellular restriction for this asset
     final canLoad = await NetworkGuard.shouldLoadHeavyAsset(
       wifiOnlyPref: widget.wifiOnlyPref,
       assetKey: widget.audioUrl,
       forceLoad: true,
     );
-    
+
     if (mounted && canLoad) {
       setState(() => _shouldLoad = true);
       await _loadAudio();
     }
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -105,7 +106,7 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -133,15 +134,18 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
                     Text(
                       'Audio available',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Connect to Wi-Fi for auto-loading',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
                     ),
                   ],
                 ),
@@ -154,25 +158,33 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
               if (_connectionStatus != null)
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _connectionStatus == 'Wi-Fi' ? Icons.wifi : Icons.signal_cellular_4_bar,
+                          _connectionStatus == 'Wi-Fi'
+                              ? Icons.wifi
+                              : Icons.signal_cellular_4_bar,
                           size: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           _connectionStatus!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                  ),
                         ),
                       ],
                     ),
@@ -194,7 +206,8 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
                 label: Text(_isLoading ? 'Loading...' : 'Load Audio'),
                 style: FilledButton.styleFrom(
                   textStyle: const TextStyle(fontSize: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -221,7 +234,7 @@ class _NetworkAwareAudioState extends State<NetworkAwareAudio> {
         final playerState = snapshot.data;
         final processingState = playerState?.processingState;
         final playing = playerState?.playing;
-        
+
         if (processingState == ProcessingState.loading ||
             processingState == ProcessingState.buffering) {
           return const CircularProgressIndicator();

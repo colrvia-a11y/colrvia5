@@ -17,7 +17,7 @@ class _AuthDialogState extends State<AuthDialog> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   bool _isSignIn = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -38,7 +38,7 @@ class _AuthDialogState extends State<AuthDialog> {
 
     try {
       UserCredential userCredential;
-      
+
       if (_isSignIn) {
         userCredential = await FirebaseService.signInWithEmailAndPassword(
           _emailController.text.trim(),
@@ -49,7 +49,7 @@ class _AuthDialogState extends State<AuthDialog> {
           _emailController.text.trim(),
           _passwordController.text,
         );
-        
+
         // Create user profile for new users
         if (userCredential.user != null) {
           final profile = UserProfile(
@@ -60,7 +60,7 @@ class _AuthDialogState extends State<AuthDialog> {
             paletteCount: 0,
             createdAt: DateTime.now(),
           );
-          
+
           await FirebaseService.createUserProfile(profile);
         }
       }
@@ -69,13 +69,15 @@ class _AuthDialogState extends State<AuthDialog> {
         widget.onAuthSuccess();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isSignIn ? 'Signed in successfully' : 'Account created successfully'),
+            content: Text(_isSignIn
+                ? 'Signed in successfully'
+                : 'Account created successfully'),
           ),
         );
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _isLoading = false);
-      
+
       String message;
       switch (e.code) {
         case 'user-not-found':
@@ -96,7 +98,7 @@ class _AuthDialogState extends State<AuthDialog> {
         default:
           message = e.message ?? 'Authentication failed';
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
@@ -104,7 +106,7 @@ class _AuthDialogState extends State<AuthDialog> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
@@ -140,9 +142,7 @@ class _AuthDialogState extends State<AuthDialog> {
                 return null;
               },
             ),
-            
             const SizedBox(height: 16),
-            
             TextFormField(
               controller: _passwordController,
               decoration: InputDecoration(
@@ -150,8 +150,11 @@ class _AuthDialogState extends State<AuthDialog> {
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.lock),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(_obscurePassword
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
               obscureText: _obscurePassword,
@@ -165,7 +168,6 @@ class _AuthDialogState extends State<AuthDialog> {
                 return null;
               },
             ),
-            
             if (!_isSignIn) ...[
               const SizedBox(height: 16),
               TextFormField(
@@ -175,8 +177,11 @@ class _AuthDialogState extends State<AuthDialog> {
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                    icon: Icon(_obscureConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () => setState(() =>
+                        _obscureConfirmPassword = !_obscureConfirmPassword),
                   ),
                 ),
                 obscureText: _obscureConfirmPassword,
@@ -191,14 +196,12 @@ class _AuthDialogState extends State<AuthDialog> {
                 },
               ),
             ],
-            
             const SizedBox(height: 16),
-            
             TextButton(
               onPressed: () => setState(() => _isSignIn = !_isSignIn),
               child: Text(
-                _isSignIn 
-                    ? 'Don\'t have an account? Sign up' 
+                _isSignIn
+                    ? 'Don\'t have an account? Sign up'
                     : 'Already have an account? Sign in',
               ),
             ),

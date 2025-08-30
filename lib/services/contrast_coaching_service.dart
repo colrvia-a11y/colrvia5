@@ -62,7 +62,11 @@ class ContrastCoachingService {
     final keyPairings = [
       {'role1': 'trim', 'role2': 'walls', 'description': 'Trim vs Walls'},
       {'role1': 'door', 'role2': 'walls', 'description': 'Door vs Walls'},
-      {'role1': 'cabinets', 'role2': 'walls', 'description': 'Cabinets vs Walls'},
+      {
+        'role1': 'cabinets',
+        'role2': 'walls',
+        'description': 'Cabinets vs Walls'
+      },
       {'role1': 'accent', 'role2': 'walls', 'description': 'Accent vs Walls'},
     ];
 
@@ -98,7 +102,7 @@ class ContrastCoachingService {
   ) {
     final suggestions = <ContrastSuggestion>[];
     final roleColors = <String, Color>{};
-    
+
     // Build role-to-color mapping from usage guide
     for (final usageItem in story.usageGuide) {
       roleColors[usageItem.role] = ColorUtils.hexToColor(usageItem.hex);
@@ -106,16 +110,19 @@ class ContrastCoachingService {
 
     // Try swapping each role with available colors
     final availableRoles = roleColors.keys.toList();
-    
+
     for (final availableRole in availableRoles) {
-      if (availableRole == evaluation.role1 || availableRole == evaluation.role2) continue;
-      
+      if (availableRole == evaluation.role1 ||
+          availableRole == evaluation.role2) {
+        continue;
+      }
+
       final availableColor = roleColors[availableRole]!;
-      
+
       // Try replacing role1 with available color
       final ratio1 = contrastRatio(availableColor, evaluation.color2);
       final level1 = _evaluateContrast(ratio1);
-      
+
       if (level1.index > evaluation.level.index) {
         suggestions.add(ContrastSuggestion(
           currentRole: evaluation.role1,
@@ -126,11 +133,11 @@ class ContrastCoachingService {
           improvedLevel: level1,
         ));
       }
-      
+
       // Try replacing role2 with available color
       final ratio2 = contrastRatio(evaluation.color1, availableColor);
       final level2 = _evaluateContrast(ratio2);
-      
+
       if (level2.index > evaluation.level.index) {
         suggestions.add(ContrastSuggestion(
           currentRole: evaluation.role2,
@@ -144,8 +151,9 @@ class ContrastCoachingService {
     }
 
     // Sort by improvement level (best improvements first)
-    suggestions.sort((a, b) => b.improvedLevel.index.compareTo(a.improvedLevel.index));
-    
+    suggestions
+        .sort((a, b) => b.improvedLevel.index.compareTo(a.improvedLevel.index));
+
     return suggestions.take(3).toList(); // Return top 3 suggestions
   }
 }

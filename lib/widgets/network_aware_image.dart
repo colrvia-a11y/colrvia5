@@ -15,7 +15,7 @@ class NetworkAwareImage extends StatefulWidget {
   final Widget? errorWidget;
   final String? semanticLabel;
   final bool isHeavyAsset; // Images > 500KB should set this to true
-  
+
   const NetworkAwareImage({
     super.key,
     required this.imageUrl,
@@ -57,7 +57,7 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
       wifiOnlyPref: widget.wifiOnlyPref,
       assetKey: widget.imageUrl,
     );
-    
+
     if (mounted) {
       setState(() => _shouldLoad = shouldLoad);
     }
@@ -72,14 +72,14 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
 
   Future<void> _onTapToLoad() async {
     setState(() => _isLoading = true);
-    
+
     // Override the cellular restriction for this asset
     final canLoad = await NetworkGuard.shouldLoadHeavyAsset(
       wifiOnlyPref: widget.wifiOnlyPref,
       assetKey: widget.imageUrl,
       forceLoad: true,
     );
-    
+
     if (mounted) {
       setState(() {
         _shouldLoad = canLoad;
@@ -96,8 +96,8 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
         borderRadius: widget.borderRadius,
         gradient: LinearGradient(
           colors: [
-            Colors.black.withOpacity(0.6),
-            Colors.black.withOpacity(0.4),
+            Colors.black.withValues(alpha: 0.6),
+            Colors.black.withValues(alpha: 0.4),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -122,15 +122,15 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
                   Text(
                     'Loading...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                    ),
+                          color: Colors.white,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                 ] else ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -143,33 +143,34 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
                   Text(
                     'Tap to load on cellular',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Connect to Wi-Fi for auto-loading',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
-                    ),
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
                     textAlign: TextAlign.center,
                   ),
                   if (_connectionStatus != null) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'Connected via $_connectionStatus',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 11,
-                        ),
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 11,
+                            ),
                       ),
                     ),
                   ],
@@ -193,8 +194,8 @@ class _NetworkAwareImageState extends State<NetworkAwareImage> {
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
-      placeholder: (context, url) => 
-          widget.placeholder ?? 
+      placeholder: (context, url) =>
+          widget.placeholder ??
           Container(
             width: widget.width,
             height: widget.height,

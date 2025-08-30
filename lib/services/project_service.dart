@@ -1,6 +1,7 @@
 // lib/services/project_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/project.dart';
 import '../services/analytics_service.dart';
 
@@ -13,18 +14,17 @@ class ProjectService {
   static Stream<List<ProjectDoc>> myProjectsStream({int limit = 50}) {
     final uid = _uid;
     if (uid == null) return const Stream.empty();
-    
+
     return _col
         .where('ownerId', isEqualTo: uid)
         .orderBy('updatedAt', descending: true)
         .limit(limit)
         .snapshots()
         .handleError((error) {
-          // Log error but return empty stream to prevent crashes
-          print('ProjectService: Error fetching projects: $error');
-          return <QuerySnapshot>[];
-        })
-        .map((s) => s.docs.map((d) => ProjectDoc.fromSnap(d)).toList());
+      // Log error but return empty stream to prevent crashes
+      debugPrint('ProjectService: Error fetching projects: $error');
+      return <QuerySnapshot>[];
+    }).map((s) => s.docs.map((d) => ProjectDoc.fromSnap(d)).toList());
   }
 
   static Future<ProjectDoc> create({
@@ -38,7 +38,7 @@ class ProjectService {
     if (uid == null) {
       throw Exception('Sign in required to create projects');
     }
-    
+
     try {
       final now = DateTime.now();
       final ref = await _col.add({
@@ -61,12 +61,13 @@ class ProjectService {
     }
   }
 
-  static Future<void> attachPalette(String projectId, String paletteId, {bool setActive = true}) async {
+  static Future<void> attachPalette(String projectId, String paletteId,
+      {bool setActive = true}) async {
     final uid = _uid;
     if (uid == null) {
       throw Exception('Sign in required to update projects');
     }
-    
+
     try {
       await _col.doc(projectId).update({
         'paletteIds': FieldValue.arrayUnion([paletteId]),
@@ -83,7 +84,7 @@ class ProjectService {
     if (uid == null) {
       throw Exception('Sign in required to update projects');
     }
-    
+
     try {
       await _col.doc(projectId).update({
         'colorStoryId': colorStoryId,
@@ -95,18 +96,19 @@ class ProjectService {
     }
   }
 
-  static Future<void> setFunnelStage(String projectId, FunnelStage stage) async {
+  static Future<void> setFunnelStage(
+      String projectId, FunnelStage stage) async {
     final uid = _uid;
     if (uid == null) {
       throw Exception('Sign in required to update projects');
     }
-    
+
     try {
       await _col.doc(projectId).update({
         'funnelStage': funnelStageToString(stage),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       // Track stage change
       AnalyticsService.instance.logProjectStageChanged(projectId, stage);
     } catch (e) {

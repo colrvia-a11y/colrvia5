@@ -33,6 +33,9 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Flutter SDK (if accidentally included)
+flutter/
+
 # Symbolication related
 app.*.symbols
 

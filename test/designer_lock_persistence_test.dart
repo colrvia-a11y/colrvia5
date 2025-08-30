@@ -14,7 +14,7 @@ class TestPaintFactory {
         code: 'TW100',
         hex: '#FFFFFF',
         rgb: [255, 255, 255],
-        lab: [95.0, 0.0, 0.0], 
+        lab: [95.0, 0.0, 0.0],
         lch: [95.0, 0.0, 0.0],
       ),
       Paint(
@@ -130,19 +130,20 @@ void main() {
 
     test('Designer: locked swatches persist across generated pages', () {
       const size = 7;
-      
+
       // Start with an initial palette
       final first = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: List<Paint?>.filled(size, null),
         mode: HarmonyMode.designer,
       );
-      
+
       expect(first.length, equals(size));
-      
+
       // Lock 1st and 5th positions
       final locked = List<bool>.generate(size, (i) => i == 0 || i == 4);
-      final anchors = List<Paint?>.generate(size, (i) => locked[i] ? first[i] : null);
+      final anchors =
+          List<Paint?>.generate(size, (i) => locked[i] ? first[i] : null);
 
       // Generate another page with locks
       final next = PaletteGenerator.rollPalette(
@@ -152,11 +153,11 @@ void main() {
       );
 
       expect(next.length, equals(size));
-      
+
       // Assert locked positions unchanged by identity
       expect(paintIdentity(next[0]), equals(paintIdentity(first[0])));
       expect(paintIdentity(next[4]), equals(paintIdentity(first[4])));
-      
+
       // Verify unlocked positions can be different
       // (Note: they might be the same by chance, but we test that locks work)
       expect(next[0].id, equals(first[0].id)); // Locked should be identical
@@ -165,17 +166,18 @@ void main() {
 
     test('Designer: single lock at middle position works', () {
       const size = 5;
-      
+
       // Generate initial palette
       final first = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: List<Paint?>.filled(size, null),
         mode: HarmonyMode.designer,
       );
-      
+
       // Lock only position 2 (middle)
-      final anchors = List<Paint?>.generate(size, (i) => i == 2 ? first[i] : null);
-      
+      final anchors =
+          List<Paint?>.generate(size, (i) => i == 2 ? first[i] : null);
+
       // Generate multiple new palettes
       for (int attempt = 0; attempt < 5; attempt++) {
         final next = PaletteGenerator.rollPalette(
@@ -183,7 +185,7 @@ void main() {
           anchors: anchors,
           mode: HarmonyMode.designer,
         );
-        
+
         expect(next.length, equals(size));
         expect(paintIdentity(next[2]), equals(paintIdentity(first[2])));
         expect(next[2].id, equals(first[2].id));
@@ -192,26 +194,26 @@ void main() {
 
     test('Designer: all positions locked returns same palette', () {
       const size = 4;
-      
+
       // Generate initial palette
       final first = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: List<Paint?>.filled(size, null),
         mode: HarmonyMode.designer,
       );
-      
+
       // Lock all positions
       final anchors = List<Paint?>.generate(size, (i) => first[i]);
-      
+
       // Generate new palette with all locks
       final next = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: anchors,
         mode: HarmonyMode.designer,
       );
-      
+
       expect(next.length, equals(size));
-      
+
       // All positions should be identical
       for (int i = 0; i < size; i++) {
         expect(paintIdentity(next[i]), equals(paintIdentity(first[i])));
@@ -221,37 +223,40 @@ void main() {
 
     test('Designer: locked paints are excluded from other slots', () {
       const size = 6;
-      
+
       // Create a palette with distinct paints
       final first = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: List<Paint?>.filled(size, null),
         mode: HarmonyMode.designer,
       );
-      
+
       // Lock positions 0 and 2
-      final anchors = List<Paint?>.generate(size, (i) => 
-        (i == 0 || i == 2) ? first[i] : null);
-      
+      final anchors = List<Paint?>.generate(
+          size, (i) => (i == 0 || i == 2) ? first[i] : null);
+
       // Generate new palette
       final next = PaletteGenerator.rollPalette(
         availablePaints: dataset,
         anchors: anchors,
         mode: HarmonyMode.designer,
       );
-      
+
       expect(next.length, equals(size));
-      
+
       // Locked positions unchanged
       expect(paintIdentity(next[0]), equals(paintIdentity(first[0])));
       expect(paintIdentity(next[2]), equals(paintIdentity(first[2])));
-      
+
       // No duplicates: locked paints shouldn't appear in other slots
-      final lockedIdentities = {paintIdentity(first[0]), paintIdentity(first[2])};
+      final lockedIdentities = {
+        paintIdentity(first[0]),
+        paintIdentity(first[2])
+      };
       for (int i = 0; i < size; i++) {
         if (i == 0 || i == 2) continue; // Skip locked positions
-        expect(lockedIdentities.contains(paintIdentity(next[i])), isFalse, 
-          reason: 'Unlocked position $i should not contain a locked paint');
+        expect(lockedIdentities.contains(paintIdentity(next[i])), isFalse,
+            reason: 'Unlocked position $i should not contain a locked paint');
       }
     });
   });

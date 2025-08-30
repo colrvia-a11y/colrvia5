@@ -36,7 +36,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       // Create user account
-      final userCredential = await FirebaseService.createUserWithEmailAndPassword(
+      final userCredential =
+          await FirebaseService.createUserWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
@@ -65,16 +66,17 @@ class _SignupScreenState extends State<SignupScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navigate to home screen after successful signup
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred. Please try again.';
-      
+
       switch (e.code) {
         case 'weak-password':
-          message = 'The password is too weak. Please choose a stronger password.';
+          message =
+              'The password is too weak. Please choose a stronger password.';
           break;
         case 'email-already-in-use':
           message = 'An account already exists with this email address.';
@@ -86,7 +88,7 @@ class _SignupScreenState extends State<SignupScreen> {
           message = 'Email/password accounts are not enabled.';
           break;
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
@@ -171,25 +173,28 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Text(
                         'Create Account',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Join Paint Roller to save your palettes',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Name field
                 TextFormField(
                   controller: _nameController,
@@ -207,9 +212,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     fillColor: Colors.grey[50],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -227,9 +232,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     fillColor: Colors.grey[50],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -241,9 +246,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: 'Create a strong password',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                     ),
                     border: OutlineInputBorder(
@@ -251,13 +259,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     filled: true,
                     fillColor: Colors.grey[50],
-                    helperText: 'At least 6 characters with letters and numbers',
+                    helperText:
+                        'At least 6 characters with letters and numbers',
                     helperMaxLines: 2,
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Confirm password field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -270,9 +279,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: 'Confirm your password',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      onPressed: () => setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword),
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                        _obscureConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                     ),
                     border: OutlineInputBorder(
@@ -282,9 +294,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     fillColor: Colors.grey[50],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Sign up button
                 SizedBox(
                   height: 50,
@@ -303,7 +315,8 @@ class _SignupScreenState extends State<SignupScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
@@ -315,9 +328,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Terms text
                 Text(
                   'By creating an account, you agree to our Terms of Service and Privacy Policy.',
@@ -327,9 +340,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Sign in link
                 TextButton(
                   onPressed: () {

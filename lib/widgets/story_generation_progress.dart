@@ -5,13 +5,13 @@ import '../models/color_story.dart' as model;
 
 /// Widget that displays step-by-step progress for color story generation
 /// with error transparency and granular retry functionality.
-/// 
+///
 /// Features:
 /// - Shows progress for each generation step (writing, usage, hero, audio)
 /// - Displays detailed error information when steps fail
 /// - Provides one-tap retry for failed steps
 /// - Shows user-friendly error messages with technical details on demand
-/// 
+///
 /// Error Structure Expected:
 /// ```dart
 /// processing: {
@@ -38,7 +38,8 @@ class StoryGenerationProgress extends StatefulWidget {
   });
 
   @override
-  State<StoryGenerationProgress> createState() => _StoryGenerationProgressState();
+  State<StoryGenerationProgress> createState() =>
+      _StoryGenerationProgressState();
 }
 
 class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
@@ -80,12 +81,13 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -105,44 +107,47 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                     Text(
                       'Creating Your Color Story',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Each step is crafted with AI precision',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Steps progress
           Column(
             children: _generationSteps.map((step) {
               final stepId = step['id'] as String;
               final stepStatus = _getStepStatus(stepId);
               final isRetrying = _retryingSteps.contains(stepId);
-              
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _buildStepRow(step, stepStatus, isRetrying),
               );
             }).toList(),
           ),
-          
+
           // Error card if there's a lastError
           if (_hasLastError()) ...[
             const SizedBox(height: 8),
             _buildErrorCard(),
           ],
-          
+
           // Overall progress indicator
           if (widget.story.status == 'processing')
             Column(
@@ -152,7 +157,8 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
                     value: _calculateOverallProgress(),
-                    backgroundColor: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       Theme.of(context).colorScheme.primary,
                     ),
@@ -163,8 +169,11 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                 Text(
                   '${(_calculateOverallProgress() * 100).round()}% complete',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
                 ),
               ],
             ),
@@ -172,20 +181,21 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       ),
     );
   }
-  
-  Widget _buildStepRow(Map<String, dynamic> step, String status, bool isRetrying) {
+
+  Widget _buildStepRow(
+      Map<String, dynamic> step, String status, bool isRetrying) {
     final stepId = step['id'] as String;
     final label = step['label'] as String;
     final description = step['description'] as String;
     final icon = step['icon'] as IconData;
-    
+
     Color iconColor;
     Widget trailingWidget;
-    
+
     switch (status) {
       case 'complete':
         iconColor = Colors.green;
-        trailingWidget = Icon(
+        trailingWidget = const Icon(
           Icons.check_circle,
           color: Colors.green,
           size: 20,
@@ -223,7 +233,8 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                 label: const Text('Retry'),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -233,11 +244,11 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
         iconColor = Theme.of(context).colorScheme.outline;
         trailingWidget = Icon(
           Icons.radio_button_unchecked,
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           size: 20,
         );
     }
-    
+
     return Row(
       children: [
         // Step icon
@@ -245,7 +256,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -254,9 +265,9 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
             size: 20,
           ),
         ),
-        
+
         const SizedBox(width: 12),
-        
+
         // Step info
         Expanded(
           child: Column(
@@ -265,57 +276,62 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
               Text(
                 label,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 2),
               Text(
                 description,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
               ),
             ],
           ),
         ),
-        
+
         // Status indicator
         trailingWidget,
       ],
     );
   }
-  
+
   bool _hasLastError() {
     final processing = widget.story.processing;
     final lastError = processing['lastError'] as Map<String, dynamic>?;
     return lastError != null && lastError.isNotEmpty;
   }
-  
+
   Map<String, dynamic>? _getLastError() {
     final processing = widget.story.processing;
     return processing['lastError'] as Map<String, dynamic>?;
   }
-  
+
   Widget _buildErrorCard() {
     final lastError = _getLastError();
     if (lastError == null) return const SizedBox.shrink();
-    
+
     final step = lastError['step'] as String? ?? 'unknown';
     final code = lastError['code'] as String? ?? '';
-    final message = lastError['message'] as String? ?? 'An unknown error occurred';
+    final message =
+        lastError['message'] as String? ?? 'An unknown error occurred';
     final at = lastError['at']; // Could be Timestamp
-    
+
     // Find step info
     final stepInfo = _generationSteps.firstWhere(
       (s) => s['id'] == step,
-      orElse: () => {'id': step, 'label': step.toUpperCase(), 'icon': Icons.error},
+      orElse: () =>
+          {'id': step, 'label': step.toUpperCase(), 'icon': Icons.error},
     );
     final stepLabel = stepInfo['label'] as String;
-  // ...existing code...
-    
+    // ...existing code...
+
     // Format error message for user display
     String userMessage = _formatErrorMessage(code, message);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -340,24 +356,24 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                 child: Text(
                   '$stepLabel Failed',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.w600,
-                  ),
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          
+
           // Error message
           Text(
             userMessage,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.red.shade700,
-            ),
+                  color: Colors.red.shade700,
+                ),
           ),
           const SizedBox(height: 12),
-          
+
           // Actions row
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -365,7 +381,8 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
               // Technical details (expandable)
               if (code.isNotEmpty)
                 TextButton.icon(
-                  onPressed: () => _showTechnicalDetails(step, code, message, at),
+                  onPressed: () =>
+                      _showTechnicalDetails(step, code, message, at),
                   icon: const Icon(Icons.info_outline, size: 16),
                   label: const Text('Details'),
                   style: TextButton.styleFrom(
@@ -374,7 +391,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                   ),
                 ),
               const SizedBox(width: 8),
-              
+
               // Retry button
               ElevatedButton.icon(
                 onPressed: _retryingSteps.contains(step)
@@ -392,12 +409,15 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
                         ),
                       )
                     : const Icon(Icons.refresh, size: 16),
-                label: Text(_retryingSteps.contains(step) ? 'Retrying...' : 'Retry'),
+                label: Text(
+                    _retryingSteps.contains(step) ? 'Retrying...' : 'Retry'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  textStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -406,7 +426,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       ),
     );
   }
-  
+
   String _formatErrorMessage(String code, String rawMessage) {
     // Convert technical error codes/messages to user-friendly text
     switch (code.toLowerCase()) {
@@ -434,13 +454,14 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
           return 'Insufficient resources. Please try again later or upgrade your plan.';
         }
         // Fallback to raw message, but cap length
-        return rawMessage.length > 120 
+        return rawMessage.length > 120
             ? '${rawMessage.substring(0, 120)}...'
             : rawMessage;
     }
   }
-  
-  void _showTechnicalDetails(String step, String code, String message, dynamic timestamp) {
+
+  void _showTechnicalDetails(
+      String step, String code, String message, dynamic timestamp) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -465,7 +486,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       ),
     );
   }
-  
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -489,7 +510,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
       ),
     );
   }
-  
+
   String _formatTimestamp(dynamic timestamp) {
     try {
       if (timestamp is String) {
@@ -504,13 +525,13 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
 
   String _getStepStatus(String stepId) {
     final processing = widget.story.processing;
-    
+
     // Check if this specific step has a lastError
     final lastError = processing['lastError'] as Map<String, dynamic>?;
     if (lastError != null && lastError['step'] == stepId) {
       return 'error';
     }
-    
+
     if (processing.isEmpty) {
       // Fallback to overall status if no detailed processing data
       if (widget.story.status == 'complete') {
@@ -523,18 +544,18 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
         return 'pending';
       }
     }
-    
+
     final stepData = processing[stepId] as Map<String, dynamic>?;
     if (stepData == null) return 'pending';
-    
+
     final status = stepData['status'] as String?;
     return status ?? 'pending';
   }
-  
+
   double _calculateOverallProgress() {
     int completedSteps = 0;
     int totalSteps = _generationSteps.length;
-    
+
     for (final step in _generationSteps) {
       final stepId = step['id'] as String;
       final status = _getStepStatus(stepId);
@@ -542,46 +563,46 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
         completedSteps++;
       }
     }
-    
+
     return completedSteps / totalSteps;
   }
-  
+
   Future<void> _retryStep(String stepId) async {
     setState(() {
       _retryingSteps.add(stepId);
     });
-    
+
     try {
       await AiService.retryStoryStep(
         storyId: widget.story.id,
         step: stepId,
       );
-      
+
       // Track retry event
       AnalyticsService.instance.logEvent('story_step_retry', {
         'story_id': widget.story.id,
         'step': stepId,
         'retry_success': true,
       });
-      
+
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Retrying ${_generationSteps.firstWhere((s) => s['id'] == stepId)['label']} step...'),
+            content: Text(
+                'Retrying ${_generationSteps.firstWhere((s) => s['id'] == stepId)['label']} step...'),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-      
+
       // Notify parent if callback provided
       widget.onRetryCompleted?.call();
-      
     } catch (e) {
       // Get error details for better user messaging
       String userErrorMessage;
       String analyticsErrorCode;
-      
+
       if (e is StepRetryException) {
         userErrorMessage = _formatErrorMessage(e.code, e.message);
         analyticsErrorCode = e.code;
@@ -589,7 +610,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
         userErrorMessage = 'Failed to retry step: ${e.toString()}';
         analyticsErrorCode = 'unknown_error';
       }
-      
+
       // Track retry failure with structured data
       AnalyticsService.instance.logEvent('story_step_retry', {
         'story_id': widget.story.id,
@@ -598,7 +619,7 @@ class _StoryGenerationProgressState extends State<StoryGenerationProgress> {
         'error_code': analyticsErrorCode,
         'error_message': e.toString(),
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

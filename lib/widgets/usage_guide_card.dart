@@ -14,14 +14,18 @@ class UsageGuideCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       child: ListTile(
         leading: CircleAvatar(backgroundColor: color),
-        title: Text('${(item['role'] as String).toUpperCase()} → ${item['surface']}',
-          style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${item['finishRecommendation']} • ${item['sheen']}\n${item['howToUse']}'),
+        title: Text(
+            '${(item['role'] as String).toUpperCase()} → ${item['surface']}',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+            '${item['finishRecommendation']} • ${item['sheen']}\n${item['howToUse']}'),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(item['brandName'] ?? '', style: const TextStyle(fontSize: 12)),
-            Text(item['code'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(item['code'] ?? '',
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
         isThreeLine: true,

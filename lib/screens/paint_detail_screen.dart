@@ -17,7 +17,8 @@ class PaintDetailScreen extends StatefulWidget {
   State<PaintDetailScreen> createState() => _PaintDetailScreenState();
 }
 
-class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProviderStateMixin {
+class _PaintDetailScreenState extends State<PaintDetailScreen>
+    with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   bool _isFavorite = false;
@@ -33,7 +34,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
-    
+
     _fadeController.forward();
     _checkIfFavorite();
   }
@@ -49,7 +50,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
     if (user != null && !_isCheckingFavorite) {
       setState(() => _isCheckingFavorite = true);
       try {
-        final isFav = await FirebaseService.isPaintFavorited(widget.paint.id, user.uid);
+        final isFav =
+            await FirebaseService.isPaintFavorited(widget.paint.id, user.uid);
         if (mounted) {
           setState(() {
             _isFavorite = isFav;
@@ -79,19 +81,24 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
       } else {
         await FirebaseService.addFavoritePaintWithData(user.uid, widget.paint);
       }
-      
+
       setState(() => _isFavorite = !_isFavorite);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isFavorite ? 'Added to favorites' : 'Removed from favorites'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                _isFavorite ? 'Added to favorites' : 'Removed from favorites'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 
@@ -106,7 +113,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
   }
 
   Color get _paintColor => ColorUtils.getPaintColor(widget.paint.hex);
-  
+
   bool get _isLightColor => ColorUtils.calculateLuminance(_paintColor) > 0.5;
 
   String _formatRgb() {
@@ -125,50 +132,50 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
     // Generate tones by adjusting lightness
     final baseColor = _paintColor;
     final tones = <Color>[];
-    
+
     // Lighter tones
     for (double factor in [0.9, 0.8, 0.7, 0.6, 0.5]) {
       tones.add(ColorUtils.lighten(baseColor, factor));
     }
-    
+
     // Base color
     tones.add(baseColor);
-    
+
     // Darker tones
     for (double factor in [0.1, 0.2, 0.3, 0.4, 0.5]) {
       tones.add(ColorUtils.darken(baseColor, factor));
     }
-    
+
     return tones;
   }
 
   String _analyzeUndertones() {
     final rgb = widget.paint.rgb;
     final r = rgb[0];
-    final g = rgb[1]; 
+    final g = rgb[1];
     final b = rgb[2];
-    
+
     // Simple undertone analysis based on RGB values
     final total = r + g + b;
     final rPercent = r / total;
     final gPercent = g / total;
     final bPercent = b / total;
-    
+
     List<String> undertones = [];
-    
+
     if (rPercent > 0.4) undertones.add('Warm/Red');
     if (gPercent > 0.4) undertones.add('Green');
     if (bPercent > 0.4) undertones.add('Cool/Blue');
-    
+
     // Additional analysis
     if (r > g && r > b) undertones.add('Red-based');
     if (g > r && g > b) undertones.add('Green-based');
     if (b > r && b > g) undertones.add('Blue-based');
-    
+
     if ((r + g) > (b * 1.5)) undertones.add('Yellow undertone');
     if ((r + b) > (g * 1.5)) undertones.add('Purple undertone');
     if ((g + b) > (r * 1.5)) undertones.add('Cool undertone');
-    
+
     return undertones.isNotEmpty ? undertones.join(', ') : 'Neutral';
   }
 
@@ -211,12 +218,14 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                             color: _paintColor,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: _isLightColor ? Colors.black26 : Colors.white24,
+                              color: _isLightColor
+                                  ? Colors.black26
+                                  : Colors.white24,
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -227,7 +236,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                         Text(
                           widget.paint.hex.toUpperCase(),
                           style: TextStyle(
-                            color: _isLightColor ? Colors.black87 : Colors.white,
+                            color:
+                                _isLightColor ? Colors.black87 : Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'monospace',
@@ -256,7 +266,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
               const SizedBox(width: 8),
             ],
           ),
-          
+
           // Content
           SliverToBoxAdapter(
             child: FadeTransition(
@@ -269,18 +279,18 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                     // Paint Info
                     _buildInfoSection(),
                     const SizedBox(height: 32),
-                    
+
                     // Color Values
                     _buildColorValuesSection(),
                     const SizedBox(height: 32),
-                    
+
                     // Tones
                     _buildTonesSection(),
                     const SizedBox(height: 32),
-                    
+
                     // Analysis
                     _buildAnalysisSection(),
-                    
+
                     const SizedBox(height: 100), // Bottom padding
                   ],
                 ),
@@ -302,24 +312,27 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
             Text(
               widget.paint.name,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               '${widget.paint.brandName} • ${widget.paint.code}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
             ),
             if (widget.paint.collection != null) ...[
               const SizedBox(height: 8),
               Text(
                 'Collection: ${widget.paint.collection}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
               ),
             ],
             if (widget.paint.finish != null) ...[
@@ -327,8 +340,11 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
               Text(
                 'Finish: ${widget.paint.finish}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
               ),
             ],
           ],
@@ -344,8 +360,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
         Text(
           'Color Values',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
         Card(
@@ -361,7 +377,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                 const Divider(),
                 _buildColorValueRow('LCH', _formatLch()),
                 const Divider(),
-                _buildColorValueRow('LRV', widget.paint.computedLrv.toStringAsFixed(1)),
+                _buildColorValueRow(
+                    'LRV', widget.paint.computedLrv.toStringAsFixed(1)),
               ],
             ),
           ),
@@ -382,23 +399,24 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
             Text(
               label,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             Row(
               children: [
                 Text(
                   value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontFamily: 'monospace',
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontFamily: 'monospace',
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   Icons.copy,
                   size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ],
             ),
@@ -410,15 +428,15 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
 
   Widget _buildTonesSection() {
     final tones = _generateTones();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Color Tones',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
         Card(
@@ -432,20 +450,27 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: tones.asMap().entries.map((entry) {
-                      final isBase = entry.key == 5; // Base color is in the middle
+                      final isBase =
+                          entry.key == 5; // Base color is in the middle
                       return Expanded(
                         child: Container(
                           decoration: BoxDecoration(
                             color: entry.value,
-                            border: isBase ? Border.all(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 3,
-                            ) : null,
+                            border: isBase
+                                ? Border.all(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 3,
+                                  )
+                                : null,
                             borderRadius: entry.key == 0
                                 ? const BorderRadius.only(
                                     topLeft: Radius.circular(7),
@@ -458,13 +483,17 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                                       )
                                     : null,
                           ),
-                          child: isBase ? Center(
-                            child: Icon(
-                              Icons.circle,
-                              color: _isLightColor ? Colors.black54 : Colors.white54,
-                              size: 12,
-                            ),
-                          ) : null,
+                          child: isBase
+                              ? Center(
+                                  child: Icon(
+                                    Icons.circle,
+                                    color: _isLightColor
+                                        ? Colors.black54
+                                        : Colors.white54,
+                                    size: 12,
+                                  ),
+                                )
+                              : null,
                         ),
                       );
                     }).toList(),
@@ -477,21 +506,27 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
                     Text(
                       'Lighter',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
                     ),
                     Text(
                       'Base',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     Text(
                       'Darker',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
                     ),
                   ],
                 ),
@@ -510,8 +545,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
         Text(
           'Color Analysis',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
         Card(
@@ -558,7 +593,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -575,15 +610,18 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> with TickerProvid
               Text(
                 label,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 4),
               Text(
                 value,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
               ),
             ],
           ),

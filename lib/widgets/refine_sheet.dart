@@ -19,7 +19,8 @@ class RefineSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = ColorUtils.getPaintColor(paint.hex);
     final brightness = ThemeData.estimateBrightnessForColor(color);
-    final textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
+    final textColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black;
 
     return Container(
       padding: EdgeInsets.only(
@@ -46,9 +47,10 @@ class RefineSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity( 0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -72,7 +74,7 @@ class RefineSheet extends StatelessWidget {
                   Text(
                     paint.name,
                     style: TextStyle(
-                      color: textColor.withOpacity( 0.8),
+                      color: textColor.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                     maxLines: 1,
@@ -82,35 +84,35 @@ class RefineSheet extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Undertone tags
           _buildUndertoneTags(),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action buttons
           Text(
             'Refine Options',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
-          
+
           _buildActionButton(
             context,
             'Nudge Lighter',
             Icons.brightness_high,
             () => _nudgeLighter(context),
           ),
-          
+
           _buildActionButton(
             context,
             'Nudge Darker',
             Icons.brightness_low,
             () => _nudgeDarker(context),
           ),
-          
+
           _buildActionButton(
             context,
             'Swap Brand',
@@ -125,7 +127,7 @@ class RefineSheet extends StatelessWidget {
   Widget _buildUndertoneTags() {
     final tags = ColorUtils.undertoneTags(paint.lab);
     if (tags.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -140,13 +142,15 @@ class RefineSheet extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: tags.map((tag) => Chip(
-            label: Text(
-              tag,
-              style: const TextStyle(fontSize: 12),
-            ),
-            backgroundColor: Colors.grey[200],
-          )).toList(),
+          children: tags
+              .map((tag) => Chip(
+                    label: Text(
+                      tag,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    backgroundColor: Colors.grey[200],
+                  ))
+              .toList(),
         ),
       ],
     );

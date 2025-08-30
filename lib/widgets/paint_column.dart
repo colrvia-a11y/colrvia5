@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/widgets/paint_action_sheet.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
+
+// Enhanced styling configuration for roller strips
+class _RollerEnhancements {
+  // Master feature flag - change to false to instantly revert all enhancements
+  static const bool enableAllEnhancements = true;
+
+  // Individual feature flags (only active if master toggle is true)
+  static bool get enableRoundedStrips => enableAllEnhancements && true;
+  static bool get enableDragReordering => enableAllEnhancements && true;
+  static bool get enableGradientBackdrops => enableAllEnhancements && true;
+  static bool get enableEnhancedShadows => enableAllEnhancements && true;
+  static bool get enableSubtleBorders => enableAllEnhancements && true;
+
+  // Brand colors matching your design system
+  static const Color warmPeach = Color(0xFFF2B897);
+
+  // Enhanced styling constants
+  static const double stripBorderRadius = 16.0; // Matching your CTA buttons
+  static const double enhancedElevation = 4.0;
+  static const double dragElevation = 8.0;
+  static const double lockIndicatorRadius = 8.0;
+}
 
 class PaintStripe extends StatefulWidget {
   final Paint? paint;
@@ -33,7 +56,9 @@ class _PaintStripeState extends State<PaintStripe> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.paint != null ? ColorUtils.getPaintColor(widget.paint!.hex) : Colors.grey;
+    final color = widget.paint != null
+        ? ColorUtils.getPaintColor(widget.paint!.hex)
+        : Colors.grey;
 
     final brightness = ThemeData.estimateBrightnessForColor(color);
     final textColor =
@@ -77,7 +102,7 @@ class _PaintStripeState extends State<PaintStripe> {
         decoration: BoxDecoration(
           color: color,
           border: Border.all(
-            color: Colors.white.withOpacity( 0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -93,7 +118,7 @@ class _PaintStripeState extends State<PaintStripe> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity( 0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Icon(
@@ -165,7 +190,6 @@ class _PaintStripeState extends State<PaintStripe> {
                   ],
                 ),
               ),
-
           ],
         ),
       ),
@@ -187,7 +211,6 @@ class _PaintStripeState extends State<PaintStripe> {
       ),
     );
   }
-
 }
 
 class AnimatedPaintStripe extends StatefulWidget {
@@ -200,6 +223,9 @@ class AnimatedPaintStripe extends StatefulWidget {
   final VoidCallback? onSwipeRight;
   final VoidCallback? onSwipeLeft;
   final VoidCallback? onRefine;
+  final int? index; // New: for drag reordering
+  final Function(int oldIndex, int newIndex)? onReorder; // New: drag callback
+
   const AnimatedPaintStripe({
     super.key,
     this.paint,
@@ -211,6 +237,8 @@ class AnimatedPaintStripe extends StatefulWidget {
     this.onSwipeRight,
     this.onSwipeLeft,
     this.onRefine,
+    this.index,
+    this.onReorder,
   });
 
   @override
@@ -220,39 +248,122 @@ class AnimatedPaintStripe extends StatefulWidget {
 class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
     with TickerProviderStateMixin {
   late AnimationController _colorController;
+  late AnimationController _dragController; // New: for drag animations
+  late AnimationController _lockController; // New: for lock indicator
+  late AnimationController _swipeController; // New: for swipe removal animation
   late Animation<Color?> _colorAnimation;
+  late Animation<double> _scaleAnimation; // New: for drag scale effect
+  late Animation<double> _lockAnimation; // New: for lock indicator
+  late Animation<Offset> _swipeAnimation; // New: for swipe removal
+  late Animation<double> _fadeAnimation; // New: for swipe fade out
+
   double _dragDx = 0.0;
   Color? _currentDisplayColor;
   String? _lastPaintId;
+  bool _isDragging = false; // New: track drag state
+  bool _isRemoving = false; // New: track removal state
 
   @override
   void initState() {
     super.initState();
-    
-    Debug.info('AnimatedPaintStripe', 'initState', 'Initializing with paint: ${widget.paint?.id}');
+
+    Debug.info('AnimatedPaintStripe', 'initState',
+        'Initializing with paint: ${widget.paint?.id}');
 
     _colorController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
+    // Initialize new animation controllers for enhanced interactions
+    if (_RollerEnhancements.enableDragReordering && widget.onReorder != null) {
+      _dragController = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this,
+      );
+
+      _scaleAnimation = Tween<double>(
+        begin: 1.0,
+        end: 1.05,
+      ).animate(CurvedAnimation(
+        parent: _dragController,
+        curve: Curves.easeInOut,
+      ));
+    }
+
+    _lockController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _lockAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _lockController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Initialize swipe removal animation
+    _swipeController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _swipeAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(-1.5, 0), // Slide out to the left
+    ).animate(CurvedAnimation(
+      parent: _swipeController,
+      curve: Curves.easeInBack,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _swipeController,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
+    ));
+
     _updateColorAnimation();
-    _currentDisplayColor = widget.paint != null ? ColorUtils.getPaintColor(widget.paint!.hex) : Colors.grey;
+    _currentDisplayColor = widget.paint != null
+        ? ColorUtils.getPaintColor(widget.paint!.hex)
+        : Colors.grey;
     _lastPaintId = widget.paint?.id;
 
     // Start animation at end state for initial load
     _colorController.value = 1.0;
+
+    // Initialize lock animation state
+    if (widget.isLocked) {
+      _lockController.value = 1.0;
+    }
   }
 
   @override
   void didUpdateWidget(AnimatedPaintStripe oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    Debug.info('AnimatedPaintStripe', 'didUpdateWidget', 'Old: ${oldWidget.paint?.id}, New: ${widget.paint?.id}, Last: $_lastPaintId');
+
+    Debug.info('AnimatedPaintStripe', 'didUpdateWidget',
+        'Old: ${oldWidget.paint?.id}, New: ${widget.paint?.id}, Last: $_lastPaintId');
+
+    // Handle lock state changes with animation
+    if (widget.isLocked != oldWidget.isLocked) {
+      if (widget.isLocked) {
+        _lockController.forward();
+        HapticFeedback.selectionClick();
+      } else {
+        _lockController.reverse();
+        HapticFeedback.lightImpact();
+      }
+    }
 
     // Only animate if paint actually changed
-    if (oldWidget.paint?.id != widget.paint?.id && _lastPaintId != widget.paint?.id) {
-      Debug.info('AnimatedPaintStripe', 'didUpdateWidget', 'Paint changed, starting animation');
+    if (oldWidget.paint?.id != widget.paint?.id &&
+        _lastPaintId != widget.paint?.id) {
+      Debug.info('AnimatedPaintStripe', 'didUpdateWidget',
+          'Paint changed, starting animation');
       _updateColorAnimation();
       _animateColorChange();
       _lastPaintId = widget.paint?.id;
@@ -261,7 +372,9 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
 
   void _updateColorAnimation() {
     final previousColor = _currentDisplayColor ?? Colors.grey;
-    final currentColor = widget.paint != null ? ColorUtils.getPaintColor(widget.paint!.hex) : Colors.grey;
+    final currentColor = widget.paint != null
+        ? ColorUtils.getPaintColor(widget.paint!.hex)
+        : Colors.grey;
 
     _colorAnimation = ColorTween(
       begin: previousColor,
@@ -270,7 +383,7 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
       parent: _colorController,
       curve: Curves.easeInOutCubic,
     ));
-    
+
     // Update current display color for next animation
     _currentDisplayColor = currentColor;
   }
@@ -284,130 +397,342 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
   @override
   void dispose() {
     _colorController.dispose();
+    if (_RollerEnhancements.enableDragReordering && widget.onReorder != null) {
+      _dragController.dispose();
+    }
+    _lockController.dispose();
+    _swipeController.dispose();
     super.dispose();
+  }
+
+  // Method to start swipe removal animation
+  void _startSwipeRemovalAnimation() {
+    if (_isRemoving) return; // Prevent double removal
+
+    setState(() {
+      _isRemoving = true;
+    });
+
+    _swipeController.forward().then((_) {
+      // After animation completes, call the actual removal callback
+      if (widget.onSwipeLeft != null) {
+        widget.onSwipeLeft!();
+      }
+    });
+  }
+
+  // Create gradient backdrop for rounded corners based on the strip's color
+  LinearGradient _createBackdropGradient(Color stripColor) {
+    if (!_RollerEnhancements.enableGradientBackdrops) {
+      return LinearGradient(
+          colors: [Colors.grey.shade100, Colors.grey.shade100]);
+    }
+
+    final HSLColor hsl = HSLColor.fromColor(stripColor);
+    final lightVariant =
+        hsl.withLightness((hsl.lightness + 0.3).clamp(0.0, 1.0)).toColor();
+    final darkerVariant =
+        hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
+
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        lightVariant.withValues(alpha: 0.3),
+        stripColor.withValues(alpha: 0.1),
+        darkerVariant.withValues(alpha: 0.2),
+      ],
+    );
+  }
+
+  // Create enhanced box shadows for depth
+  List<BoxShadow> _createEnhancedShadows(Color stripColor) {
+    if (!_RollerEnhancements.enableEnhancedShadows) {
+      return [];
+    }
+
+    final elevation = _isDragging
+        ? _RollerEnhancements.dragElevation
+        : _RollerEnhancements.enhancedElevation;
+
+    return [
+      BoxShadow(
+        color: stripColor.withValues(alpha: 0.2),
+        blurRadius: elevation * 2,
+        offset: Offset(0, elevation * 0.75),
+      ),
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.05),
+        blurRadius: elevation,
+        offset: Offset(0, elevation * 0.5),
+      ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    Debug.build('AnimatedPaintStripe', 'build', details: 'paint: ${widget.paint?.id}, isLocked: ${widget.isLocked}, isRolling: ${widget.isRolling}');
-    return AnimatedBuilder(
-      animation: _colorController,
-      builder: (context, child) {
-        final color = _colorAnimation.value ?? (widget.paint != null ? ColorUtils.getPaintColor(widget.paint!.hex) : Colors.grey);
-        final brightness = ThemeData.estimateBrightnessForColor(color);
-        final textColor =
-            brightness == Brightness.dark ? Colors.white : Colors.black;
+    Debug.build('AnimatedPaintStripe', 'build',
+        details:
+            'paint: ${widget.paint?.id}, isLocked: ${widget.isLocked}, isRolling: ${widget.isRolling}');
 
-        return GestureDetector(
-          onTap: widget.onTap,
-          onLongPress: widget.paint != null
-              ? () => _showActionSheet(context)
-              : widget.onLongPress,
-          onHorizontalDragStart: (_) => _dragDx = 0.0,
-          onHorizontalDragUpdate: (details) => _dragDx += details.delta.dx,
-          onHorizontalDragEnd: (details) {
-            final v = details.velocity.pixelsPerSecond.dx;
-            if ((_dragDx > 24) || (v > 500)) {
-              if (widget.onSwipeRight != null) widget.onSwipeRight!();
-            } else if ((_dragDx < -24) || (v < -500)) {
-              if (widget.onSwipeLeft != null) widget.onSwipeLeft!();
-            }
-            _dragDx = 0.0;
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: color,
-              border: Border.all(
-                color: Colors.white.withOpacity( 0.3),
-                width: 0.5,
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Lock indicator
-                if (widget.isLocked)
-                  Positioned(
-                    left: 16,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity( 0.7),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.lock,
-                          color: Colors.white,
-                          size: 16,
-                        ),
+    // Wrap with swipe removal animations
+    return AnimatedBuilder(
+      animation: _swipeController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _swipeAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_colorController, _lockController]),
+              builder: (context, child) {
+                final color = _colorAnimation.value ??
+                    (widget.paint != null
+                        ? ColorUtils.getPaintColor(widget.paint!.hex)
+                        : Colors.grey);
+                final brightness = ThemeData.estimateBrightnessForColor(color);
+                final textColor =
+                    brightness == Brightness.dark ? Colors.white : Colors.black;
+
+                Widget stripContent = Container(
+                  margin: _RollerEnhancements.enableRoundedStrips
+                      ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
+                      : EdgeInsets.zero,
+                  decoration: _RollerEnhancements.enableGradientBackdrops
+                      ? BoxDecoration(
+                          gradient: _createBackdropGradient(color),
+                          borderRadius: _RollerEnhancements.enableRoundedStrips
+                              ? BorderRadius.circular(
+                                  _RollerEnhancements.stripBorderRadius)
+                              : null,
+                          boxShadow: _createEnhancedShadows(color),
+                        )
+                      : null,
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      widget.onTap();
+                    },
+                    onLongPress: widget.paint != null
+                        ? () => _showActionSheet(
+                            context) // Preserve existing paint info feature
+                        : widget.onLongPress,
+                    onHorizontalDragStart: (_) => _dragDx = 0.0,
+                    onHorizontalDragUpdate: (details) =>
+                        _dragDx += details.delta.dx,
+                    onHorizontalDragEnd: (details) {
+                      final v = details.velocity.pixelsPerSecond.dx;
+                      if ((_dragDx > 24) || (v > 500)) {
+                        if (widget.onSwipeRight != null) {
+                          HapticFeedback.lightImpact();
+                          widget.onSwipeRight!();
+                        }
+                      } else if ((_dragDx < -24) || (v < -500)) {
+                        if (widget.onSwipeLeft != null) {
+                          HapticFeedback.lightImpact();
+                          _startSwipeRemovalAnimation(); // Use animated removal instead of direct callback
+                        }
+                      }
+                      _dragDx = 0.0;
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: _RollerEnhancements.enableRoundedStrips
+                            ? BorderRadius.circular(
+                                _RollerEnhancements.stripBorderRadius - 2)
+                            : null,
+                        border: _RollerEnhancements.enableSubtleBorders
+                            ? Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 0.5,
+                              )
+                            : null,
+                      ),
+                      child: Stack(
+                        children: [
+                          // Subtle gradient overlay for depth
+                          if (_RollerEnhancements.enableRoundedStrips)
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                    _RollerEnhancements.stripBorderRadius - 2),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.white.withValues(alpha: 0.1),
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          // Enhanced lock indicator with animation - NO BRAND COLORS!
+                          AnimatedBuilder(
+                            animation: _lockAnimation,
+                            builder: (context, child) {
+                              if (!widget.isLocked ||
+                                  _lockAnimation.value == 0) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return Positioned(
+                                left: 16,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: Transform.scale(
+                                    scale: _lockAnimation.value,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                        borderRadius: BorderRadius.circular(
+                                            _RollerEnhancements
+                                                .lockIndicatorRadius),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withValues(alpha: 0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.lock_rounded,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Paint information with enhanced typography
+                          if (widget.paint != null)
+                            Positioned(
+                              left: widget.isLocked ? 60 : 16,
+                              top: 0,
+                              bottom: 0,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Enhanced brand information
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: textColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      widget.paint!.brandName,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // Paint name with enhanced styling
+                                  Text(
+                                    widget.paint!.name,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Hex value display removed to reduce visual clutter
+                        ],
                       ),
                     ),
                   ),
+                );
 
-                // Paint information
-                if (widget.paint != null)
-                  Positioned(
-                    left: widget.isLocked ? 60 : 16,
-                    top: 0,
-                    bottom: 0,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Brand information (roles removed)
-                        Text(
-                          widget.paint!.brandName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                // Wrap with drag functionality if enabled and preserving long-press
+                if (_RollerEnhancements.enableDragReordering &&
+                    widget.onReorder != null &&
+                    widget.index != null) {
+                  return AnimatedBuilder(
+                    animation: _dragController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: LongPressDraggable<int>(
+                          data: widget.index!,
+                          delay: const Duration(
+                              milliseconds:
+                                  500), // Delay to allow paint info long-press
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: Transform.scale(
+                              scale: 1.1,
+                              child: Opacity(
+                                opacity: 0.8,
+                                child: stripContent,
+                              ),
+                            ),
+                          ),
+                          childWhenDragging: Opacity(
+                            opacity: 0.3,
+                            child: stripContent,
+                          ),
+                          onDragStarted: () {
+                            setState(() => _isDragging = true);
+                            _dragController.forward();
+                            HapticFeedback.mediumImpact();
+                          },
+                          onDragEnd: (details) {
+                            setState(() => _isDragging = false);
+                            _dragController.reverse();
+                          },
+                          child: DragTarget<int>(
+                            onWillAcceptWithDetails: (details) => details.data != widget.index,
+                            onAcceptWithDetails: (details) {
+                              widget.onReorder!(details.data, widget.index!);
+                              HapticFeedback.selectionClick();
+                            },
+                            builder: (context, candidateData, rejectedData) {
+                              return Container(
+                                decoration: candidateData.isNotEmpty
+                                    ? BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            _RollerEnhancements
+                                                .stripBorderRadius),
+                                        border: Border.all(
+                                          color: _RollerEnhancements.warmPeach,
+                                          width: 3,
+                                        ),
+                                      )
+                                    : null,
+                                child: stripContent,
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(height: 4),
+                      );
+                    },
+                  );
+                }
 
-                        // Paint name
-                        Text(
-                          widget.paint!.name,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  // Empty state
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 32,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Tap to roll',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-              ],
+                return stripContent;
+              },
             ),
           ),
         );
@@ -430,5 +755,4 @@ class _AnimatedPaintStripeState extends State<AnimatedPaintStripe>
       ),
     );
   }
-
 }

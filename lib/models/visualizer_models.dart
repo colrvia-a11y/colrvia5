@@ -34,7 +34,8 @@ class VisualizerJob {
       inputGsPath: d['inputGsPath'],
       roomType: d['roomType'] ?? 'interior room',
       surfaces: List<String>.from(d['surfaces'] ?? const ['walls']),
-      variants: List<String>.from(d['variantHexes'] ?? d['variants'] ?? const []),
+      variants:
+          List<String>.from(d['variantHexes'] ?? d['variants'] ?? const []),
       status: d['status'] ?? 'running',
       createdAt: (d['createdAt'] as Timestamp).toDate(),
       updatedAt: (d['updatedAt'] as Timestamp).toDate(),
@@ -47,11 +48,12 @@ class VisualizerRender {
   final String gsPath;
   final String downloadUrl;
 
-  VisualizerRender({required this.hex, required this.gsPath, required this.downloadUrl});
+  VisualizerRender(
+      {required this.hex, required this.gsPath, required this.downloadUrl});
 
   factory VisualizerRender.fromMap(Map<String, dynamic> m) => VisualizerRender(
-    hex: m['hex'] ?? '#000000',
-    gsPath: m['filePath'] ?? '',
-    downloadUrl: m['downloadUrl'] ?? '',
-  );
+        hex: m['hex'] ?? '#000000',
+        gsPath: m['filePath'] ?? '',
+        downloadUrl: m['downloadUrl'] ?? '',
+      );
 }

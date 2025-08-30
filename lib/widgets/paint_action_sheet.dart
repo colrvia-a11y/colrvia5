@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 
 class PaintActionSheet extends StatelessWidget {
+  static final _logger = Logger('PaintActionSheet');
+
   final Paint paint;
   final VoidCallback? onRefine;
   final String primaryActionLabel; // NEW
@@ -26,7 +29,8 @@ class PaintActionSheet extends StatelessWidget {
           Container(
             height: 80,
             decoration: BoxDecoration(
-              color: Color(int.parse(paint.hex.replaceAll('#', ''), radix: 16) | 0xFF000000),
+              color: Color(int.parse(paint.hex.replaceAll('#', ''), radix: 16) |
+                  0xFF000000),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -42,16 +46,16 @@ class PaintActionSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Paint info
           Text(
             '${paint.brandName} • ${paint.code}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 20),
-          
+
           // Action buttons
           Row(
             children: [
@@ -73,7 +77,7 @@ class PaintActionSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 12),
-          
+
           if (onRefine != null) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -88,7 +92,7 @@ class PaintActionSheet extends StatelessWidget {
               ),
             ),
           ],
-          
+
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -109,22 +113,27 @@ class PaintActionSheet extends StatelessWidget {
   Future<void> _saveFavorite(BuildContext context) async {
     // Enhanced authentication check with detailed logging
     var currentUser = FirebaseService.currentUser;
-    print('Initial user check - Current user: ${currentUser?.uid ?? "null"}');
-    
+    _logger.info(
+        'Initial user check - Current user: ${currentUser?.uid ?? "null"}');
+
     if (currentUser == null) {
       // Double-check by waiting for auth state stream
       try {
-        print('Checking auth state stream...');
+        _logger.info('Checking auth state stream...');
         final authStream = FirebaseService.authStateChanges.take(1);
-        currentUser = await authStream.first.timeout(const Duration(seconds: 3));
-        print('Auth stream result - User: ${currentUser?.uid ?? "still null"}');
+        currentUser =
+            await authStream.first.timeout(const Duration(seconds: 3));
+        _logger.info(
+            'Auth stream result - User: ${currentUser?.uid ?? "still null"}');
       } catch (e) {
-        print('Auth state check failed: $e');
+        _logger.warning('Auth state check failed: $e');
       }
-      
+
       if (currentUser == null) {
-        print('User is not authenticated - showing sign in prompt');
-        _showSignInPrompt(context);
+        _logger.info('User is not authenticated - showing sign in prompt');
+        if (context.mounted) {
+          _showSignInPrompt(context);
+        }
         return;
       }
     }
@@ -132,12 +141,14 @@ class PaintActionSheet extends StatelessWidget {
     try {
       // Enhanced debug logging
       final firebaseStatus = await FirebaseService.getFirebaseStatus();
-      print('Firebase Status: $firebaseStatus');
-      print('User details - UID: ${currentUser.uid}, Email: ${currentUser.email}, isAnonymous: ${currentUser.isAnonymous}');
-      print('Paint details - ID: ${paint.id}, Name: ${paint.name}');
-      
+      _logger.info('Firebase Status: $firebaseStatus');
+      _logger.info(
+          'User details - UID: ${currentUser.uid}, Email: ${currentUser.email}, isAnonymous: ${currentUser.isAnonymous}');
+      _logger.info('Paint details - ID: ${paint.id}, Name: ${paint.name}');
+
       // Check if paint is already favorited first
-      final isAlreadyFavorited = await FirebaseService.isPaintFavorited(paint.id, currentUser.uid);
+      final isAlreadyFavorited =
+          await FirebaseService.isPaintFavorited(paint.id, currentUser.uid);
       if (isAlreadyFavorited) {
         if (context.mounted) {
           Navigator.pop(context);
@@ -150,18 +161,21 @@ class PaintActionSheet extends StatelessWidget {
         }
         return;
       }
-      
-      print('Attempting to save favorite paint with embedded data...');
+
+      _logger.info('Attempting to save favorite paint with embedded data...');
       try {
         await FirebaseService.addFavoritePaintWithData(currentUser.uid, paint);
-        print('Favorite paint saved successfully to Firebase (with embedded data)');
+        _logger.info(
+            'Favorite paint saved successfully to Firebase (with embedded data)');
       } catch (embedError) {
-        print('Embedded data save failed, trying ID-only fallback: $embedError');
+        _logger.warning(
+            'Embedded data save failed, trying ID-only fallback: $embedError');
         // If denormalized write fails for any reason, try ID-only save
         await FirebaseService.addFavoritePaint(currentUser.uid, paint.id);
-        print('Favorite paint saved successfully to Firebase (ID-only fallback)');
+        _logger.info(
+            'Favorite paint saved successfully to Firebase (ID-only fallback)');
       }
-      
+
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -173,24 +187,29 @@ class PaintActionSheet extends StatelessWidget {
         );
       }
     } catch (e) {
-      print('Error saving favorite paint: $e');
-      print('Error type: ${e.runtimeType}');
-      
+      _logger.severe('Error saving favorite paint: $e');
+      _logger.severe('Error type: ${e.runtimeType}');
+
       if (context.mounted) {
         Navigator.pop(context);
         String errorMessage = 'Failed to save favorite';
-        
+
         // Handle specific Firebase errors with better messaging
         final errorString = e.toString().toLowerCase();
-        if (errorString.contains('permission-denied') || errorString.contains('permission denied')) {
-          errorMessage = 'Permission denied. Please check Firebase configuration.';
-        } else if (errorString.contains('not authenticated') || errorString.contains('unauthenticated')) {
+        if (errorString.contains('permission-denied') ||
+            errorString.contains('permission denied')) {
+          errorMessage =
+              'Permission denied. Please check Firebase configuration.';
+        } else if (errorString.contains('not authenticated') ||
+            errorString.contains('unauthenticated')) {
           errorMessage = 'Authentication failed. Please sign in again.';
           _showSignInPrompt(context);
           return;
-        } else if (errorString.contains('network') || errorString.contains('offline')) {
+        } else if (errorString.contains('network') ||
+            errorString.contains('offline')) {
           errorMessage = 'Network error. Please check your connection.';
-        } else if (errorString.contains('already in favorites') || errorString.contains('already')) {
+        } else if (errorString.contains('already in favorites') ||
+            errorString.contains('already')) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${paint.name} is already in your favorites!'),
@@ -201,7 +220,7 @@ class PaintActionSheet extends StatelessWidget {
         } else {
           errorMessage = 'Failed to save: $e';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -212,7 +231,7 @@ class PaintActionSheet extends StatelessWidget {
       }
     }
   }
-  
+
   void _showSignInPrompt(BuildContext context) {
     if (context.mounted) {
       Navigator.pop(context);
@@ -240,9 +259,9 @@ Brand: ${paint.brandName}
 Code: ${paint.code}
 Hex: ${paint.hex}
 RGB: ${paint.rgb.join(', ')}''';
-      
+
       await Clipboard.setData(ClipboardData(text: paintInfo));
-      
+
       // Try to save to Firebase for user's copy history (optional)
       final currentUser = FirebaseService.currentUser;
       if (currentUser != null) {
@@ -250,10 +269,10 @@ RGB: ${paint.rgb.join(', ')}''';
           await FirebaseService.addCopiedPaint(currentUser.uid, paint);
         } catch (firebaseError) {
           // Silently ignore Firebase errors - copy still works
-          print('Firebase save failed: $firebaseError');
+          _logger.warning('Firebase save failed: $firebaseError');
         }
       }
-      
+
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

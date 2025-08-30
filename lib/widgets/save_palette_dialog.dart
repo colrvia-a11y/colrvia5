@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
@@ -30,11 +31,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
   void initState() {
     super.initState();
     // Generate default name
-    final brandNames = widget.paints
-        .map((p) => p.brandName)
-        .toSet()
-        .take(2)
-        .join(' & ');
+    final brandNames =
+        widget.paints.map((p) => p.brandName).toSet().take(2).join(' & ');
     _nameController.text = '$brandNames Palette';
   }
 
@@ -49,16 +47,17 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
   Future<void> _savePalette() async {
     // Get current user with robust checking and timeout
     var currentUser = FirebaseService.currentUser;
-    
+
     if (currentUser == null) {
       // Double-check by waiting for auth state with timeout
       try {
         final authStream = FirebaseService.authStateChanges.take(1);
-        currentUser = await authStream.first.timeout(const Duration(seconds: 3));
+        currentUser =
+            await authStream.first.timeout(const Duration(seconds: 3));
       } catch (e) {
         // Auth state check timed out or failed
       }
-      
+
       if (currentUser == null) {
         _showSignInPrompt();
         return;
@@ -80,8 +79,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
     try {
       // Debug: Check Firebase status before saving
       final firebaseStatus = await FirebaseService.getFirebaseStatus();
-      print('Firebase Status before save: $firebaseStatus');
-      
+      debugPrint('Firebase Status before save: $firebaseStatus');
+
       final colors = widget.paints.asMap().entries.map((entry) {
         return PaletteColor(
           paintId: entry.value.id,
@@ -105,7 +104,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
         updatedAt: DateTime.now(),
       );
 
-      print('Attempting to save palette: ${palette.name} for user: ${currentUser.uid}');
+      debugPrint(
+          'Attempting to save palette: ${palette.name} for user: ${currentUser.uid}');
       final paletteId = await FirebaseService.createPalette(
         userId: currentUser.uid,
         name: _nameController.text.trim(),
@@ -113,8 +113,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
         tags: _tags,
         notes: _notesController.text.trim(),
       );
-      print('Palette saved successfully with ID: $paletteId');
-      
+      debugPrint('Palette saved successfully with ID: $paletteId');
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,16 +129,19 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
       setState(() => _isSaving = false);
       if (mounted) {
         String errorMessage = 'Failed to save palette';
-        
+
         // Handle specific Firebase errors with actionable messages
         if (e.code == 'permission-denied') {
-          errorMessage = 'Permission denied. Firebase project not configured properly.\n\nYou need to:\n1. Connect to a real Firebase project\n2. Deploy Firestore security rules\n\nError: ${e.code}';
+          errorMessage =
+              'Permission denied. Firebase project not configured properly.\n\nYou need to:\n1. Connect to a real Firebase project\n2. Deploy Firestore security rules\n\nError: ${e.code}';
         } else if (e.code == 'unauthenticated') {
-          errorMessage = 'Authentication failed. Please sign out and sign back in. Error: ${e.code}';
+          errorMessage =
+              'Authentication failed. Please sign out and sign back in. Error: ${e.code}';
         } else {
-          errorMessage = 'Failed to save palette. Error: ${e.code} - ${e.message}';
+          errorMessage =
+              'Failed to save palette. Error: ${e.code} - ${e.message}';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -149,10 +152,10 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
       }
     } catch (e) {
       setState(() => _isSaving = false);
-      print('General error saving palette: $e');
+      debugPrint('General error saving palette: $e');
       if (mounted) {
         String errorMessage = 'Failed to save palette: ${e.toString()}';
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -180,8 +183,17 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
 
   List<String> _getQuickTags() {
     return [
-      'living room', 'bedroom', 'kitchen', 'bathroom', 'office',
-      'neutral', 'warm', 'cool', 'bold', 'modern', 'cozy'
+      'living room',
+      'bedroom',
+      'kitchen',
+      'bathroom',
+      'office',
+      'neutral',
+      'warm',
+      'cool',
+      'bold',
+      'modern',
+      'cozy'
     ];
   }
 
@@ -225,7 +237,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Free accounts can save up to 5 palettes. Upgrade to Pro for unlimited palette saves.'),
+              Text(
+                  'Free accounts can save up to 5 palettes. Upgrade to Pro for unlimited palette saves.'),
               SizedBox(height: 16),
               Text(
                 'Pro benefits:',
@@ -280,7 +293,7 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
               child: Row(
                 children: widget.paints.map((paint) {
                   final color = ColorUtils.getPaintColor(paint.hex);
-                  
+
                   return Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -290,7 +303,8 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
                                 topLeft: Radius.circular(8),
                                 bottomLeft: Radius.circular(8),
                               )
-                            : widget.paints.indexOf(paint) == widget.paints.length - 1
+                            : widget.paints.indexOf(paint) ==
+                                    widget.paints.length - 1
                                 ? const BorderRadius.only(
                                     topRight: Radius.circular(8),
                                     bottomRight: Radius.circular(8),
@@ -302,9 +316,9 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
                 }).toList(),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Name field
             TextField(
               controller: _nameController,
@@ -313,9 +327,9 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
                 border: OutlineInputBorder(),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Tags
             const Text('Tags', style: TextStyle(fontWeight: FontWeight.w500)),
             const Text(
@@ -323,46 +337,53 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 8),
-            
+
             // Quick tag suggestions
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: _getQuickTags().map((tag) => GestureDetector(
-                onTap: () {
-                  if (!_tags.contains(tag)) {
-                    setState(() => _tags.add(tag));
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _tags.contains(tag) 
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _tags.contains(tag)
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[300]!,
-                    ),
-                  ),
-                  child: Text(
-                    tag,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _tags.contains(tag)
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Colors.grey[700],
-                      fontWeight: _tags.contains(tag) ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              )).toList(),
+              children: _getQuickTags()
+                  .map((tag) => GestureDetector(
+                        onTap: () {
+                          if (!_tags.contains(tag)) {
+                            setState(() => _tags.add(tag));
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _tags.contains(tag)
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _tags.contains(tag)
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey[300]!,
+                            ),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _tags.contains(tag)
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                  : Colors.grey[700],
+                              fontWeight: _tags.contains(tag)
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ))
+                  .toList(),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             Row(
               children: [
                 Expanded(
@@ -383,21 +404,23 @@ class _SavePaletteDialogState extends State<SavePaletteDialog> {
                 ),
               ],
             ),
-            
+
             if (_tags.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: _tags.map((tag) => Chip(
-                  label: Text(tag),
-                  onDeleted: () => _removeTag(tag),
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                )).toList(),
+                children: _tags
+                    .map((tag) => Chip(
+                          label: Text(tag),
+                          onDeleted: () => _removeTag(tag),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                        ))
+                    .toList(),
               ),
             ],
-            
+
             const SizedBox(height: 16),
-            
+
             // Notes field
             TextField(
               controller: _notesController,

@@ -333,7 +333,8 @@ class VisualizerDoc {
   final String id;
   final String userId;
   final String roomId;
-  final Map<String, dynamic> assignments; // surfaceType.name -> { paintId, finish }
+  final Map<String, dynamic>
+      assignments; // surfaceType.name -> { paintId, finish }
   final double brightness; // -1..+1
   final double whiteBalanceK; // 2700..6500
   final String? style; // optional tag
@@ -449,7 +450,8 @@ class UserProfile {
       plan: plan ?? this.plan,
       paletteCount: paletteCount ?? this.paletteCount,
       generationsThisMonth: generationsThisMonth ?? this.generationsThisMonth,
-      lastGenerationResetDate: lastGenerationResetDate ?? this.lastGenerationResetDate,
+      lastGenerationResetDate:
+          lastGenerationResetDate ?? this.lastGenerationResetDate,
       isAdmin: isAdmin ?? this.isAdmin,
       createdAt: createdAt,
     );
@@ -662,7 +664,9 @@ class AiAttribution {
   });
 
   factory AiAttribution.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return AiAttribution(provider: 'Unknown', model: 'Unknown');
+    if (json == null) {
+      return AiAttribution(provider: 'Unknown', model: 'Unknown');
+    }
     return AiAttribution(
       provider: json['provider'] ?? 'Unknown',
       model: json['model'] ?? 'Unknown',
@@ -697,10 +701,12 @@ class ColorStory {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ColorStoryPalette> palette;
-  final List<String> facets; // Denormalized filter array for efficient ANDed queries
-  
+  final List<String>
+      facets; // Denormalized filter array for efficient ANDed queries
+
   // AI-powered fields
-  final String status; // "draft" | "queued" | "processing" | "complete" | "error"
+  final String
+      status; // "draft" | "queued" | "processing" | "complete" | "error"
   final double progress; // 0.0 - 1.0
   final String? progressMessage;
   final Map<String, dynamic>? processing; // Step-level progress data
@@ -715,12 +721,12 @@ class ColorStory {
   final int likeCount; // default 0
   final int playCount; // default 0
   final bool spotlight; // Featured in spotlight rail
-  
+
   // Attribution metadata
   final AiAttribution? modelAttribution;
   final AiAttribution? heroImageAttribution;
   final AiAttribution? audioAttribution;
-  
+
   // Enhanced wizard inputs
   final String? styleTag;
   final String? roomType;
@@ -728,12 +734,12 @@ class ColorStory {
   final List<String>? brandHints;
   final List<String>? colors; // Hex colors from original palette
   final String? paletteName;
-  
+
   // Variant support
   final String? variantOf; // Parent story ID
   final String? emphasis; // Variant emphasis
   final List<String>? vibeTweaks; // Adjusted vibe words
-  
+
   // Generation metadata
   final int? generationTimeMs;
   final String? version;
@@ -788,9 +794,10 @@ class ColorStory {
     // Generation metadata
     this.generationTimeMs,
     this.version,
-  }) : fallbackHero = fallbackHero ?? _generateFallbackFromUsageGuide({
-    'usageGuide': usageGuide.map((item) => item.toJson()).toList(),
-  });
+  }) : fallbackHero = fallbackHero ??
+            _generateFallbackFromUsageGuide({
+              'usageGuide': usageGuide.map((item) => item.toJson()).toList(),
+            });
 
   factory ColorStory.fromJson(Map<String, dynamic> json, String id) {
     return ColorStory(
@@ -817,7 +824,8 @@ class ColorStory {
       progressMessage: json['progressMessage'],
       processing: json['processing'] as Map<String, dynamic>?,
       sourcePaletteId: json['sourcePaletteId'],
-      narration: json['narration'] ?? json['storyText'], // Support both field names
+      narration:
+          json['narration'] ?? json['storyText'], // Support both field names
       storyText: json['storyText'],
       usageGuide: (json['usageGuide'] as List? ?? [])
           .map((item) => ColorUsageGuideItem.fromJson(item))
@@ -831,19 +839,26 @@ class ColorStory {
       spotlight: json['spotlight'] ?? false,
       // Attribution metadata
       modelAttribution: AiAttribution.fromJson(json['modelAttribution']),
-      heroImageAttribution: AiAttribution.fromJson(json['heroImageAttribution']),
+      heroImageAttribution:
+          AiAttribution.fromJson(json['heroImageAttribution']),
       audioAttribution: AiAttribution.fromJson(json['audioAttribution']),
       // Enhanced wizard inputs
       styleTag: json['styleTag'],
       roomType: json['roomType'],
-      vibeWords: json['vibeWords'] != null ? List<String>.from(json['vibeWords']) : null,
-      brandHints: json['brandHints'] != null ? List<String>.from(json['brandHints']) : null,
+      vibeWords: json['vibeWords'] != null
+          ? List<String>.from(json['vibeWords'])
+          : null,
+      brandHints: json['brandHints'] != null
+          ? List<String>.from(json['brandHints'])
+          : null,
       colors: json['colors'] != null ? List<String>.from(json['colors']) : null,
       paletteName: json['paletteName'],
       // Variant support
       variantOf: json['variantOf'],
       emphasis: json['emphasis'],
-      vibeTweaks: json['vibeTweaks'] != null ? List<String>.from(json['vibeTweaks']) : null,
+      vibeTweaks: json['vibeTweaks'] != null
+          ? List<String>.from(json['vibeTweaks'])
+          : null,
       // Generation metadata
       generationTimeMs: json['generationTimeMs'],
       version: json['version'],
@@ -885,12 +900,18 @@ class ColorStory {
     if (storyText != null) json['storyText'] = storyText;
     if (audioUrl != null) json['audioUrl'] = audioUrl;
     if (heroPrompt != null) json['heroPrompt'] = heroPrompt;
-    
+
     // Attribution metadata
-    if (modelAttribution != null) json['modelAttribution'] = modelAttribution!.toJson();
-    if (heroImageAttribution != null) json['heroImageAttribution'] = heroImageAttribution!.toJson();
-    if (audioAttribution != null) json['audioAttribution'] = audioAttribution!.toJson();
-    
+    if (modelAttribution != null) {
+      json['modelAttribution'] = modelAttribution!.toJson();
+    }
+    if (heroImageAttribution != null) {
+      json['heroImageAttribution'] = heroImageAttribution!.toJson();
+    }
+    if (audioAttribution != null) {
+      json['audioAttribution'] = audioAttribution!.toJson();
+    }
+
     // Enhanced wizard inputs
     if (styleTag != null) json['styleTag'] = styleTag;
     if (roomType != null) json['roomType'] = roomType;
@@ -898,12 +919,12 @@ class ColorStory {
     if (brandHints != null) json['brandHints'] = brandHints;
     if (colors != null) json['colors'] = colors;
     if (paletteName != null) json['paletteName'] = paletteName;
-    
+
     // Variant support
     if (variantOf != null) json['variantOf'] = variantOf;
     if (emphasis != null) json['emphasis'] = emphasis;
     if (vibeTweaks != null) json['vibeTweaks'] = vibeTweaks;
-    
+
     // Generation metadata
     if (generationTimeMs != null) json['generationTimeMs'] = generationTimeMs;
     if (version != null) json['version'] = version;
@@ -1010,12 +1031,12 @@ class ColorStory {
       version: version ?? this.version,
     );
   }
-  
+
   /// Generate fallback hero from usage guide colors
   static String _generateFallbackFromUsageGuide(Map<String, dynamic> data) {
     final usageGuide = data['usageGuide'] as List<dynamic>? ?? [];
     final colors = <String>[];
-    
+
     // Extract first two valid colors from usage guide
     for (final item in usageGuide) {
       if (item is Map<String, dynamic> && item['hex'] is String) {
@@ -1026,33 +1047,34 @@ class ColorStory {
         }
       }
     }
-    
+
     // Use default colors if not enough found
     if (colors.isEmpty) colors.add('#6366F1');
     if (colors.length == 1) colors.add('#8B5CF6');
-    
+
     return _generateGradientDataUri(colors[0], colors[1]);
   }
-  
+
   /// Validate hex color format
   static bool _isValidHex(String hex) {
     final cleanHex = hex.replaceAll('#', '');
     return RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(cleanHex);
   }
-  
+
   /// Generate gradient SVG data URI
   static String _generateGradientDataUri(String colorA, String colorB) {
     final hexA = colorA.startsWith('#') ? colorA : '#$colorA';
     final hexB = colorB.startsWith('#') ? colorB : '#$colorB';
-    
-    final svgContent = '''<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+
+    final svgContent =
+        '''<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0%" stop-color="$hexA"/>
     <stop offset="100%" stop-color="$hexB"/>
   </linearGradient></defs>
   <rect width="100%" height="100%" fill="url(#g)"/>
 </svg>''';
-    
+
     final encoded = base64Encode(utf8.encode(svgContent));
     return 'data:image/svg+xml;base64,$encoded';
   }
@@ -1064,22 +1086,22 @@ class ColorStory {
     required List<String> rooms,
   }) {
     final facets = <String>[];
-    
+
     // Add theme facets
     for (final theme in themes) {
       facets.add('theme:$theme');
     }
-    
+
     // Add family facets
     for (final family in families) {
       facets.add('family:$family');
     }
-    
+
     // Add room facets
     for (final room in rooms) {
       facets.add('room:$room');
     }
-    
+
     return facets;
   }
 }

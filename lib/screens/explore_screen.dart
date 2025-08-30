@@ -69,7 +69,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         tooltip: 'Clear',
                       )
                     : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -128,11 +129,14 @@ class _CardSkeleton extends StatelessWidget {
               flex: 3,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                   gradient: LinearGradient(
                     colors: [
-                      Colors.primaries[index % Colors.primaries.length].shade400,
-                      Colors.primaries[(index + 3) % Colors.primaries.length].shade200,
+                      Colors
+                          .primaries[index % Colors.primaries.length].shade400,
+                      Colors.primaries[(index + 3) % Colors.primaries.length]
+                          .shade200,
                     ],
                   ),
                 ),
@@ -146,9 +150,12 @@ class _CardSkeleton extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('Beautiful Color Story',
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w600)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     m.SizedBox(height: 6),
-                    Text('AI Generated', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('AI Generated',
+                        style: TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ),

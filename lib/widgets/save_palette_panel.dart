@@ -34,8 +34,16 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
   bool _isSaving = false;
 
   static const List<String> quickTags = [
-    'Living Room', 'Bedroom', 'Kitchen', 'Bathroom',
-    'Neutral', 'Bold', 'Warm', 'Cool', 'Modern', 'Classic'
+    'Living Room',
+    'Bedroom',
+    'Kitchen',
+    'Bathroom',
+    'Neutral',
+    'Bold',
+    'Warm',
+    'Cool',
+    'Modern',
+    'Classic'
   ];
 
   @override
@@ -77,15 +85,19 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
         id: '', // Will be set by FirebaseService
         userId: '', // Will be set by FirebaseService
         name: _nameController.text.trim(),
-        colors: widget.paints.asMap().entries.map((entry) => PaletteColor(
-          paintId: entry.value.id,
-          locked: false,
-          position: entry.key,
-          brand: entry.value.brandName,
-          name: entry.value.name,
-          hex: entry.value.hex,
-          code: entry.value.code,
-        )).toList(),
+        colors: widget.paints
+            .asMap()
+            .entries
+            .map((entry) => PaletteColor(
+                  paintId: entry.value.id,
+                  locked: false,
+                  position: entry.key,
+                  brand: entry.value.brandName,
+                  name: entry.value.name,
+                  hex: entry.value.hex,
+                  code: entry.value.code,
+                ))
+            .toList(),
         tags: _tags,
         notes: _notesController.text.trim(),
         createdAt: DateTime.now(),
@@ -107,17 +119,19 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
           'color_count': palette.colors.length,
           'tags': palette.tags,
         });
-        
+
         // Ensure user is signed in before creating/attaching projects
         await AuthGuard.ensureSignedIn(context);
-        
+
         final uid = FirebaseAuth.instance.currentUser?.uid;
         final savedPaletteId = savedPalette; // your existing var
         ProjectDoc? project;
 
         if (uid != null) {
           if (widget.projectId != null) {
-            await ProjectService.attachPalette(widget.projectId!, savedPaletteId, setActive: true);
+            await ProjectService.attachPalette(
+                widget.projectId!, savedPaletteId,
+                setActive: true);
             project = await ProjectService.fetch(widget.projectId!);
           } else {
             project = await ProjectService.create(
@@ -126,10 +140,10 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
             );
           }
         }
-        
+
         // Show subtle success snackbar
         widget.onSaved(); // Close save panel first
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Saved to your Color Story'),
@@ -143,7 +157,8 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
             ),
           ),
         );
-        AnalyticsService.instance.logRollerSaveToProject(project?.id ?? 'none', savedPaletteId);
+        AnalyticsService.instance
+            .logRollerSaveToProject(project?.id ?? 'none', savedPaletteId);
       }
     } catch (e) {
       if (mounted) {
@@ -158,7 +173,6 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -166,7 +180,8 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Save Palette', style: Theme.of(context).textTheme.headlineSmall),
+          Text('Save Palette',
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
 
           // Preview strip
@@ -180,7 +195,9 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
               children: widget.paints.map((paint) {
                 return Expanded(
                   child: Container(
-                    color: Color(int.parse(paint.hex.replaceAll('#', ''), radix: 16) | 0xFF000000),
+                    color: Color(
+                        int.parse(paint.hex.replaceAll('#', ''), radix: 16) |
+                            0xFF000000),
                     child: Container(), // Empty container for color display
                   ),
                 );
@@ -244,7 +261,8 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
 
           // Current tags
           if (_tags.isNotEmpty) ...[
-            Text('Selected Tags', style: Theme.of(context).textTheme.titleMedium),
+            Text('Selected Tags',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -282,13 +300,13 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
               Expanded(
                 child: FilledButton(
                   onPressed: _isSaving ? null : _savePalette,
-                  child: _isSaving 
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save Palette'),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save Palette'),
                 ),
               ),
             ],

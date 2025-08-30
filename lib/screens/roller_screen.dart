@@ -233,15 +233,15 @@ class _RollerScreenState extends RollerScreenStatePublic {
       // If no data in database, fall back to sample data
       if (paints.isEmpty) {
         print('No paints found in database, falling back to sample data');
-        paints = await SamplePaints.getSamplePaints();
-        brands = SamplePaints.getSampleBrands();
+        paints = await SamplePaints.getAllPaints();
+        brands = await SamplePaints.getSampleBrands();
         print('Sample data fallback loaded: ${paints.length} paints, ${brands.length} brands');
       }
     } catch (e) {
       print('Error loading from database: $e, falling back to sample data');
       try {
-        paints = await SamplePaints.getSamplePaints();
-        brands = SamplePaints.getSampleBrands();
+        paints = await SamplePaints.getAllPaints();
+        brands = await SamplePaints.getSampleBrands();
         print('Sample data fallback loaded: ${paints.length} paints, ${brands.length} brands');
       } catch (sampleError) {
         print('Error loading sample data: $sampleError');

@@ -41,7 +41,6 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
     super.dispose();
   }
 
-
   Future<void> _updatePalette() async {
     try {
       final updatedPalette = UserPalette(
@@ -54,9 +53,9 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
         createdAt: widget.palette.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       await FirebaseService.updatePalette(updatedPalette);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Palette updated')),
@@ -72,26 +71,33 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
   }
 
   void _copyToClipboard() {
-    final text = widget.palette.colors.map((color) => '${color.name} (${color.code}) - ${color.hex}').join('\n');
+    final text = widget.palette.colors
+        .map((color) => '${color.name} (${color.code}) - ${color.hex}')
+        .join('\n');
     Clipboard.setData(ClipboardData(text: text));
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Palette copied to clipboard')),
     );
   }
 
   Future<void> _exportCSV() async {
-    final csv = 'Brand,Code,Name,Hex\n${widget.palette.colors.map((color) => '${color.brand ?? 'Unknown'},${color.code},"${color.name}",${color.hex}').join('\n')}';
-    
+    final csv =
+        'Brand,Code,Name,Hex\n${widget.palette.colors.map((color) => '${color.brand ?? 'Unknown'},${color.code},"${color.name}",${color.hex}').join('\n')}';
+
     await Share.share(csv, subject: '${widget.palette.name} - Paint Colors');
   }
 
   Future<void> _shareLink() async {
-    final hexCodes = widget.palette.colors.map((color) => color.hex.substring(1)).join('-');
-    final shareUrl = 'https://colorcanvas.app/palette/${widget.palette.id}?colors=$hexCodes';
-    final shareText = '${widget.palette.name}\n\n${widget.palette.colors.map((color) => '${color.name} (${color.code})').join('\n')}\n\nView this palette: $shareUrl';
-    
-    await Share.share(shareText, subject: '${widget.palette.name} - Color Palette');
+    final hexCodes =
+        widget.palette.colors.map((color) => color.hex.substring(1)).join('-');
+    final shareUrl =
+        'https://colorcanvas.app/palette/${widget.palette.id}?colors=$hexCodes';
+    final shareText =
+        '${widget.palette.name}\n\n${widget.palette.colors.map((color) => '${color.name} (${color.code})').join('\n')}\n\nView this palette: $shareUrl';
+
+    await Share.share(shareText,
+        subject: '${widget.palette.name} - Color Palette');
   }
 
   @override
@@ -113,7 +119,8 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                   _shareLink();
                   break;
                 case 'roller':
-                  final ids = widget.palette.colors.map((c) => c.paintId).toList();
+                  final ids =
+                      widget.palette.colors.map((c) => c.paintId).toList();
                   if (!mounted) return;
                   _openInRoller(ids);
                   break;
@@ -122,7 +129,8 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Delete Palette'),
-                      content: Text('Are you sure you want to delete "${widget.palette.name}"?'),
+                      content: Text(
+                          'Are you sure you want to delete "${widget.palette.name}"?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
@@ -130,17 +138,19 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                          child: const Text('Delete',
+                              style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
                   );
-                  
+
                   if (confirmed == true) {
                     try {
                       await FirebaseService.deletePalette(widget.palette.id);
                       if (!mounted) return;
                       Navigator.pop(context);
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Palette deleted'),
@@ -194,13 +204,21 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
               const PopupMenuItem(
                 value: 'roller',
                 child: Row(
-                  children: [Icon(Icons.casino, size: 16), SizedBox(width: 8), Text('Open in Roller')],
+                  children: [
+                    Icon(Icons.casino, size: 16),
+                    SizedBox(width: 8),
+                    Text('Open in Roller')
+                  ],
                 ),
               ),
               const PopupMenuItem(
                 value: 'delete',
                 child: Row(
-                  children: [Icon(Icons.delete, size: 16, color: Colors.red), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))],
+                  children: [
+                    Icon(Icons.delete, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.red))
+                  ],
                 ),
               ),
             ],
@@ -216,163 +234,164 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
         label: const Text('Open in Roller'),
       ),
       body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Color preview
-                  Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Row(
-                      children: widget.palette.colors.map((paletteColor) {
-                        final color = ColorUtils.hexToColor(paletteColor.hex);
-                        final index = widget.palette.colors.indexOf(paletteColor);
-                        
-                        return Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: index == 0
-                                  ? const BorderRadius.only(
-                                      topLeft: Radius.circular(12),
-                                      bottomLeft: Radius.circular(12),
-                                    )
-                                  : index == widget.palette.colors.length - 1
-                                      ? const BorderRadius.only(
-                                          topRight: Radius.circular(12),
-                                          bottomRight: Radius.circular(12),
-                                        )
-                                      : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Create Color Story button
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        // Ensure user is signed in before creating project
-                        await AuthGuard.ensureSignedIn(context);
-                        
-                        // Create project first, then navigate to wizard
-                        try {
-                          final project = await ProjectService.create(
-                            title: '${widget.palette.name} Story',
-                            paletteId: widget.palette.id,
-                          );
-                          
-                          if (mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ColorStoryWizardScreen(
-                                  projectId: project.id,
-                                  paletteId: widget.palette.id,
-                                ),
-                              ),
-                            );
-                            
-                            // Track analytics
-                            AnalyticsService.instance.logEvent('palette_detail_create_story', {
-                              'palette_id': widget.palette.id,
-                              'color_count': widget.palette.colors.length,
-                              'project_id': project.id,
-                            });
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Please sign in to create color stories')),
-                            );
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.auto_awesome),
-                      label: const Text('Create Color Story'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Color preview
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: widget.palette.colors.map((paletteColor) {
+                  final color = ColorUtils.hexToColor(paletteColor.hex);
+                  final index = widget.palette.colors.indexOf(paletteColor);
+
+                  return Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: index == 0
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                bottomLeft: Radius.circular(12),
+                              )
+                            : index == widget.palette.colors.length - 1
+                                ? const BorderRadius.only(
+                                    topRight: Radius.circular(12),
+                                    bottomRight: Radius.circular(12),
+                                  )
+                                : null,
                       ),
                     ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Name field
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Palette Name',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (_) => _updatePalette(),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Notes field
-                  TextField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                    onChanged: (_) => _updatePalette(),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Paint details
-                  Text(
-                    'Colors',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  ...(widget.palette.colors.map((paletteColor) => 
-                    PaintDetailCard.fromPaletteColor(
-                      paletteColor, 
-                      onOpenInRoller: (paint) {
-                        _openInRollerSingleColor([paint]);
-                      }
-                    )).toList()),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Metadata
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Palette Info',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildInfoRow('Created', _formatDate(widget.palette.createdAt)),
-                          _buildInfoRow('Updated', _formatDate(widget.palette.updatedAt)),
-                          _buildInfoRow('Colors', '${widget.palette.colors.length}'),
-                          if (widget.palette.tags.isNotEmpty)
-                            _buildInfoRow('Tags', widget.palette.tags.join(', ')),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            // Create Color Story button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  // Ensure user is signed in before creating project
+                  await AuthGuard.ensureSignedIn(context);
+
+                  // Create project first, then navigate to wizard
+                  try {
+                    final project = await ProjectService.create(
+                      title: '${widget.palette.name} Story',
+                      paletteId: widget.palette.id,
+                    );
+
+                    if (!mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ColorStoryWizardScreen(
+                          projectId: project.id,
+                          paletteId: widget.palette.id,
+                        ),
+                      ),
+                    );
+                    // Track analytics
+                    AnalyticsService.instance
+                        .logEvent('palette_detail_create_story', {
+                      'palette_id': widget.palette.id,
+                      'color_count': widget.palette.colors.length,
+                      'project_id': project.id,
+                    });
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content:
+                              const Text('Please sign in to create color stories')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Create Color Story'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Name field
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Palette Name',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) => _updatePalette(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Notes field
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (_) => _updatePalette(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Paint details
+            Text(
+              'Colors',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+
+            ...(widget.palette.colors
+                .map((paletteColor) => PaintDetailCard.fromPaletteColor(
+                        paletteColor, onOpenInRoller: (paint) {
+                      _openInRollerSingleColor([paint]);
+                    }))
+                .toList()),
+
+            const SizedBox(height: 24),
+
+            // Metadata
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Palette Info',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(
+                        'Created', _formatDate(widget.palette.createdAt)),
+                    _buildInfoRow(
+                        'Updated', _formatDate(widget.palette.updatedAt)),
+                    _buildInfoRow('Colors', '${widget.palette.colors.length}'),
+                    if (widget.palette.tags.isNotEmpty)
+                      _buildInfoRow('Tags', widget.palette.tags.join(', ')),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -404,11 +423,12 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
     Navigator.of(context).popUntil((route) {
       return route.settings.name == '/' || route.isFirst;
     });
-    
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => _RollerWithInitialColorsWrapper(initialPaintIds: paintIds),
+        builder: (_) =>
+            _RollerWithInitialColorsWrapper(initialPaintIds: paintIds),
       ),
     );
   }
@@ -418,7 +438,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
     Navigator.of(context).popUntil((route) {
       return route.settings.name == '/' || route.isFirst;
     });
-    
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -433,23 +453,28 @@ class PaintDetailCard extends StatelessWidget {
   final PaletteColor? paletteColor;
   final Function(Paint)? onOpenInRoller;
 
-  const PaintDetailCard({super.key, required this.paint, this.onOpenInRoller}) : paletteColor = null;
-  
-  const PaintDetailCard.fromPaletteColor(this.paletteColor, {super.key, this.onOpenInRoller}) : paint = null;
+  const PaintDetailCard({super.key, required this.paint, this.onOpenInRoller})
+      : paletteColor = null;
+
+  const PaintDetailCard.fromPaletteColor(this.paletteColor,
+      {super.key, this.onOpenInRoller})
+      : paint = null;
 
   @override
   Widget build(BuildContext context) {
     // Get data from either Paint or PaletteColor
     final String name = paint?.name ?? paletteColor?.name ?? 'Unknown';
-    final String brandName = paint?.brandName ?? paletteColor?.brand ?? 'Unknown';
+    final String brandName =
+        paint?.brandName ?? paletteColor?.brand ?? 'Unknown';
     final String code = paint?.code ?? paletteColor?.code ?? '';
     final String hex = paint?.hex ?? paletteColor?.hex ?? '#000000';
-    
-    final color = paint != null 
-        ? ColorUtils.getPaintColor(paint!.hex) 
+
+    final color = paint != null
+        ? ColorUtils.getPaintColor(paint!.hex)
         : ColorUtils.hexToColor(hex);
     final brightness = ThemeData.estimateBrightnessForColor(color);
-    final textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
+    final textColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -467,11 +492,13 @@ class PaintDetailCard extends StatelessWidget {
             context: context,
             builder: (ctx) => PaintActionSheet(
               paint: p,
-              primaryActionLabel: 'Open in Roller',  // NEW
-              onRefine: onOpenInRoller != null ? () {
-                Navigator.of(ctx).pop(); // Close the modal first
-                onOpenInRoller!(p);
-              } : null,
+              primaryActionLabel: 'Open in Roller', // NEW
+              onRefine: onOpenInRoller != null
+                  ? () {
+                      Navigator.of(ctx).pop(); // Close the modal first
+                      onOpenInRoller!(p);
+                    }
+                  : null,
             ),
           );
         },
@@ -500,9 +527,9 @@ class PaintDetailCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Paint info
               Expanded(
                 child: Column(
@@ -529,7 +556,7 @@ class PaintDetailCard extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Copy icon
               const Icon(Icons.copy, size: 16, color: Colors.grey),
             ],
@@ -551,10 +578,12 @@ class _RollerWithInitialColorsWrapper extends StatefulWidget {
   });
 
   @override
-  State<_RollerWithInitialColorsWrapper> createState() => _RollerWithInitialColorsWrapperState();
+  State<_RollerWithInitialColorsWrapper> createState() =>
+      _RollerWithInitialColorsWrapperState();
 }
 
-class _RollerWithInitialColorsWrapperState extends State<_RollerWithInitialColorsWrapper> {
+class _RollerWithInitialColorsWrapperState
+    extends State<_RollerWithInitialColorsWrapper> {
   @override
   void initState() {
     super.initState();
@@ -592,16 +621,19 @@ class _HomeScreenWithRollerInitialColors extends StatefulWidget {
   });
 
   @override
-  State<_HomeScreenWithRollerInitialColors> createState() => _HomeScreenWithRollerInitialColorsState();
+  State<_HomeScreenWithRollerInitialColors> createState() =>
+      _HomeScreenWithRollerInitialColorsState();
 }
 
-class _HomeScreenWithRollerInitialColorsState extends State<_HomeScreenWithRollerInitialColors> {
+class _HomeScreenWithRollerInitialColorsState
+    extends State<_HomeScreenWithRollerInitialColors> {
   int _currentIndex = 0; // Start with roller tab
-  late final GlobalKey<RollerScreenStatePublic> _rollerKey = GlobalKey<RollerScreenStatePublic>();
-  
+  late final GlobalKey<RollerScreenStatePublic> _rollerKey =
+      GlobalKey<RollerScreenStatePublic>();
+
   late final List<Widget> _screens = [
     RollerScreen(
-      key: _rollerKey, 
+      key: _rollerKey,
       initialPaintIds: widget.initialPaintIds,
       initialPaints: widget.initialPaints,
     ),
@@ -616,9 +648,9 @@ class _HomeScreenWithRollerInitialColorsState extends State<_HomeScreenWithRolle
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.initialPaints != null 
-            ? 'Opened color in Roller!'
-            : 'Opened palette in Roller!'),
+          content: Text(widget.initialPaints != null
+              ? 'Opened color in Roller!'
+              : 'Opened palette in Roller!'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
@@ -638,7 +670,8 @@ class _HomeScreenWithRollerInitialColorsState extends State<_HomeScreenWithRolle
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity( 0.6),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [

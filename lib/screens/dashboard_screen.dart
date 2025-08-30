@@ -1,6 +1,5 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/project_service.dart';
 import '../services/firebase_service.dart';
 import '../services/analytics_service.dart';
@@ -36,7 +35,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    Debug.info('DashboardScreen', 'didChangeDependencies', 'Dependencies changed, hasCheckedReduceMotion: $_hasCheckedReduceMotion');
+    Debug.info('DashboardScreen', 'didChangeDependencies',
+        'Dependencies changed, hasCheckedReduceMotion: $_hasCheckedReduceMotion');
     // Only check reduce motion once to prevent infinite MediaQuery access
     if (!_hasCheckedReduceMotion) {
       _checkReduceMotion();
@@ -45,10 +45,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _checkReduceMotion() {
-    Debug.mediaQuery('DashboardScreen', '_checkReduceMotion', 'maybeDisableAnimationsOf');
-    final newReduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    Debug.mediaQuery(
+        'DashboardScreen', '_checkReduceMotion', 'maybeDisableAnimationsOf');
+    final newReduceMotion =
+        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (_reduceMotion != newReduceMotion) {
-      Debug.info('DashboardScreen', '_checkReduceMotion', 'Reduce motion changed: $_reduceMotion -> $newReduceMotion');
+      Debug.info('DashboardScreen', '_checkReduceMotion',
+          'Reduce motion changed: $_reduceMotion -> $newReduceMotion');
       _reduceMotion = newReduceMotion;
     }
   }
@@ -72,13 +75,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Debug.build('DashboardScreen', 'build', details: 'reduceMotion: $_reduceMotion, hasCheckedReduceMotion: $_hasCheckedReduceMotion');
-    
+    Debug.build('DashboardScreen', 'build',
+        details:
+            'reduceMotion: $_reduceMotion, hasCheckedReduceMotion: $_hasCheckedReduceMotion');
+
     // Brand colors matching visualizer design
     const Color forestGreen = Color(0xFF404934);
     const Color warmPeach = Color(0xFFf2b897);
     const Color creamWhite = Color(0xFFFFFBF7);
-    
+
     return Scaffold(
       backgroundColor: creamWhite,
       body: Container(
@@ -88,8 +93,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             end: Alignment.bottomRight,
             colors: [
               creamWhite,
-              forestGreen.withOpacity(0.03),
-              warmPeach.withOpacity(0.05),
+              forestGreen.withValues(alpha: 0.03),
+              warmPeach.withValues(alpha: 0.05),
             ],
             stops: const [0.0, 0.7, 1.0],
           ),
@@ -117,8 +122,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
 
               // Recent Projects Section
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
                 sliver: SliverToBoxAdapter(
                   child: _SectionHeader(
                     title: 'Recent Projects',
@@ -131,12 +136,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 stream: _getProjectsStream(),
                 builder: (context, snapshot) {
                   if (FirebaseService.currentUser == null) {
-                    return SliverToBoxAdapter(child: _BrandedSignInCard(onSignIn: _showSignInPrompt));
+                    return SliverToBoxAdapter(
+                        child: _BrandedSignInCard(onSignIn: _showSignInPrompt));
                   }
-                  
+
                   final projects = snapshot.data ?? const <ProjectDoc>[];
-                  if (snapshot.connectionState == ConnectionState.waiting && projects.isEmpty) {
-                    return SliverToBoxAdapter(child: _BrandedProjectsSkeleton());
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      projects.isEmpty) {
+                    return SliverToBoxAdapter(
+                        child: _BrandedProjectsSkeleton());
                   }
                   if (projects.isEmpty) {
                     return SliverToBoxAdapter(child: _BrandedEmptyProjects());
@@ -144,17 +152,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     sliver: SliverList.separated(
-                      itemCount: projects.length > 3 ? 3 : projects.length, // Show max 3 recent
+                      itemCount: projects.length > 3
+                          ? 3
+                          : projects.length, // Show max 3 recent
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) => _BrandedProjectCard(projects[i]),
+                      itemBuilder: (context, i) =>
+                          _BrandedProjectCard(projects[i]),
                     ),
                   );
                 },
               ),
 
               // Library Section
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
                 sliver: SliverToBoxAdapter(
                   child: _SectionHeader(
                     title: 'Library',
@@ -168,8 +179,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
 
               // Support & Info Section
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
                 sliver: SliverToBoxAdapter(
                   child: _SectionHeader(
                     title: 'Support & Info',
@@ -183,8 +194,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
 
               // Account Section
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
                 sliver: SliverToBoxAdapter(
                   child: _SectionHeader(
                     title: 'Account',
@@ -202,7 +213,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
 }
 
 // === NEW BRANDED COMPONENTS ===
@@ -213,23 +223,24 @@ class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
   static const Color creamWhite = Color(0xFFFFFBF7);
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     final opacity = 1.0 - (shrinkOffset / maxExtent).clamp(0.0, 1.0);
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            forestGreen.withOpacity(0.95),
-            forestGreen.withOpacity(0.8),
-            warmPeach.withOpacity(0.15),
+            forestGreen.withValues(alpha: 0.95),
+            forestGreen.withValues(alpha: 0.8),
+            warmPeach.withValues(alpha: 0.15),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: forestGreen.withOpacity(0.1),
+            color: forestGreen.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -246,7 +257,7 @@ class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       'Account',
                       style: TextStyle(
                         color: creamWhite,
@@ -261,7 +272,7 @@ class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
                         child: Text(
                           'Manage your colors and preferences',
                           style: TextStyle(
-                            color: creamWhite.withOpacity(0.8),
+                            color: creamWhite.withValues(alpha: 0.8),
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                           ),
@@ -272,14 +283,14 @@ class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: creamWhite.withOpacity(0.15),
+                  color: creamWhite.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: creamWhite.withOpacity(0.2),
+                    color: creamWhite.withValues(alpha: 0.2),
                   ),
                 ),
                 child: IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.settings_rounded,
                     color: creamWhite,
                   ),
@@ -303,7 +314,8 @@ class _AccountHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 90;
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
 }
 
 class _WelcomeHeroSection extends StatelessWidget {
@@ -315,7 +327,7 @@ class _WelcomeHeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseService.currentUser;
     final displayName = user?.email?.split('@').first ?? 'there';
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -324,17 +336,17 @@ class _WelcomeHeroSection extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             creamWhite,
-            warmPeach.withOpacity(0.08),
-            forestGreen.withOpacity(0.05),
+            warmPeach.withValues(alpha: 0.08),
+            forestGreen.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.1),
+          color: forestGreen.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: forestGreen.withOpacity(0.05),
+            color: forestGreen.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -348,10 +360,10 @@ class _WelcomeHeroSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: forestGreen.withOpacity(0.1),
+                  color: forestGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.palette_rounded,
                   color: forestGreen,
                   size: 24,
@@ -364,7 +376,7 @@ class _WelcomeHeroSection extends StatelessWidget {
                   children: [
                     Text(
                       'Welcome back, $displayName!',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: forestGreen,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -374,7 +386,7 @@ class _WelcomeHeroSection extends StatelessWidget {
                     Text(
                       'Ready to create something beautiful?',
                       style: TextStyle(
-                        color: forestGreen.withOpacity(0.7),
+                        color: forestGreen.withValues(alpha: 0.7),
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
@@ -411,11 +423,10 @@ class _QuickActionsGrid extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [forestGreen.withOpacity(0.9), forestGreen],
+            colors: [forestGreen.withValues(alpha: 0.9), forestGreen],
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const RollerScreen())
-          ),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const RollerScreen())),
         ),
         _QuickActionCard(
           icon: Icons.explore_outlined,
@@ -424,11 +435,10 @@ class _QuickActionsGrid extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [warmPeach.withOpacity(0.9), warmPeach],
+            colors: [warmPeach.withValues(alpha: 0.9), warmPeach],
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ExploreScreen())
-          ),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ExploreScreen())),
         ),
         _QuickActionCard(
           icon: Icons.chair_outlined,
@@ -438,13 +448,12 @@ class _QuickActionsGrid extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              forestGreen.withOpacity(0.7),
-              warmPeach.withOpacity(0.8),
+              forestGreen.withValues(alpha: 0.7),
+              warmPeach.withValues(alpha: 0.8),
             ],
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => VisualizerScreen())
-          ),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const VisualizerScreen())),
         ),
         _QuickActionCard(
           icon: Icons.collections_bookmark_outlined,
@@ -454,13 +463,12 @@ class _QuickActionsGrid extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              warmPeach.withOpacity(0.7),
-              forestGreen.withOpacity(0.8),
+              warmPeach.withValues(alpha: 0.7),
+              forestGreen.withValues(alpha: 0.8),
             ],
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => LibraryScreen(initialFilter: LibraryFilter.all))
-          ),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const LibraryScreen(initialFilter: LibraryFilter.all))),
         ),
       ],
     );
@@ -495,7 +503,7 @@ class _QuickActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -524,7 +532,7 @@ class _QuickActionCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
@@ -550,13 +558,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color forestGreen = Color(0xFF404934);
-    
+
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: forestGreen.withOpacity(0.1),
+            color: forestGreen.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -568,7 +576,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             color: forestGreen,
             fontSize: 22,
             fontWeight: FontWeight.w800,
@@ -598,13 +606,13 @@ class _BrandedSignInCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            forestGreen.withOpacity(0.05),
-            warmPeach.withOpacity(0.08),
+            forestGreen.withValues(alpha: 0.05),
+            warmPeach.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.15),
+          color: forestGreen.withValues(alpha: 0.15),
         ),
       ),
       child: Column(
@@ -612,17 +620,17 @@ class _BrandedSignInCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: forestGreen.withOpacity(0.1),
+              color: forestGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.account_circle_rounded,
               color: forestGreen,
               size: 32,
             ),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Sign in to see your projects',
             style: TextStyle(
               color: forestGreen,
@@ -634,13 +642,13 @@ class _BrandedSignInCard extends StatelessWidget {
           Text(
             'Track your color stories and sync across devices',
             style: TextStyle(
-              color: forestGreen.withOpacity(0.7),
+              color: forestGreen.withValues(alpha: 0.7),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          Container(
+          SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onSignIn,
@@ -677,46 +685,48 @@ class _BrandedProjectsSkeleton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
-        children: List.generate(3, (index) => Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                forestGreen.withOpacity(0.05),
-                warmPeach.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: forestGreen.withOpacity(0.1),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 18,
-                width: 140 + (index * 25).toDouble(),
-                decoration: BoxDecoration(
-                  color: forestGreen.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                height: 14,
-                width: 100,
-                decoration: BoxDecoration(
-                  color: warmPeach.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-              ),
-            ],
-          ),
-        )),
+        children: List.generate(
+            3,
+            (index) => Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        forestGreen.withValues(alpha: 0.05),
+                        warmPeach.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: forestGreen.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 18,
+                        width: 140 + (index * 25).toDouble(),
+                        decoration: BoxDecoration(
+                          color: forestGreen.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        height: 14,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: warmPeach.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
       ),
     );
   }
@@ -737,13 +747,13 @@ class _BrandedEmptyProjects extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            forestGreen.withOpacity(0.05),
-            warmPeach.withOpacity(0.08),
+            forestGreen.withValues(alpha: 0.05),
+            warmPeach.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.1),
+          color: forestGreen.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -751,17 +761,17 @@ class _BrandedEmptyProjects extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: forestGreen.withOpacity(0.1),
+              color: forestGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.auto_stories_outlined,
               color: forestGreen,
               size: 32,
             ),
           ),
           const SizedBox(height: 20),
-          Text(
+          const Text(
             'No Color Stories yet',
             style: TextStyle(
               color: forestGreen,
@@ -773,7 +783,7 @@ class _BrandedEmptyProjects extends StatelessWidget {
           Text(
             'Start creating beautiful color combinations',
             style: TextStyle(
-              color: forestGreen.withOpacity(0.7),
+              color: forestGreen.withValues(alpha: 0.7),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -784,8 +794,7 @@ class _BrandedEmptyProjects extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const RollerScreen())
-                  ),
+                      MaterialPageRoute(builder: (_) => const RollerScreen())),
                   icon: const Icon(Icons.palette_outlined),
                   label: const Text('Build'),
                   style: ElevatedButton.styleFrom(
@@ -802,8 +811,7 @@ class _BrandedEmptyProjects extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ExploreScreen())
-                  ),
+                      MaterialPageRoute(builder: (_) => const ExploreScreen())),
                   icon: const Icon(Icons.explore_outlined),
                   label: const Text('Explore'),
                   style: OutlinedButton.styleFrom(
@@ -812,7 +820,7 @@ class _BrandedEmptyProjects extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    side: BorderSide(color: forestGreen),
+                    side: const BorderSide(color: forestGreen),
                   ),
                 ),
               ),
@@ -843,9 +851,9 @@ class _BrandedProjectCard extends StatelessWidget {
 
     final statusColor = {
       FunnelStage.build: warmPeach,
-      FunnelStage.story: forestGreen.withOpacity(0.8),
+      FunnelStage.story: forestGreen.withValues(alpha: 0.8),
       FunnelStage.visualize: forestGreen,
-      FunnelStage.share: warmPeach.withOpacity(0.8),
+      FunnelStage.share: warmPeach.withValues(alpha: 0.8),
     }[project.funnelStage]!;
 
     return Material(
@@ -861,17 +869,17 @@ class _BrandedProjectCard extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 creamWhite,
-                forestGreen.withOpacity(0.03),
-                warmPeach.withOpacity(0.05),
+                forestGreen.withValues(alpha: 0.03),
+                warmPeach.withValues(alpha: 0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: forestGreen.withOpacity(0.1),
+              color: forestGreen.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
-                color: forestGreen.withOpacity(0.05),
+                color: forestGreen.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -882,7 +890,7 @@ class _BrandedProjectCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
+                  color: statusColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -898,7 +906,7 @@ class _BrandedProjectCard extends StatelessWidget {
                   children: [
                     Text(
                       project.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: forestGreen,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -906,9 +914,10 @@ class _BrandedProjectCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
+                        color: statusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -924,7 +933,7 @@ class _BrandedProjectCard extends StatelessWidget {
                     Text(
                       'Updated ${_timeAgo(project.updatedAt)}',
                       style: TextStyle(
-                        color: forestGreen.withOpacity(0.6),
+                        color: forestGreen.withValues(alpha: 0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -933,7 +942,7 @@ class _BrandedProjectCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: forestGreen.withOpacity(0.4),
+                color: forestGreen.withValues(alpha: 0.4),
                 size: 24,
               ),
             ],
@@ -967,14 +976,17 @@ class _BrandedProjectCard extends StatelessWidget {
   void _openStage(BuildContext context, ProjectDoc p) {
     switch (p.funnelStage) {
       case FunnelStage.build:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => RollerScreen(projectId: p.id)));
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => RollerScreen(projectId: p.id)));
         break;
       case FunnelStage.story:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ColorStoryWizardScreen(projectId: p.id)));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ColorStoryWizardScreen(projectId: p.id)));
         break;
       case FunnelStage.visualize:
       case FunnelStage.share:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => VisualizerScreen()));
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const VisualizerScreen()));
         break;
     }
   }
@@ -995,17 +1007,17 @@ class _BrandedLibrarySection extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             creamWhite,
-            forestGreen.withOpacity(0.03),
-            warmPeach.withOpacity(0.05),
+            forestGreen.withValues(alpha: 0.03),
+            warmPeach.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.1),
+          color: forestGreen.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: forestGreen.withOpacity(0.05),
+            color: forestGreen.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1019,10 +1031,10 @@ class _BrandedLibrarySection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: forestGreen.withOpacity(0.1),
+                  color: forestGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.collections_bookmark_rounded,
                   color: forestGreen,
                   size: 20,
@@ -1033,7 +1045,7 @@ class _BrandedLibrarySection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Your Collection',
                       style: TextStyle(
                         color: forestGreen,
@@ -1044,7 +1056,7 @@ class _BrandedLibrarySection extends StatelessWidget {
                     Text(
                       'Browse saved palettes and stories',
                       style: TextStyle(
-                        color: forestGreen.withOpacity(0.7),
+                        color: forestGreen.withValues(alpha: 0.7),
                         fontSize: 13,
                       ),
                     ),
@@ -1061,8 +1073,9 @@ class _BrandedLibrarySection extends StatelessWidget {
                   icon: Icons.palette_outlined,
                   title: 'Palettes',
                   count: '12',
-                  colors: [forestGreen, forestGreen.withOpacity(0.8)],
-                  onTap: () => _openLibraryWithFilter(context, LibraryFilter.palettes),
+                  colors: [forestGreen, forestGreen.withValues(alpha: 0.8)],
+                  onTap: () =>
+                      _openLibraryWithFilter(context, LibraryFilter.palettes),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1071,17 +1084,19 @@ class _BrandedLibrarySection extends StatelessWidget {
                   icon: Icons.auto_stories_outlined,
                   title: 'Stories',
                   count: '8',
-                  colors: [warmPeach, warmPeach.withOpacity(0.8)],
-                  onTap: () => _openLibraryWithFilter(context, LibraryFilter.stories),
+                  colors: [warmPeach, warmPeach.withValues(alpha: 0.8)],
+                  onTap: () =>
+                      _openLibraryWithFilter(context, LibraryFilter.stories),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Container(
+          SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _openLibraryWithFilter(context, LibraryFilter.all),
+              onPressed: () =>
+                  _openLibraryWithFilter(context, LibraryFilter.all),
               icon: const Icon(Icons.library_books_outlined),
               label: const Text(
                 'View All',
@@ -1090,7 +1105,7 @@ class _BrandedLibrarySection extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: forestGreen.withOpacity(0.1),
+                backgroundColor: forestGreen.withValues(alpha: 0.1),
                 foregroundColor: forestGreen,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -1142,11 +1157,11 @@ class _BrandedLibraryButton extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: colors.map((c) => c.withOpacity(0.15)).toList(),
+              colors: colors.map((c) => c.withValues(alpha: 0.15)).toList(),
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: colors.first.withOpacity(0.2),
+              color: colors.first.withValues(alpha: 0.2),
             ),
           ),
           child: Column(
@@ -1161,9 +1176,10 @@ class _BrandedLibraryButton extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colors.first.withOpacity(0.2),
+                      color: colors.first.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1209,13 +1225,13 @@ class _BrandedSupportSection extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             creamWhite,
-            forestGreen.withOpacity(0.03),
-            warmPeach.withOpacity(0.05),
+            forestGreen.withValues(alpha: 0.03),
+            warmPeach.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.1),
+          color: forestGreen.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -1264,7 +1280,8 @@ class _BrandedSupportSection extends StatelessWidget {
     );
   }
 
-  Widget _buildBrandedMenuItem(BuildContext context, {
+  Widget _buildBrandedMenuItem(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -1282,7 +1299,7 @@ class _BrandedSupportSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: forestGreen.withOpacity(0.1),
+                  color: forestGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -1298,7 +1315,7 @@ class _BrandedSupportSection extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: forestGreen,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -1307,7 +1324,7 @@ class _BrandedSupportSection extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: forestGreen.withOpacity(0.7),
+                        color: forestGreen.withValues(alpha: 0.7),
                         fontSize: 13,
                       ),
                     ),
@@ -1316,7 +1333,7 @@ class _BrandedSupportSection extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: forestGreen.withOpacity(0.4),
+                color: forestGreen.withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -1354,17 +1371,17 @@ class _BrandedUserSection extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             creamWhite,
-            forestGreen.withOpacity(0.03),
-            warmPeach.withOpacity(0.05),
+            forestGreen.withValues(alpha: 0.03),
+            warmPeach.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: forestGreen.withOpacity(0.1),
+          color: forestGreen.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: forestGreen.withOpacity(0.05),
+            color: forestGreen.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1381,13 +1398,16 @@ class _BrandedUserSection extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [forestGreen.withOpacity(0.8), warmPeach.withOpacity(0.6)],
+                      colors: [
+                        forestGreen.withValues(alpha: 0.8),
+                        warmPeach.withValues(alpha: 0.6)
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(50),
                   ),
                   child: Text(
                     user.email?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: creamWhite,
@@ -1401,7 +1421,7 @@ class _BrandedUserSection extends StatelessWidget {
                     children: [
                       Text(
                         user.email ?? 'User',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: forestGreen,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1410,12 +1430,13 @@ class _BrandedUserSection extends StatelessWidget {
                       ),
                       Container(
                         margin: const EdgeInsets.only(top: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: forestGreen.withOpacity(0.1),
+                          color: forestGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
+                        child: const Text(
                           'Signed in',
                           style: TextStyle(
                             color: forestGreen,
@@ -1430,7 +1451,7 @@ class _BrandedUserSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            Container(
+            SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
@@ -1438,8 +1459,8 @@ class _BrandedUserSection extends StatelessWidget {
                     await FirebaseService.signOut();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Signed out successfully'),
+                        const SnackBar(
+                          content: Text('Signed out successfully'),
                           backgroundColor: forestGreen,
                         ),
                       );
@@ -1463,7 +1484,7 @@ class _BrandedUserSection extends StatelessWidget {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: forestGreen.withOpacity(0.1),
+                  backgroundColor: forestGreen.withValues(alpha: 0.1),
                   foregroundColor: forestGreen,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -1479,10 +1500,10 @@ class _BrandedUserSection extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: forestGreen.withOpacity(0.1),
+                    color: forestGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(50),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.person_outline_rounded,
                     color: forestGreen,
                     size: 24,
@@ -1493,7 +1514,7 @@ class _BrandedUserSection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Not signed in',
                         style: TextStyle(
                           color: forestGreen,
@@ -1504,7 +1525,7 @@ class _BrandedUserSection extends StatelessWidget {
                       Text(
                         'Sign in to sync your projects',
                         style: TextStyle(
-                          color: forestGreen.withOpacity(0.7),
+                          color: forestGreen.withValues(alpha: 0.7),
                           fontSize: 13,
                         ),
                       ),
@@ -1514,13 +1535,13 @@ class _BrandedUserSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            Container(
+            SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pushNamed('/login');
                 },
-                icon: const Icon(Icons.login_rounded),
+                icon: Icon(Icons.login_rounded),
                 label: const Text(
                   'Sign In',
                   style: TextStyle(
@@ -1539,10 +1560,9 @@ class _BrandedUserSection extends StatelessWidget {
               ),
             ),
           ],
-          
           const SizedBox(height: 20),
           Divider(
-            color: forestGreen.withOpacity(0.2),
+            color: forestGreen.withValues(alpha: 0.2),
             height: 1,
           ),
           const SizedBox(height: 16),
@@ -1551,14 +1571,14 @@ class _BrandedUserSection extends StatelessWidget {
             children: [
               Icon(
                 Icons.palette_rounded,
-                color: forestGreen.withOpacity(0.5),
+                color: forestGreen.withValues(alpha: 0.5),
                 size: 16,
               ),
               const SizedBox(width: 8),
               Text(
                 'Colrvia v1.0.0',
                 style: TextStyle(
-                  color: forestGreen.withOpacity(0.5),
+                  color: forestGreen.withValues(alpha: 0.5),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),

@@ -18,7 +18,7 @@ class StoryStudioScreen extends StatefulWidget {
 class _StoryStudioScreenState extends State<StoryStudioScreen> {
   final PageController _pageController = PageController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   // Form data
   String _title = '';
   String _slug = '';
@@ -30,15 +30,16 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   File? _heroImage;
   // ignore: unused_field
   String _heroImageUrl = '';
-  
+
   // Palette data
   final List<PaletteEntry> _selectedColors = [];
   List<Paint> _availablePaints = [];
   List<Paint> _filteredPaints = [];
+  List<Brand> _availableBrands = [];
   // ignore: unused_field
   final String _paintSearchQuery = '';
   String? _selectedBrand;
-  
+
   // UI state
   int _currentStep = 0;
   bool _isAutoSlug = true;
@@ -80,9 +81,30 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     } catch (e) {
       // Use defaults on error
       setState(() {
-        _availableThemes = ['Modern', 'Traditional', 'Contemporary', 'Minimalist', 'Rustic', 'Coastal'];
-        _availableFamilies = ['Neutrals', 'Warm Neutrals', 'Cool Neutrals', 'Greens', 'Blues', 'Earth Tones'];
-        _availableRooms = ['Living Room', 'Bedroom', 'Kitchen', 'Bathroom', 'Dining Room', 'Home Office'];
+        _availableThemes = [
+          'Modern',
+          'Traditional',
+          'Contemporary',
+          'Minimalist',
+          'Rustic',
+          'Coastal'
+        ];
+        _availableFamilies = [
+          'Neutrals',
+          'Warm Neutrals',
+          'Cool Neutrals',
+          'Greens',
+          'Blues',
+          'Earth Tones'
+        ];
+        _availableRooms = [
+          'Living Room',
+          'Bedroom',
+          'Kitchen',
+          'Bathroom',
+          'Dining Room',
+          'Home Office'
+        ];
         _taxonomiesLoading = false;
       });
     }
@@ -109,11 +131,11 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     switch (_currentStep) {
       case 0: // Foundation
         return _title.trim().length >= 3 &&
-               _slug.trim().isNotEmpty &&
-               _description.trim().length >= 20 &&
-               _selectedThemes.isNotEmpty &&
-               _selectedFamilies.isNotEmpty &&
-               _selectedRooms.isNotEmpty;
+            _slug.trim().isNotEmpty &&
+            _description.trim().length >= 20 &&
+            _selectedThemes.isNotEmpty &&
+            _selectedFamilies.isNotEmpty &&
+            _selectedRooms.isNotEmpty;
       case 1: // Palette
         return _selectedColors.length >= 2 && _hasMainAndTrim();
       case 2: // Preview
@@ -122,25 +144,25 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         return false;
     }
   }
-  
+
   bool _canPublish() {
     // At least 3 colors chosen, roles assigned, main + trim present
     if (_selectedColors.length < 3) return false;
     if (!_hasMainAndTrim()) return false;
-    
+
     // Text contrast validation
     for (final entry in _selectedColors) {
       if (!_hasReadableContrast(entry.paint)) {
         return false;
       }
     }
-    
+
     // Title and description required
     if (_title.trim().isEmpty || _description.trim().isEmpty) return false;
-    
+
     return true;
   }
-  
+
   bool _hasReadableContrast(Paint paint) {
     final color = ColorUtils.getPaintColor(paint.hex);
     final luminance = color.computeLuminance();
@@ -150,7 +172,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
 
   void _nextStep() {
     if (!_canContinue()) return;
-    
+
     if (_currentStep < 2) {
       setState(() {
         _currentStep++;
@@ -183,19 +205,21 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         maxHeight: 800,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         setState(() {
           _heroImage = File(image.path);
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -214,27 +238,28 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       _tags.remove(tag);
     });
   }
-  
+
   Future<void> _loadPaintData() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      _availablePaints = await SamplePaints.getSamplePaints();
+      _availablePaints = await SamplePaints.getAllPaints();
+      _availableBrands = await SamplePaints.getSampleBrands();
       _filteredPaints = List.from(_availablePaints);
     } catch (e) {
-      print('Error loading paint data: $e');
+      debugPrint('Error loading paint data: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
-  
+
   void _onPaintSearchChanged() {
     _filterPaints();
   }
-  
+
   void _filterPaints() {
     final query = _paintSearchController.text.toLowerCase();
     setState(() {
@@ -243,13 +268,13 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             paint.name.toLowerCase().contains(query) ||
             paint.code.toLowerCase().contains(query) ||
             paint.brandName.toLowerCase().contains(query);
-        final matchesBrand = _selectedBrand == null ||
-            paint.brandName == _selectedBrand;
+        final matchesBrand =
+            _selectedBrand == null || paint.brandName == _selectedBrand;
         return matchesSearch && matchesBrand;
       }).toList();
     });
   }
-  
+
   void _addColor(Paint paint) {
     if (_selectedColors.length >= 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -260,7 +285,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       );
       return;
     }
-    
+
     // Check for duplicates
     if (_selectedColors.any((entry) => entry.paint.id == paint.id)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -271,7 +296,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       );
       return;
     }
-    
+
     setState(() {
       _selectedColors.add(PaletteEntry(
         paint: paint,
@@ -281,13 +306,13 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ));
     });
   }
-  
+
   void _removeColor(int index) {
     setState(() {
       _selectedColors.removeAt(index);
     });
   }
-  
+
   void _reorderColors(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) newIndex--;
     setState(() {
@@ -295,57 +320,60 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       _selectedColors.insert(newIndex, item);
     });
   }
-  
+
   void _updateColorRole(int index, String role) {
     setState(() {
       _selectedColors[index] = _selectedColors[index].copyWith(role: role);
     });
   }
-  
+
   void _updateColorPsychology(int index, String psychology) {
     setState(() {
-      _selectedColors[index] = _selectedColors[index].copyWith(psychology: psychology);
+      _selectedColors[index] =
+          _selectedColors[index].copyWith(psychology: psychology);
     });
   }
-  
+
   void _updateColorUsageTips(int index, String usageTips) {
     setState(() {
-      _selectedColors[index] = _selectedColors[index].copyWith(usageTips: usageTips);
+      _selectedColors[index] =
+          _selectedColors[index].copyWith(usageTips: usageTips);
     });
   }
-  
+
   bool _hasMainAndTrim() {
     final roles = _selectedColors.map((e) => e.role).toSet();
     return roles.contains('MAIN') && roles.contains('TRIM');
   }
-  
+
   int _getAccentCount() {
     return _selectedColors.where((e) => e.role == 'ACCENT').length;
   }
-  
+
   bool _hasNearIdenticalColors() {
     for (int i = 0; i < _selectedColors.length; i++) {
       for (int j = i + 1; j < _selectedColors.length; j++) {
         final paint1 = _selectedColors[i].paint;
         final paint2 = _selectedColors[j].paint;
         final deltaE = ColorUtils.deltaE2000(paint1.lab, paint2.lab);
-        if (deltaE < 5.0) { // Very similar colors
+        if (deltaE < 5.0) {
+          // Very similar colors
           return true;
         }
       }
     }
     return false;
   }
-  
+
   void _suggestAccents() {
     final mainColor = _selectedColors.firstWhere(
       (entry) => entry.role == 'MAIN',
       orElse: () => _selectedColors.first,
     );
-    
+
     // Generate harmonious colors using color theory
     final suggestions = _generateHarmoniousColors(mainColor.paint);
-    
+
     if (suggestions.isNotEmpty) {
       _showAccentSuggestions(suggestions);
     } else {
@@ -357,29 +385,30 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       );
     }
   }
-  
+
   List<Paint> _generateHarmoniousColors(Paint mainPaint) {
     final lch = ColorUtils.labToLch(mainPaint.lab);
     final List<Paint> suggestions = [];
-    
+
     // Generate complementary and triadic colors
     final targetHues = [
-      (lch[2] + 60) % 360,  // Analogous
-      (lch[2] - 60) % 360,  // Analogous
+      (lch[2] + 60) % 360, // Analogous
+      (lch[2] - 60) % 360, // Analogous
       (lch[2] + 180) % 360, // Complementary
       (lch[2] + 120) % 360, // Triadic
       (lch[2] - 120) % 360, // Triadic
     ];
-    
+
     for (final targetHue in targetHues) {
       // Find paints with similar hue but different lightness/chroma
       final candidates = _availablePaints.where((paint) {
         final paintLch = ColorUtils.labToLch(paint.lab);
         final hueDiff = (paintLch[2] - targetHue).abs();
         final adjustedDiff = math.min(hueDiff, 360 - hueDiff);
-        return adjustedDiff < 30 && !_selectedColors.any((e) => e.paint.id == paint.id);
+        return adjustedDiff < 30 &&
+            !_selectedColors.any((e) => e.paint.id == paint.id);
       }).toList();
-      
+
       if (candidates.isNotEmpty) {
         // Sort by lightness difference from main color
         candidates.sort((a, b) {
@@ -387,14 +416,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           final bLightnessDiff = (b.lab[0] - mainPaint.lab[0]).abs();
           return bLightnessDiff.compareTo(aLightnessDiff);
         });
-        
+
         suggestions.addAll(candidates.take(2));
       }
     }
-    
+
     return suggestions.take(4).toList();
   }
-  
+
   void _showAccentSuggestions(List<Paint> suggestions) {
     showModalBottomSheet(
       context: context,
@@ -407,15 +436,15 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             Text(
               'Suggested Accents',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Based on color harmony with your main color',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -562,15 +591,15 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                     Text(
                       ['Foundation', 'Palette', 'Preview'][_currentStep],
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: PageView(
@@ -583,7 +612,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ],
             ),
           ),
-          
+
           // Navigation buttons
           Container(
             padding: const EdgeInsets.all(16),
@@ -591,7 +620,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity( 0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
@@ -640,18 +669,18 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             Text(
               'Foundation',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Set up the basic information for your Color Story.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
             const SizedBox(height: 24),
-            
+
             // Title
             TextFormField(
               controller: _titleController,
@@ -668,7 +697,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Slug
             TextFormField(
               controller: _slugController,
@@ -704,11 +733,11 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             Text(
               _isAutoSlug ? 'Auto-generated from title' : 'Manual override',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _isAutoSlug ? Colors.green : Colors.grey,
-              ),
+                    color: _isAutoSlug ? Colors.green : Colors.grey,
+                  ),
             ),
             const SizedBox(height: 16),
-            
+
             // Description
             TextFormField(
               controller: _descriptionController,
@@ -716,7 +745,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               maxLength: 500,
               decoration: const InputDecoration(
                 labelText: 'Description *',
-                hintText: 'Describe the mood and inspiration behind this color story...',
+                hintText:
+                    'Describe the mood and inspiration behind this color story...',
                 border: OutlineInputBorder(),
               ),
               onChanged: (value) {
@@ -732,7 +762,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               },
             ),
             const SizedBox(height: 24),
-            
+
             // Themes
             _buildMultiSelectSection(
               'Design Themes *',
@@ -742,7 +772,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               maxSelections: 3,
             ),
             const SizedBox(height: 24),
-            
+
             // Color Families
             _buildMultiSelectSection(
               'Color Families *',
@@ -752,7 +782,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               maxSelections: 3,
             ),
             const SizedBox(height: 24),
-            
+
             // Rooms
             _buildMultiSelectSection(
               'Room Types *',
@@ -762,14 +792,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               maxSelections: 5,
             ),
             const SizedBox(height: 24),
-            
+
             // Tags
             _buildTagsSection(),
             const SizedBox(height: 24),
-            
+
             // Hero Image
             _buildHeroImageSection(),
-            
+
             const SizedBox(height: 80), // Space for navigation buttons
           ],
         ),
@@ -777,31 +807,27 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     );
   }
 
-  Widget _buildMultiSelectSection(
-    String title,
-    String description,
-    List<String> options,
-    Set<String> selected,
-    {int maxSelections = 3}
-  ) {
+  Widget _buildMultiSelectSection(String title, String description,
+      List<String> options, Set<String> selected,
+      {int maxSelections = 3}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 4),
         Text(
           description,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey[600],
-          ),
+                color: Colors.grey[600],
+              ),
         ),
         const SizedBox(height: 12),
-        
+
         // Show loading or options
         if (_taxonomiesLoading) ...[
           Container(
@@ -821,8 +847,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 Text(
                   'Loading options...',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ),
@@ -834,8 +860,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             child: Text(
               'No options available',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
           ),
         ] else ...[
@@ -845,19 +871,21 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             children: options.map((option) {
               final isSelected = selected.contains(option);
               final canSelect = selected.length < maxSelections || isSelected;
-              
+
               return FilterChip(
                 label: Text(option),
                 selected: isSelected,
-                onSelected: canSelect ? (bool isSelectedNow) {
-                  setState(() {
-                    if (isSelectedNow) {
-                      selected.add(option);
-                    } else {
-                      selected.remove(option);
-                    }
-                  });
-                } : null,
+                onSelected: canSelect
+                    ? (bool isSelectedNow) {
+                        setState(() {
+                          if (isSelectedNow) {
+                            selected.add(option);
+                          } else {
+                            selected.remove(option);
+                          }
+                        });
+                      }
+                    : null,
                 backgroundColor: canSelect ? null : Colors.grey[100],
                 disabledColor: Colors.grey[100],
                 selectedColor: Theme.of(context).colorScheme.primaryContainer,
@@ -866,14 +894,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             }).toList(),
           ),
         ],
-        
+
         if (selected.isNotEmpty && !_taxonomiesLoading) ...[
           const SizedBox(height: 8),
           Text(
             '${selected.length}/$maxSelections selected',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: selected.isEmpty ? Colors.red : Colors.green,
-            ),
+                  color: selected.isEmpty ? Colors.red : Colors.green,
+                ),
           ),
         ],
       ],
@@ -887,15 +915,15 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         Text(
           'Tags',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 4),
         Text(
           'Add mood, season, or style keywords (optional)',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey[600],
-          ),
+                color: Colors.grey[600],
+              ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -930,7 +958,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 label: Text(tag),
                 deleteIcon: const Icon(Icons.close, size: 16),
                 onDeleted: () => _removeTag(tag),
-                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                backgroundColor:
+                    Theme.of(context).colorScheme.secondaryContainer,
               );
             }).toList(),
           ),
@@ -945,15 +974,15 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         Text(
           'Hero Image',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 4),
         Text(
           'Upload a beautiful hero image for your story (optional)',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey[600],
-          ),
+                color: Colors.grey[600],
+              ),
         ),
         const SizedBox(height: 12),
         GestureDetector(
@@ -967,30 +996,30 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               color: Colors.grey[50],
             ),
             child: _heroImage != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _heroImage!,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.add_photo_alternate_outlined,
-                      size: 48,
-                      color: Colors.grey[400],
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      _heroImage!,
+                      fit: BoxFit.cover,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap to add hero image',
-                      style: TextStyle(
-                        color: Colors.grey[600],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to add hero image',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
         if (_heroImage != null) ...[
@@ -1002,8 +1031,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               Text(
                 'Image selected',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.green,
-                ),
+                      color: Colors.green,
+                    ),
               ),
               const Spacer(),
               TextButton.icon(
@@ -1038,20 +1067,20 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               Text(
                 'Palette Builder',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Select 3-6 colors and assign roles for your Color Story',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                      color: Colors.grey[600],
+                    ),
               ),
             ],
           ),
         ),
-        
+
         Expanded(
           child: Row(
             children: [
@@ -1060,7 +1089,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 flex: 2,
                 child: _buildPaintPickerPanel(),
               ),
-              
+
               // Selected Colors Panel
               Expanded(
                 flex: 3,
@@ -1072,7 +1101,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ],
     );
   }
-  
+
   Widget _buildPaintPickerPanel() {
     return Container(
       decoration: BoxDecoration(
@@ -1097,7 +1126,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Brand filter
                 DropdownButtonFormField<String?>(
                   initialValue: _selectedBrand,
@@ -1111,8 +1140,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                       value: null,
                       child: Text('All Brands'),
                     ),
-                    ...SamplePaints.getSampleBrands().map((brand) =>
-                      DropdownMenuItem(
+                    ..._availableBrands.map(
+                      (brand) => DropdownMenuItem(
                         value: brand.name,
                         child: Text(brand.name),
                       ),
@@ -1128,109 +1157,114 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ],
             ),
           ),
-          
+
           // Paint grid
           Expanded(
             child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 0.8,
-                  ),
-                  itemCount: _filteredPaints.length,
-                  itemBuilder: (context, index) {
-                    final paint = _filteredPaints[index];
-                    final isSelected = _selectedColors.any((e) => e.paint.id == paint.id);
-                    
-                    return GestureDetector(
-                      onTap: isSelected ? null : () => _addColor(paint),
-                      child: Card(
-                        elevation: isSelected ? 0 : 2,
-                        child: Stack(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  flex: 3,
+                ? const Center(child: CircularProgressIndicator())
+                : GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: _filteredPaints.length,
+                    itemBuilder: (context, index) {
+                      final paint = _filteredPaints[index];
+                      final isSelected =
+                          _selectedColors.any((e) => e.paint.id == paint.id);
+
+                      return GestureDetector(
+                        onTap: isSelected ? null : () => _addColor(paint),
+                        child: Card(
+                          elevation: isSelected ? 0 : 2,
+                          child: Stack(
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color:
+                                            ColorUtils.getPaintColor(paint.hex),
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                          top: Radius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            paint.name,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            paint.code,
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          Text(
+                                            paint.brandName,
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              color: Colors.grey[500],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (isSelected)
+                                Positioned.fill(
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: ColorUtils.getPaintColor(paint.hex),
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(8),
+                                      color: Colors.black.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                        size: 24,
                                       ),
                                     ),
                                   ),
                                 ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          paint.name,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          paint.code,
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        Text(
-                                          paint.brandName,
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (isSelected)
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity( 0.3),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildSelectedColorsPanel() {
     return Column(
       children: [
@@ -1245,15 +1279,17 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                     child: Text(
                       'Selected Colors (${_selectedColors.length}/6)',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: _selectedColors.length < 6 ? () {
-                      // Focus search field
-                      FocusScope.of(context).requestFocus(FocusNode());
-                    } : null,
+                    onPressed: _selectedColors.length < 6
+                        ? () {
+                            // Focus search field
+                            FocusScope.of(context).requestFocus(FocusNode());
+                          }
+                        : null,
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Add Color'),
                     style: ElevatedButton.styleFrom(
@@ -1266,13 +1302,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Smart assists
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _selectedColors.isNotEmpty ? _suggestAccents : null,
+                      onPressed:
+                          _selectedColors.isNotEmpty ? _suggestAccents : null,
                       icon: const Icon(Icons.auto_fix_high, size: 16),
                       label: const Text('Suggest Accents'),
                       style: OutlinedButton.styleFrom(
@@ -1288,59 +1325,59 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             ],
           ),
         ),
-        
+
         // Warning badges
         if (_selectedColors.isNotEmpty) ..._buildWarningBadges(),
-        
+
         // Selected colors list
         Expanded(
           child: _selectedColors.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.palette_outlined,
-                      size: 48,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No colors selected',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 16,
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.palette_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Search and tap colors from the left panel to add them',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
+                      const SizedBox(height: 16),
+                      Text(
+                        'No colors selected',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Search and tap colors from the left panel to add them',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              : ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _selectedColors.length,
+                  onReorder: _reorderColors,
+                  itemBuilder: (context, index) {
+                    final entry = _selectedColors[index];
+                    return _buildColorEntryCard(entry, index);
+                  },
                 ),
-              )
-            : ReorderableListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _selectedColors.length,
-                onReorder: _reorderColors,
-                itemBuilder: (context, index) {
-                  final entry = _selectedColors[index];
-                  return _buildColorEntryCard(entry, index);
-                },
-              ),
         ),
       ],
     );
   }
-  
+
   List<Widget> _buildWarningBadges() {
     final warnings = <Widget>[];
-    
+
     if (!_hasMainAndTrim()) {
       warnings.add(
         Container(
@@ -1370,7 +1407,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         ),
       );
     }
-    
+
     if (_getAccentCount() > 3) {
       warnings.add(
         Container(
@@ -1400,7 +1437,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         ),
       );
     }
-    
+
     if (_hasNearIdenticalColors()) {
       warnings.add(
         Container(
@@ -1430,10 +1467,10 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         ),
       );
     }
-    
+
     return warnings;
   }
-  
+
   Widget _buildColorEntryCard(PaletteEntry entry, int index) {
     return Card(
       key: ValueKey(entry.paint.id),
@@ -1457,7 +1494,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Paint details
                 Expanded(
                   child: Column(
@@ -1481,7 +1518,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Role dropdown
                 SizedBox(
                   width: 100,
@@ -1499,16 +1536,17 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                       DropdownMenuItem(value: 'MAIN', child: Text('MAIN')),
                       DropdownMenuItem(value: 'TRIM', child: Text('TRIM')),
                       DropdownMenuItem(value: 'ACCENT', child: Text('ACCENT')),
-                      DropdownMenuItem(value: 'BACKGROUND', child: Text('BACKGROUND')),
+                      DropdownMenuItem(
+                          value: 'BACKGROUND', child: Text('BACKGROUND')),
                     ],
                     onChanged: (value) {
                       if (value != null) _updateColorRole(index, value);
                     },
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // Remove button
                 IconButton(
                   onPressed: () => _removeColor(index),
@@ -1520,9 +1558,9 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Psychology field
             TextField(
               decoration: const InputDecoration(
@@ -1534,9 +1572,9 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               onChanged: (value) => _updateColorPsychology(index, value),
               maxLength: 50,
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Usage tips field
             TextField(
               decoration: const InputDecoration(
@@ -1558,7 +1596,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     if (_isPublished) {
       return _buildPostPublishView();
     }
-    
+
     return Column(
       children: [
         // Header with validation status
@@ -1576,16 +1614,20 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                       children: [
                         Text(
                           'Preview & Publish',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Final checks before publishing your Color Story',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                       ],
                     ),
@@ -1610,18 +1652,18 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Validation checks
               ..._buildValidationChecks(),
             ],
           ),
         ),
-        
+
         // Preview content - exact replica of Color Story detail view
         Expanded(
           child: _buildStoryPreview(),
         ),
-        
+
         // Publish controls
         Container(
           padding: const EdgeInsets.all(16),
@@ -1629,7 +1671,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity( 0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, -2),
               ),
@@ -1641,13 +1683,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ElevatedButton.icon(
                 onPressed: _canPublish() && !_isLoading ? _publishStory : null,
                 icon: _isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.publish),
-                label: Text(_isLoading ? 'Publishing...' : 'Publish Color Story'),
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.publish),
+                label:
+                    Text(_isLoading ? 'Publishing...' : 'Publish Color Story'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
@@ -1675,10 +1718,10 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ],
     );
   }
-  
+
   List<Widget> _buildValidationChecks() {
     final checks = <Widget>[];
-    
+
     // Color count check
     final colorCountCheck = _selectedColors.length >= 3;
     checks.add(_buildCheckItem(
@@ -1686,7 +1729,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       colorCountCheck,
       '${_selectedColors.length}/3 colors selected',
     ));
-    
+
     // Roles check
     final rolesCheck = _hasMainAndTrim();
     checks.add(_buildCheckItem(
@@ -1694,7 +1737,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       rolesCheck,
       rolesCheck ? 'All required roles set' : 'Missing main or trim role',
     ));
-    
+
     // Text contrast check
     bool allContrastsGood = true;
     for (final entry in _selectedColors) {
@@ -1706,9 +1749,11 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     checks.add(_buildCheckItem(
       'Text contrast readable on all swatches',
       allContrastsGood,
-      allContrastsGood ? 'All colors have good contrast' : 'Some colors may be hard to read',
+      allContrastsGood
+          ? 'All colors have good contrast'
+          : 'Some colors may be hard to read',
     ));
-    
+
     // Hero image check
     final heroCheck = _heroImage != null;
     checks.add(_buildCheckItem(
@@ -1717,20 +1762,24 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       heroCheck ? 'Hero image uploaded' : 'No hero image (optional)',
       isWarning: !heroCheck,
     ));
-    
+
     return checks;
   }
-  
-  Widget _buildCheckItem(String title, bool isValid, String subtitle, {bool isWarning = false}) {
-    final color = isValid ? Colors.green : (isWarning ? Colors.orange : Colors.red);
-    final icon = isValid ? Icons.check_circle : (isWarning ? Icons.warning : Icons.error);
-    
+
+  Widget _buildCheckItem(String title, bool isValid, String subtitle,
+      {bool isWarning = false}) {
+    final color =
+        isValid ? Colors.green : (isWarning ? Colors.orange : Colors.red);
+    final icon = isValid
+        ? Icons.check_circle
+        : (isWarning ? Icons.warning : Icons.error);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity( 0.1),
-        border: Border.all(color: color.withOpacity( 0.3)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1752,7 +1801,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: color.withOpacity( 0.8),
+                    color: color.withValues(alpha: 0.8),
                     fontSize: 11,
                   ),
                 ),
@@ -1767,7 +1816,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   Widget _buildStoryPreview() {
     final backgroundColor = const Color(0xFFF8F9FA);
     final textColor = Colors.black87;
-    
+
     return Container(
       color: backgroundColor,
       child: CustomScrollView(
@@ -1790,52 +1839,54 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                     Shadow(
                       offset: const Offset(0, 1),
                       blurRadius: 2,
-                      color: Colors.white.withOpacity( 0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ],
                 ),
               ),
               background: _heroImage != null
-                ? Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(
-                        _heroImage!,
-                        fit: BoxFit.cover,
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity( 0.3),
-                            ],
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          _heroImage!,
+                          fit: BoxFit.cover,
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.3),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : Container(
-                    decoration: _selectedColors.isNotEmpty
-                      ? BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              ColorUtils.getPaintColor(_selectedColors.first.paint.hex),
-                              ColorUtils.getPaintColor(_selectedColors.last.paint.hex),
-                            ],
-                          ),
-                        )
-                      : BoxDecoration(
-                          color: Colors.grey[300],
-                        ),
-                  ),
+                      ],
+                    )
+                  : Container(
+                      decoration: _selectedColors.isNotEmpty
+                          ? BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  ColorUtils.getPaintColor(
+                                      _selectedColors.first.paint.hex),
+                                  ColorUtils.getPaintColor(
+                                      _selectedColors.last.paint.hex),
+                                ],
+                              ),
+                            )
+                          : BoxDecoration(
+                              color: Colors.grey[300],
+                            ),
+                    ),
             ),
           ),
-          
+
           SliverList(
             delegate: SliverChildListDelegate([
               // Description
@@ -1845,23 +1896,24 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                   child: Text(
                     _description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: textColor,
-                      height: 1.6,
-                      fontSize: 16,
-                    ),
+                          color: textColor,
+                          height: 1.6,
+                          fontSize: 16,
+                        ),
                   ),
                 ),
-              
+
               // Color Reveal Cards (like in Color Story Detail)
-              ..._selectedColors.map((entry) => _buildPreviewColorCard(entry, textColor)),
-              
+              ..._selectedColors
+                  .map((entry) => _buildPreviewColorCard(entry, textColor)),
+
               // CTA Section Preview
               Container(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
                     const SizedBox(height: 24),
-                    
+
                     // Use This Color Story Button (preview only)
                     SizedBox(
                       width: double.infinity,
@@ -1871,7 +1923,8 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                         label: const Text('Use This Color Story'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity( 0.5),
+                          backgroundColor:
+                              Theme.of(context).primaryColor.withValues(alpha: 0.5),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1879,9 +1932,9 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Secondary Actions (preview only)
                     Row(
                       children: [
@@ -1892,17 +1945,16 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                             label: const Text('Save'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              foregroundColor: textColor.withOpacity( 0.5),
-                              side: BorderSide(color: textColor.withOpacity( 0.3)),
+                              foregroundColor: textColor.withValues(alpha: 0.5),
+                              side:
+                                  BorderSide(color: textColor.withValues(alpha: 0.3)),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
                         ),
-                        
                         const SizedBox(width: 16),
-                        
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: null,
@@ -1910,8 +1962,9 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                             label: const Text('Share'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              foregroundColor: textColor.withOpacity( 0.5),
-                              side: BorderSide(color: textColor.withOpacity( 0.3)),
+                              foregroundColor: textColor.withValues(alpha: 0.5),
+                              side:
+                                  BorderSide(color: textColor.withValues(alpha: 0.3)),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1920,7 +1973,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -1931,18 +1984,18 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ),
     );
   }
-  
+
   Widget _buildPreviewColorCard(PaletteEntry entry, Color textColor) {
     final swatchColor = ColorUtils.getPaintColor(entry.paint.hex);
     final cardTextColor = _getCardTextColor(swatchColor);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: textColor.withOpacity( 0.1),
+            color: textColor.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -1967,14 +2020,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          cardTextColor == Colors.white 
-                              ? Colors.black.withOpacity( 0.3)
-                              : Colors.white.withOpacity( 0.3),
+                          cardTextColor == Colors.white
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : Colors.white.withValues(alpha: 0.3),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   // Color Info Overlay
                   Positioned(
                     bottom: 16,
@@ -2004,7 +2057,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                         Text(
                           '${entry.paint.brandName} • ${entry.paint.code}',
                           style: TextStyle(
-                            color: cardTextColor.withOpacity( 0.9),
+                            color: cardTextColor.withValues(alpha: 0.9),
                             fontSize: 12,
                           ),
                         ),
@@ -2014,7 +2067,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                 ],
               ),
             ),
-            
+
             // Content Section
             Container(
               color: Theme.of(context).cardColor,
@@ -2027,22 +2080,24 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                     Text(
                       entry.psychology,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontStyle: FontStyle.italic,
-                        height: 1.4,
-                      ),
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color,
+                            fontStyle: FontStyle.italic,
+                            height: 1.4,
+                          ),
                     ),
                     const SizedBox(height: 12),
                   ],
-                  
+
                   // Usage Tips
                   if (entry.usageTips.isNotEmpty)
                     RichText(
                       text: TextSpan(
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          height: 1.4,
-                        ),
+                              color:
+                                  Theme.of(context).textTheme.bodySmall?.color,
+                              height: 1.4,
+                            ),
                         children: [
                           TextSpan(
                             text: 'How to use: ',
@@ -2063,12 +2118,12 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ),
     );
   }
-  
+
   Color _getCardTextColor(Color backgroundColor) {
     final luminance = backgroundColor.computeLuminance();
     return luminance > 0.5 ? Colors.black87 : Colors.white;
   }
-  
+
   Widget _buildPostPublishView() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -2084,20 +2139,20 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           Text(
             'Color Story Published!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.green[700],
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
           ),
           const SizedBox(height: 16),
           Text(
             '"$_title" has been successfully published and is now available in the Explore section.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 48),
-          
+
           // Action buttons
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2133,25 +2188,27 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ),
     );
   }
-  
+
   Future<void> _saveAsDraft() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Convert palette entries to ColorStoryPalette objects
-      final palette = _selectedColors.map((entry) => ColorStoryPalette(
-        role: entry.role,
-        hex: entry.paint.hex,
-        paintId: entry.paint.id,
-        brandName: entry.paint.brandName,
-        name: entry.paint.name,
-        code: entry.paint.code,
-        psychology: entry.psychology,
-        usageTips: entry.usageTips,
-      )).toList();
-      
+      final palette = _selectedColors
+          .map((entry) => ColorStoryPalette(
+                role: entry.role,
+                hex: entry.paint.hex,
+                paintId: entry.paint.id,
+                brandName: entry.paint.brandName,
+                name: entry.paint.name,
+                code: entry.paint.code,
+                psychology: entry.psychology,
+                usageTips: entry.usageTips,
+              ))
+          .toList();
+
       // Upload hero image if present
       String? heroImageUrl;
       if (_heroImage != null) {
@@ -2159,14 +2216,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         // In a real implementation, you'd upload to Firebase Storage
         heroImageUrl = 'https://via.placeholder.com/800x400';
       }
-      
+
       // Build facets for efficient querying
       final facets = ColorStory.buildFacets(
         themes: _selectedThemes.toList(),
         families: _selectedFamilies.toList(),
         rooms: _selectedRooms.toList(),
       );
-      
+
       // Create the ColorStory object
       final userId = FirebaseService.currentUser?.uid ?? '';
       final colorStory = ColorStory(
@@ -2186,10 +2243,10 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         updatedAt: DateTime.now(),
         facets: facets,
       );
-      
+
       // Save to Firestore (this will save as draft with timestamps)
       await FirebaseService.createColorStory(colorStory);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -2215,7 +2272,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       }
     }
   }
-  
+
   // ignore: unused_element
   Widget _buildStep3PreviewAndPublish() {
     return SingleChildScrollView(
@@ -2226,18 +2283,18 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           Text(
             'Publish Story',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Your Color Story is ready to be published!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 24),
-          
+
           // Summary card
           Card(
             child: Padding(
@@ -2255,21 +2312,23 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
                       const SizedBox(width: 8),
                       Text(
                         'Story Ready',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green[700],
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green[700],
+                                ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
-                  _buildSummaryRow('Title', _title.isEmpty ? 'Untitled' : _title),
+                  _buildSummaryRow(
+                      'Title', _title.isEmpty ? 'Untitled' : _title),
                   _buildSummaryRow('Slug', _slug.isEmpty ? 'untitled' : _slug),
                   _buildSummaryRow('Themes', _selectedThemes.join(', ')),
                   _buildSummaryRow('Families', _selectedFamilies.join(', ')),
                   _buildSummaryRow('Rooms', _selectedRooms.join(', ')),
-                  _buildSummaryRow('Colors', '${_selectedColors.length} selected'),
+                  _buildSummaryRow(
+                      'Colors', '${_selectedColors.length} selected'),
                   if (_heroImage != null)
                     _buildSummaryRow('Hero Image', 'Uploaded'),
                   if (_tags.isNotEmpty)
@@ -2278,9 +2337,9 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action buttons
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2288,13 +2347,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ElevatedButton.icon(
                 onPressed: _isLoading ? null : _publishStory,
                 icon: _isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.publish),
-                label: Text(_isLoading ? 'Publishing...' : 'Publish Color Story'),
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.publish),
+                label:
+                    Text(_isLoading ? 'Publishing...' : 'Publish Color Story'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
@@ -2303,27 +2363,29 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _isLoading ? null : () {
-                  // Save as draft functionality could go here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Draft saving coming soon!'),
-                      backgroundColor: Colors.blue,
-                    ),
-                  );
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        // Save as draft functionality could go here
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Draft saving coming soon!'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      },
                 icon: const Icon(Icons.drafts),
                 label: const Text('Save as Draft'),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 80), // Space for navigation buttons
         ],
       ),
     );
   }
-  
+
   Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -2352,8 +2414,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       ),
     );
   }
-  
-  
+
   Future<void> _publishStory() async {
     if (!_canPublish()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2364,24 +2425,26 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Convert palette entries to ColorStoryPalette objects
-      final palette = _selectedColors.map((entry) => ColorStoryPalette(
-        role: entry.role,
-        hex: entry.paint.hex,
-        paintId: entry.paint.id,
-        brandName: entry.paint.brandName,
-        name: entry.paint.name,
-        code: entry.paint.code,
-        psychology: entry.psychology,
-        usageTips: entry.usageTips,
-      )).toList();
-      
+      final palette = _selectedColors
+          .map((entry) => ColorStoryPalette(
+                role: entry.role,
+                hex: entry.paint.hex,
+                paintId: entry.paint.id,
+                brandName: entry.paint.brandName,
+                name: entry.paint.name,
+                code: entry.paint.code,
+                psychology: entry.psychology,
+                usageTips: entry.usageTips,
+              ))
+          .toList();
+
       // Upload hero image if present
       String? heroImageUrl;
       if (_heroImage != null) {
@@ -2389,14 +2452,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         // In a real implementation, you'd upload to Firebase Storage
         heroImageUrl = 'https://via.placeholder.com/800x400';
       }
-      
+
       // Build facets for efficient querying
       final facets = ColorStory.buildFacets(
         themes: _selectedThemes.toList(),
         families: _selectedFamilies.toList(),
         rooms: _selectedRooms.toList(),
       );
-      
+
       // Create the ColorStory object
       final userId = FirebaseService.currentUser?.uid ?? '';
       final colorStory = ColorStory(
@@ -2416,17 +2479,17 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
         updatedAt: DateTime.now(),
         facets: facets,
       );
-      
+
       // Save to Firestore
       final storyId = await FirebaseService.createColorStory(colorStory);
       _publishedStoryId = storyId;
-      
+
       // Show success and switch to post-publish view
       if (mounted) {
         setState(() {
           _isPublished = true;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Published successfully!'),
@@ -2451,13 +2514,12 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       }
     }
   }
-  
+
   void _viewInExplore() {
     // Navigate to explore screen
     Navigator.of(context).popUntil((route) => route.isFirst);
-    // TODO: Navigate to specific story in explore
   }
-  
+
   void _createAnother() {
     // Reset all form data and go back to step 0
     setState(() {
@@ -2476,14 +2538,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
       _isFeatured = false;
       _isPublished = false;
       _publishedStoryId = null;
-      
+
       _titleController.clear();
       _slugController.clear();
       _descriptionController.clear();
       _tagController.clear();
       _paintSearchController.clear();
     });
-    
+
     _pageController.animateToPage(
       0,
       duration: const Duration(milliseconds: 300),
@@ -2534,10 +2596,10 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
 
     try {
       final result = await FirebaseService.backfillColorStoryFacets();
-      
+
       if (mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
+
         // Show results dialog
         showDialog(
           context: context,
@@ -2574,7 +2636,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Backfill failed: $e'),
@@ -2603,14 +2665,14 @@ class PaletteEntry {
   final String role;
   final String psychology;
   final String usageTips;
-  
+
   PaletteEntry({
     required this.paint,
     required this.role,
     required this.psychology,
     required this.usageTips,
   });
-  
+
   PaletteEntry copyWith({
     Paint? paint,
     String? role,
