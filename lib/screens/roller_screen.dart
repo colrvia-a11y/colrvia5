@@ -387,31 +387,42 @@ class _RollerScreenState extends RollerScreenStatePublic {
     
     HapticFeedback.lightImpact();
     
-    // Generate new paint for ONLY this stripe, preserving all other colors
-    final anchors = List<Paint?>.filled(_paletteSize, null);
-    for (int i = 0; i < _paletteSize && i < _currentPalette.length; i++) {
-      if (i != index) { // Preserve all colors EXCEPT the one we're rolling
-        anchors[i] = _currentPalette[i];
+    // Set rolling state to prevent concurrent operations
+    setState(() => _isRolling = true);
+    
+    try {
+      // Generate new paint for ONLY this stripe, preserving all other colors
+      final anchors = List<Paint?>.filled(_paletteSize, null);
+      for (int i = 0; i < _paletteSize && i < _currentPalette.length; i++) {
+        if (i != index) { // Preserve all colors EXCEPT the one we're rolling
+          anchors[i] = _currentPalette[i];
+        }
+        // anchors[index] remains null so it gets a new color
       }
-      // anchors[index] remains null so it gets a new color
-    }
-    
-    final rolled = PaletteGenerator.rollPalette(
-      availablePaints: _getFilteredPaints(),
-      anchors: anchors,
-      mode: _currentMode,
-      diversifyBrands: _diversifyBrands,
-    );
-    
-    final adjusted = _applyAdjustments(rolled);
-    
-    setState(() {
-      _currentPalette = adjusted.take(_paletteSize).toList();
-    });
+      
+      final rolled = PaletteGenerator.rollPalette(
+        availablePaints: _getFilteredPaints(),
+        anchors: anchors,
+        mode: _currentMode,
+        diversifyBrands: _diversifyBrands,
+      );
+      
+      final adjusted = _applyAdjustments(rolled);
+      
+      setState(() {
+        _currentPalette = adjusted.take(_paletteSize).toList();
+        _isRolling = false; // Reset rolling state
+      });
 
-    // Sync current page cache after rolling a stripe
-    if (_visiblePage < _pages.length) {
-      _pages[_visiblePage] = List<Paint>.from(_currentPalette);
+      // Sync current page cache after rolling a stripe
+      if (_visiblePage < _pages.length) {
+        _pages[_visiblePage] = List<Paint>.from(_currentPalette);
+      }
+    } catch (e) {
+      print('Error in _rollStripe: $e');
+      if (mounted) {
+        setState(() => _isRolling = false);
+      }
     }
   }
 
