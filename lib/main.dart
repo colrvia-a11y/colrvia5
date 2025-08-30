@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:color_canvas/firebase_options.dart';
 import 'package:color_canvas/theme.dart';
@@ -47,6 +48,11 @@ void main() async {
     );
     
     Debug.info('App', 'main', 'Firebase App Check activated with PRODUCTION reCAPTCHA key');
+    
+    // Initialize the Gemini Developer API backend service
+    // Create a `GenerativeModel` instance with a model that supports your use case
+    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash');
+    Debug.info('App', 'main', 'Firebase AI GenerativeModel initialized with gemini-2.5-flash');
     
     await FirebaseService.enableOfflineSupport();
     isFirebaseInitialized = true;
