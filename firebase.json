@@ -48,17 +48,5 @@
     "ui": {
       "enabled": true
     }
-  },
-  "flutter": {
-    "platforms": {
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "v29bvc2fec6tbbyy7j9h4tddz1dq28",
-          "configurations": {
-            "web": "1:596436988958:web:0713d48838f3a0349e6a0f"
-          }
-        }
-      }
-    }
   }
 }
