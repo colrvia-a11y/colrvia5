@@ -1,5 +1,16 @@
 {
     "dart.flutterSdkPath": "C:\\src\\flutter",
     "github.copilot.chat.agent.autoFix": true,
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.agent.thinkingTool": true,
+    "github.copilot.chat.newWorkspace.useContext7": true,
+    "github.copilot.enable": {
+        "GitHub Copilot": true,
+        "dart": true,
+        "flutter": true,
+        "C:\\Users\\corey\\OneDrive\\Desktop\\colrvia5\\flutter\\": true,
+        "flutter\\": true,
+        "github.copilot.chat.useWorkspaceContext": true
+    }
 }

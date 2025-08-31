@@ -6,12 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math' as math;
+import 'dart:async';
 
 import '../services/gemini_ai_service.dart';
 import '../services/surface_detection_service.dart';
+import '../services/photo_library_service.dart';
 import '../firestore/firestore_data_schema.dart';
+import 'photo_library_screen.dart';
 
-enum VisualizerMode { welcome, upload, analyze, generate, results, refine }
+enum VisualizerMode { welcome, upload, analyze, selectSurfaces, generate, results, refine }
 
 class VisualizerScreen extends StatefulWidget {
   final UserPalette? initialPalette;
@@ -54,6 +57,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   // 🔧 PROCESSING STATE
   bool _isAnalyzing = false;
   String _currentStep = '';
+  String _currentDescriptiveAction = '';
+  late Timer? _descriptiveActionTimer;
 
   // 🎪 UI STATE
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -78,9 +83,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       vsync: this,
     )..repeat(reverse: true);
 
-    // Progress animation
+    // Progress animation - slowed down to feel more realistic
     _progressController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 2500), // Increased from 800ms
       vsync: this,
     );
 
@@ -191,30 +196,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               },
             )
           : null,
-      title: const Text(
-        'AI Visualizer',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.5,
-        ),
-      ),
       centerTitle: true,
-      actions: [
-        IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            child: const Icon(Icons.tune, color: Colors.white, size: 18),
-          ),
-          onPressed: _showSettings,
-        ),
-      ],
     );
   }
 
@@ -238,6 +220,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           _buildWelcomeScreen(),
           _buildUploadScreen(),
           _buildAnalysisScreen(),
+          _buildSurfaceSelectionScreen(),
           _buildGenerationScreen(),
           _buildResultsScreen(),
         ],
@@ -866,32 +849,419 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     );
   }
 
-  // 🔍 ANALYSIS SCREEN
+  // 🔍 ANALYSIS SCREEN - Pure analysis animation
   Widget _buildAnalysisScreen() {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const SizedBox(height: 80),
-
-          // Analysis Animation
+          const SizedBox(height: 100),
           Expanded(
-            child: SingleChildScrollView(
+            child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildAnalysisAnimation(),
                   const SizedBox(height: 40),
                   _buildAnalysisStatus(),
-                  const SizedBox(height: 40),
-                  if (_analysisResult != null) _buildSurfaceSelection(),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          if (_analysisResult != null) _buildAnalysisActions(),
+  // 🎯 SURFACE SELECTION SCREEN - Smart, adaptive based on AI analysis
+  Widget _buildSurfaceSelectionScreen() {
+    if (_analysisResult == null) {
+      return const Center(
+        child: Text('No analysis results available', 
+          style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  
+                  // Compact Analysis Header (now part of scrollable content)
+                  _buildCompactAnalysisHeader(),
+                  const SizedBox(height: 24),
+                  
+                  // Dynamic surface selection based on detected surfaces
+                  _buildDetectedSurfacesSelection(),
+                  const SizedBox(height: 24),
+                  
+                  // Lighting and style context
+                  _buildAnalysisContext(),
+                  
+                  const SizedBox(height: 100), // Extra space for bottom action button
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          if (_selectedColors.isNotEmpty) _buildAnalysisActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactAnalysisHeader() {
+    final spaceType = _analysisResult!.spaceType;
+    final surfaceCount = _analysisResult!.availableSurfaces.length;
+    final confidence = (_analysisResult!.confidence * 100).round();
+    
+    // Get space-specific emoji and description
+    final spaceEmoji = _getSpaceEmoji(spaceType);
+    final spaceDescription = _getSpaceDescription(spaceType);
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16), // Reduced from 20
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withValues(alpha: 0.15), // More subtle
+            Colors.green.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12), // Smaller radius
+        border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8), // Reduced from 12
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8), // Smaller radius
+            ),
+            child: Text(spaceEmoji, style: const TextStyle(fontSize: 20)), // Smaller emoji
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Analysis Complete!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16, // Reduced from 18
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  spaceDescription,
+                  style: TextStyle(
+                    color: Colors.green[200],
+                    fontSize: 12, // Reduced from 14
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.format_paint, color: Colors.green[300], size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$surfaceCount surfaces detected',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Smaller padding
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(16), // Smaller radius
+            ),
+            child: Text(
+              '$confidence%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11, // Smaller text
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetectedSurfacesSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Surfaces to Paint',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Choose which detected surfaces you\'d like to visualize with new colors:',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Dynamic surface grid based on actual detection
+        ...(_analysisResult!.availableSurfaces.map((surface) {
+          return _buildSurfaceCard(surface);
+        }).toList()),
+      ],
+    );
+  }
+
+  Widget _buildSurfaceCard(SurfaceType surface) {
+    final isSelected = _selectedColors.containsKey(surface);
+    final selectedColor = _selectedColors[surface];
+    final surfaceInfo = _getSurfaceInfo(surface, _analysisResult!.spaceType);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? Colors.blue.withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.2),
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Surface Header with context-aware description
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isSelected 
+                    ? Colors.blue.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  SurfaceDetectionService.getSurfaceIcon(surface),
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      SurfaceDetectionService.getSurfaceName(surface),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      surfaceInfo,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isSelected,
+                onChanged: (value) => _selectSurface(surface),
+                activeThumbColor: Colors.blue,
+              ),
+            ],
+          ),
+
+          // Color Selection (shown when surface is selected)
+          if (isSelected) ...[
+            const SizedBox(height: 16),
+            _buildSmartColorSelection(surface, selectedColor),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartColorSelection(SurfaceType surface, String? selectedColor) {
+    // Get intelligent color suggestions based on space type and surface
+    final suggestedColors = _getSmartColorSuggestions(surface, _analysisResult!.spaceType);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recommended Colors:',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: suggestedColors.map((colorInfo) {
+            final isSelected = selectedColor == colorInfo['hex'];
+            final color = _parseColor(colorInfo['hex']!);
+
+            return GestureDetector(
+              onTap: () => _selectColorForSurface(surface, colorInfo['hex']!),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.3),
+                    width: isSelected ? 3 : 1,
+                  ),
+                  boxShadow: [
+                    if (isSelected)
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isSelected)
+                      const Icon(Icons.check, color: Colors.white, size: 16),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Perfect for ${_getSurfaceColorAdvice(surface, _analysisResult!.spaceType)}',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.5),
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnalysisContext() {
+    final lighting = _analysisResult!.lightingConditions;
+    final style = _analysisResult!.style;
+    final dominantColors = _analysisResult!.dominantColors;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Space Analysis',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Lighting info
+          Row(
+            children: [
+              Icon(_getLightingIcon(lighting), color: Colors.amber[300], size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Lighting: ${lighting.replaceAll('_', ' ').toUpperCase()}',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Style info  
+          Row(
+            children: [
+              Icon(Icons.style, color: Colors.purple[300], size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Style: ${style.toUpperCase()}',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Existing colors
+          Row(
+            children: [
+              Icon(Icons.palette, color: Colors.pink[300], size: 16),
+              const SizedBox(width: 8),
+              const Text(
+                'Existing colors: ',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              ...dominantColors.take(3).map((colorHex) {
+                return Container(
+                  margin: const EdgeInsets.only(left: 4),
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: _parseColor(colorHex),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: Colors.white30, width: 0.5),
+                  ),
+                );
+              }),
+            ],
+          ),
         ],
       ),
     );
@@ -937,6 +1307,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   }
 
   Widget _buildAnalysisStatus() {
+    // Descriptive actions that rotate during analysis
+    final descriptiveActions = [
+      'Detecting walls and surfaces...',
+      'Assessing lighting conditions...',
+      'Analyzing room geometry...',
+      'Identifying paintable areas...',
+      'Understanding space layout...',
+      'Calculating surface textures...',
+    ];
+
     return Column(
       children: [
         Text(
@@ -948,16 +1328,33 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          _isAnalyzing
-              ? 'AI is understanding your room layout and identifying paintable surfaces'
-              : 'Ready to apply colors to your space',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.2),
-            fontSize: 16,
+        if (_isAnalyzing) ...[
+          // Show rotating descriptive action
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 800),
+            child: Text(
+              _currentDescriptiveAction.isEmpty 
+                ? descriptiveActions[0]
+                : _currentDescriptiveAction,
+              key: ValueKey(_currentDescriptiveAction),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: const Color(0xFFF2B897).withValues(alpha: 0.8), // Brand peach
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-        ),
+        ] else ...[
+          Text(
+            'Ready to apply colors to your space',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 16,
+            ),
+          ),
+        ],
         if (_isAnalyzing) ...[
           const SizedBox(height: 24),
           AnimatedBuilder(
@@ -991,183 +1388,6 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ],
       ],
     );
-  }
-
-  Widget _buildSurfaceSelection() {
-    if (_analysisResult == null) return const SizedBox();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select Surfaces & Colors',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Available Surfaces
-          const Text(
-            'Detected Surfaces:',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Surface Selection with Color Chips
-          ..._analysisResult!.availableSurfaces.map((surface) {
-            final isSelected = _selectedColors.containsKey(surface);
-            final selectedColor = _selectedColors[surface];
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF6C5CE7)
-                      : Colors.white.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Surface Header
-                  Row(
-                    children: [
-                      Text(
-                        SurfaceDetectionService.getSurfaceIcon(surface),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          SurfaceDetectionService.getSurfaceName(surface),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        value: isSelected,
-                        onChanged: (value) => _selectSurface(surface),
-                        activeThumbColor: const Color(0xFF6C5CE7),
-                      ),
-                    ],
-                  ),
-
-                  // Color Selection (shown when surface is selected)
-                  if (isSelected) ...[
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Choose Color:',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildColorSelection(surface, selectedColor),
-                  ],
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildColorSelection(SurfaceType surface, String? selectedColor) {
-    // Get available colors from active palette or recent colors
-    final availableColors = <String>[];
-
-    if (_activePalette != null && _activePalette!.colors.isNotEmpty) {
-      availableColors.addAll(_activePalette!.colors.map((c) => c.hex));
-    } else {
-      // Fallback to default colors if no palette
-      availableColors.addAll([
-        '#FFFFFF',
-        '#F5F5F5',
-        '#E8E8E8',
-        '#D3D3D3',
-        '#B8860B',
-        '#8B4513',
-        '#2F4F4F',
-        '#708090',
-        '#483D8B',
-        '#6B8E23',
-        '#A0522D',
-        '#800080'
-      ]);
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: availableColors.map((colorHex) {
-        final isSelected = selectedColor == colorHex;
-        final color = _parseColor(colorHex);
-
-        return GestureDetector(
-          onTap: () => _selectColorForSurface(surface, colorHex),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.3),
-                width: isSelected ? 3 : 1,
-              ),
-              boxShadow: [
-                if (isSelected)
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-              ],
-            ),
-            child: isSelected
-                ? const Icon(Icons.check, color: Colors.white, size: 20)
-                : null,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Color _parseColor(String hexColor) {
-    hexColor = hexColor.replaceAll('#', '');
-    if (hexColor.length == 6) {
-      hexColor = 'FF$hexColor';
-    }
-    return Color(int.parse(hexColor, radix: 16));
   }
 
   void _selectColorForSurface(SurfaceType surface, String colorHex) {
@@ -1451,11 +1671,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           borderRadius: BorderRadius.circular(16),
           child: Stack(
             children: [
-              Image.memory(
-                variant.imageData,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
+              GestureDetector(
+                onTap: () => _showFullscreenImage(variant.imageData, variant.description),
+                child: Image.memory(
+                  variant.imageData,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
               if (isSelected)
                 Positioned(
@@ -1487,13 +1710,25 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       ],
                     ),
                   ),
-                  child: Text(
-                    variant.description,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          variant.description,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.zoom_out_map,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1502,6 +1737,158 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ),
       ),
     );
+  }
+
+  void _showFullscreenImage(Uint8List imageData, String description) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.black,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with close button
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        description,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              // Full-screen image
+              Flexible(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  child: Image.memory(
+                    imageData,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+              // Action buttons
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _saveToPhotoLibrary(imageData, description),
+                        icon: const Icon(Icons.save_alt),
+                        label: const Text('Save to Library'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF2B897),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Add share functionality here if needed
+                        },
+                        icon: const Icon(Icons.share),
+                        label: const Text('Share'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF404934),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveToPhotoLibrary(Uint8List imageData, String description) async {
+    try {
+      debugPrint('💾 Saving image to photo library: $description');
+      
+      // Save image using PhotoLibraryService
+      final photoId = await PhotoLibraryService.savePhoto(
+        imageData: imageData,
+        description: description,
+        metadata: {
+          'source': 'ai_visualizer',
+          'timestamp': DateTime.now().toIso8601String(),
+          'mode': _currentMode.toString(),
+        },
+      );
+      
+      debugPrint('✅ Image saved successfully with ID: $photoId');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Image saved to your photo library!'),
+            backgroundColor: const Color(0xFF404934),
+            action: SnackBarAction(
+              label: 'View Library',
+              textColor: const Color(0xFFF2B897),
+              onPressed: () {
+                // Navigate to photo library page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PhotoLibraryScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error saving to photo library: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save image: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildResultsActions() {
@@ -1581,14 +1968,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     try {
       _progressController.forward();
 
-      // Simulate analysis steps
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Start rotating descriptive actions
+      _startDescriptiveActionRotation();
+
+      // Simulate analysis steps with more realistic timing
+      await Future.delayed(const Duration(milliseconds: 800));
       setState(() => _currentStep = 'Identifying room type...');
 
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
       setState(() => _currentStep = 'Detecting surfaces...');
 
-      await Future.delayed(const Duration(milliseconds: 600));
+      await Future.delayed(const Duration(milliseconds: 900));
       setState(() => _currentStep = 'Analyzing lighting...');
 
       // Actual AI analysis
@@ -1605,15 +1995,59 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             '🎨 Auto-selected walls with color: ${_selectedColors[SurfaceType.walls]}');
       }
 
+      // Stop descriptive action rotation
+      _stopDescriptiveActionRotation();
+
       setState(() {
         _isAnalyzing = false;
         _currentStep = '';
+        _currentDescriptiveAction = '';
       });
+      
+      // Navigate to surface selection screen after analysis completes
+      _navigateToMode(VisualizerMode.selectSurfaces);
     } catch (e) {
       debugPrint('❌ Analysis failed: $e');
-      setState(() => _isAnalyzing = false);
+      _stopDescriptiveActionRotation();
+      setState(() {
+        _isAnalyzing = false;
+        _currentDescriptiveAction = '';
+      });
       _showError('Failed to analyze image. Please try again.');
     }
+  }
+
+  void _startDescriptiveActionRotation() {
+    final descriptiveActions = [
+      'Detecting walls and surfaces...',
+      'Assessing lighting conditions...',
+      'Analyzing room geometry...',
+      'Identifying paintable areas...',
+      'Understanding space layout...',
+      'Calculating surface textures...',
+    ];
+
+    int actionIndex = 0;
+    setState(() {
+      _currentDescriptiveAction = descriptiveActions[actionIndex];
+    });
+
+    _descriptiveActionTimer = Timer.periodic(const Duration(milliseconds: 1200), (timer) {
+      if (!_isAnalyzing) {
+        timer.cancel();
+        return;
+      }
+      
+      actionIndex = (actionIndex + 1) % descriptiveActions.length;
+      setState(() {
+        _currentDescriptiveAction = descriptiveActions[actionIndex];
+      });
+    });
+  }
+
+  void _stopDescriptiveActionRotation() {
+    _descriptiveActionTimer?.cancel();
+    _descriptiveActionTimer = null;
   }
 
   void _selectSurface(SurfaceType surface) {
@@ -1701,12 +2135,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   }
 
   void _tryMoreColors() {
-    // Return to color selection
-    _navigateToMode(VisualizerMode.analyze);
-  }
-
-  void _showSettings() {
-    // Show settings modal
+    // Return to surface selection screen
+    _navigateToMode(VisualizerMode.selectSurfaces);
   }
 
   void _showError(String message) {
@@ -1729,12 +2159,286 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   @override
   void dispose() {
+    _stopDescriptiveActionRotation();
     _masterController.dispose();
     _breathingController.dispose();
     _progressController.dispose();
     _resultsController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  // 🧠 SMART HELPER METHODS FOR ADAPTIVE UI
+
+  String _getSpaceEmoji(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return '🛋️';
+      case SpaceType.kitchen:
+        return '🍳';
+      case SpaceType.bathroom:
+        return '🛁';
+      case SpaceType.bedroom:
+        return '🛏️';
+      case SpaceType.exterior:
+        return '🏠';
+      case SpaceType.office:
+        return '💼';
+    }
+  }
+
+  String _getSpaceDescription(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return 'Living room detected with relaxation-focused surfaces';
+      case SpaceType.kitchen:
+        return 'Kitchen detected with cooking and storage surfaces';
+      case SpaceType.bathroom:
+        return 'Bathroom detected with moisture-resistant surfaces';
+      case SpaceType.bedroom:
+        return 'Bedroom detected with calming sleep-focused surfaces';
+      case SpaceType.exterior:
+        return 'Exterior detected with weather-resistant surfaces';
+      case SpaceType.office:
+        return 'Office detected with productivity-focused surfaces';
+    }
+  }
+
+  String _getSurfaceInfo(SurfaceType surface, SpaceType spaceType) {
+    switch (surface) {
+      case SurfaceType.walls:
+        return _getWallsInfo(spaceType);
+      case SurfaceType.cabinets:
+        return _getCabinetsInfo(spaceType);
+      case SurfaceType.trim:
+        return _getTrimInfo(spaceType);
+      case SurfaceType.ceiling:
+        return _getCeilingInfo(spaceType);
+      case SurfaceType.shutters:
+        return 'Exterior shutters - great for adding character and color contrast';
+      case SurfaceType.doors:
+        return 'Entry doors - make a bold first impression with color';
+    }
+  }
+
+  String _getWallsInfo(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return 'Main focal area - sets the mood for relaxation and entertainment';
+      case SpaceType.kitchen:
+        return 'Backdrop for cooking - choose colors that energize and complement appliances';
+      case SpaceType.bathroom:
+        return 'Moisture-exposed area - select colors that feel fresh and clean';
+      case SpaceType.bedroom:
+        return 'Sleep sanctuary - opt for calming, restful colors';
+      case SpaceType.exterior:
+        return 'Curb appeal feature - weather-resistant colors that enhance architecture';
+      case SpaceType.office:
+        return 'Productivity zone - colors that promote focus and creativity';
+    }
+  }
+
+  String _getCabinetsInfo(SpaceType spaceType) {
+    if (spaceType == SpaceType.kitchen) {
+      return 'Storage focal point - can dramatically change the kitchen\'s personality';
+    } else {
+      return 'Storage elements - accent colors that complement the main space';
+    }
+  }
+
+  String _getTrimInfo(SpaceType spaceType) {
+    return 'Architectural details - perfect for adding definition and elegance';
+  }
+
+  String _getCeilingInfo(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return 'Fifth wall opportunity - can make the room feel larger or cozier';
+      case SpaceType.bedroom:
+        return 'Overhead sanctuary - subtle colors that enhance sleep quality';
+      case SpaceType.office:
+        return 'Focus enhancer - colors that improve concentration and reduce eye strain';
+      default:
+        return 'Overhead surface - often overlooked but impactful design element';
+    }
+  }
+
+  List<Map<String, String>> _getSmartColorSuggestions(SurfaceType surface, SpaceType spaceType) {
+    // Get base colors for the surface type
+    final baseColors = _getBaseSurfaceColors(surface);
+    
+    // Get space-specific modifications
+    final spaceColors = _getSpaceSpecificColors(spaceType);
+    
+    // Combine and prioritize based on surface and space
+    final smartSuggestions = <Map<String, String>>[];
+    
+    // Add space-appropriate colors first
+    smartSuggestions.addAll(spaceColors);
+    
+    // Add surface-appropriate colors
+    smartSuggestions.addAll(baseColors);
+    
+    // Remove duplicates and limit to 8 suggestions
+    final seen = <String>{};
+    return smartSuggestions.where((color) => seen.add(color['hex']!)).take(8).toList();
+  }
+
+  List<Map<String, String>> _getBaseSurfaceColors(SurfaceType surface) {
+    switch (surface) {
+      case SurfaceType.walls:
+        return [
+          {'hex': '#F8F9FA', 'name': 'Pure White'},
+          {'hex': '#E9ECEF', 'name': 'Soft Gray'},
+          {'hex': '#F5F5DC', 'name': 'Warm Beige'},
+          {'hex': '#E6E6FA', 'name': 'Light Lavender'},
+        ];
+      case SurfaceType.cabinets:
+        return [
+          {'hex': '#FFFFFF', 'name': 'Classic White'},
+          {'hex': '#2F4F4F', 'name': 'Dark Slate'},
+          {'hex': '#8B4513', 'name': 'Rich Wood'},
+          {'hex': '#483D8B', 'name': 'Navy Blue'},
+        ];
+      case SurfaceType.trim:
+        return [
+          {'hex': '#FFFFFF', 'name': 'Classic White'},
+          {'hex': '#F5F5F5', 'name': 'Off White'},
+          {'hex': '#000000', 'name': 'Bold Black'},
+          {'hex': '#2F4F4F', 'name': 'Charcoal'},
+        ];
+      case SurfaceType.ceiling:
+        return [
+          {'hex': '#FFFFFF', 'name': 'Pure White'},
+          {'hex': '#F8F8FF', 'name': 'Ghost White'},
+          {'hex': '#F5F5DC', 'name': 'Cream'},
+          {'hex': '#E6E6FA', 'name': 'Pale Lavender'},
+        ];
+      case SurfaceType.shutters:
+        return [
+          {'hex': '#000000', 'name': 'Classic Black'},
+          {'hex': '#FFFFFF', 'name': 'Pure White'},
+          {'hex': '#228B22', 'name': 'Forest Green'},
+          {'hex': '#8B0000', 'name': 'Deep Red'},
+        ];
+      case SurfaceType.doors:
+        return [
+          {'hex': '#8B0000', 'name': 'Bold Red'},
+          {'hex': '#000080', 'name': 'Navy Blue'},
+          {'hex': '#000000', 'name': 'Classic Black'},
+          {'hex': '#8B4513', 'name': 'Rich Brown'},
+        ];
+    }
+  }
+
+  List<Map<String, String>> _getSpaceSpecificColors(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return [
+          {'hex': '#F5F5DC', 'name': 'Warm Beige'},
+          {'hex': '#D2B48C', 'name': 'Tan'},
+          {'hex': '#708090', 'name': 'Slate Gray'},
+          {'hex': '#B8860B', 'name': 'Gold'},
+        ];
+      case SpaceType.kitchen:
+        return [
+          {'hex': '#FFFFFF', 'name': 'Fresh White'},
+          {'hex': '#F0F8FF', 'name': 'Alice Blue'},
+          {'hex': '#90EE90', 'name': 'Light Green'},
+          {'hex': '#FFE4B5', 'name': 'Moccasin'},
+        ];
+      case SpaceType.bathroom:
+        return [
+          {'hex': '#E0FFFF', 'name': 'Light Cyan'},
+          {'hex': '#F0F8FF', 'name': 'Alice Blue'},
+          {'hex': '#E6E6FA', 'name': 'Lavender'},
+          {'hex': '#F5FFFA', 'name': 'Mint Cream'},
+        ];
+      case SpaceType.bedroom:
+        return [
+          {'hex': '#E6E6FA', 'name': 'Lavender'},
+          {'hex': '#F0F8FF', 'name': 'Alice Blue'},
+          {'hex': '#F5DEB3', 'name': 'Wheat'},
+          {'hex': '#FFEFD5', 'name': 'Papaya Whip'},
+        ];
+      case SpaceType.exterior:
+        return [
+          {'hex': '#F5F5DC', 'name': 'Beige'},
+          {'hex': '#D2B48C', 'name': 'Tan'},
+          {'hex': '#A0522D', 'name': 'Sienna'},
+          {'hex': '#8FBC8F', 'name': 'Dark Sea Green'},
+        ];
+      case SpaceType.office:
+        return [
+          {'hex': '#F8F8FF', 'name': 'Ghost White'},
+          {'hex': '#E6E6FA', 'name': 'Lavender'},
+          {'hex': '#D3D3D3', 'name': 'Light Gray'},
+          {'hex': '#B0C4DE', 'name': 'Light Steel Blue'},
+        ];
+    }
+  }
+
+  String _getSurfaceColorAdvice(SurfaceType surface, SpaceType spaceType) {
+    switch (surface) {
+      case SurfaceType.walls:
+        return _getWallColorAdvice(spaceType);
+      case SurfaceType.cabinets:
+        return _getCabinetColorAdvice(spaceType);
+      case SurfaceType.trim:
+        return 'defining architectural features and adding elegance';
+      case SurfaceType.ceiling:
+        return 'creating height and atmosphere overhead';
+      case SurfaceType.shutters:
+        return 'adding curb appeal and architectural interest';
+      case SurfaceType.doors:
+        return 'making a bold entrance statement';
+    }
+  }
+
+  String _getWallColorAdvice(SpaceType spaceType) {
+    switch (spaceType) {
+      case SpaceType.living:
+        return 'creating a welcoming, relaxing atmosphere';
+      case SpaceType.kitchen:
+        return 'energizing cooking activities and complementing appliances';
+      case SpaceType.bathroom:
+        return 'creating a spa-like, refreshing environment';
+      case SpaceType.bedroom:
+        return 'promoting restful sleep and tranquility';
+      case SpaceType.exterior:
+        return 'enhancing curb appeal and architectural style';
+      case SpaceType.office:
+        return 'boosting productivity and mental clarity';
+    }
+  }
+
+  String _getCabinetColorAdvice(SpaceType spaceType) {
+    if (spaceType == SpaceType.kitchen) {
+      return 'transforming the kitchen\'s personality and storage appeal';
+    } else {
+      return 'complementing the space while highlighting storage';
+    }
+  }
+
+  IconData _getLightingIcon(String lighting) {
+    switch (lighting.toLowerCase()) {
+      case 'natural':
+        return Icons.wb_sunny;
+      case 'artificial':
+        return Icons.lightbulb;
+      case 'mixed':
+        return Icons.lightbulb_outline;
+      default:
+        return Icons.light_mode;
+    }
+  }
+
+  Color _parseColor(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor';
+    }
+    return Color(int.parse(hexColor, radix: 16));
   }
 }
 

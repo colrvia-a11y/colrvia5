@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/project_service.dart';
 import '../services/firebase_service.dart';
 import '../services/analytics_service.dart';
+import '../services/photo_library_service.dart';
 import '../models/project.dart';
 import '../widgets/auth_dialog.dart';
 import 'package:color_canvas/screens/roller_screen.dart';
@@ -11,6 +12,7 @@ import 'color_story_wizard_screen.dart';
 import 'visualizer_screen.dart';
 import 'settings_screen.dart';
 import 'library_screen.dart';
+import 'photo_library_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _reduceMotion = false;
   bool _hasCheckedReduceMotion = false;
+  int _photoCount = 0;
 
   @override
   void initState() {
@@ -30,6 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Debug.info('DashboardScreen', 'initState', 'Component initializing');
     // Track dashboard opened
     AnalyticsService.instance.logDashboardOpened();
+    // Load photo count
+    _loadPhotoCount();
   }
 
   @override
@@ -53,6 +58,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Debug.info('DashboardScreen', '_checkReduceMotion',
           'Reduce motion changed: $_reduceMotion -> $newReduceMotion');
       _reduceMotion = newReduceMotion;
+    }
+  }
+
+  Future<void> _loadPhotoCount() async {
+    try {
+      final count = await PhotoLibraryService.getPhotoCount();
+      if (mounted) {
+        setState(() {
+          _photoCount = count;
+        });
+      }
+    } catch (e) {
+      Debug.error('DashboardScreen', '_loadPhotoCount', 
+          'Failed to load photo count: $e');
     }
   }
 
@@ -175,7 +194,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                sliver: SliverToBoxAdapter(child: _BrandedLibrarySection()),
+                sliver: SliverToBoxAdapter(child: _BrandedLibrarySection(
+                  photoCount: _photoCount,
+                  onPhotoCountRefresh: _loadPhotoCount,
+                )),
               ),
 
               // Support & Info Section
@@ -997,6 +1019,14 @@ class _BrandedLibrarySection extends StatelessWidget {
   static const Color warmPeach = Color(0xFFf2b897);
   static const Color creamWhite = Color(0xFFFFFBF7);
 
+  final int photoCount;
+  final VoidCallback onPhotoCountRefresh;
+
+  const _BrandedLibrarySection({
+    required this.photoCount,
+    required this.onPhotoCountRefresh,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1066,6 +1096,7 @@ class _BrandedLibrarySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          // First row - Palettes and Stories
           Row(
             children: [
               Expanded(
@@ -1090,6 +1121,15 @@ class _BrandedLibrarySection extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          // Second row - Photo Library (full width)
+          _BrandedLibraryButton(
+            icon: Icons.photo_library_outlined,
+            title: 'Photo Library',
+            count: photoCount.toString(),
+            colors: [const Color(0xFF6A5ACD), const Color(0xFF6A5ACD).withValues(alpha: 0.8)], // Purple accent
+            onTap: () => _openPhotoLibrary(context),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1126,6 +1166,16 @@ class _BrandedLibrarySection extends StatelessWidget {
         builder: (_) => LibraryScreen(initialFilter: filter),
       ),
     );
+  }
+
+  void _openPhotoLibrary(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const PhotoLibraryScreen(),
+      ),
+    );
+    // Refresh photo count when returning from photo library
+    onPhotoCountRefresh();
   }
 }
 
