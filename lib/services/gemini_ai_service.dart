@@ -7,12 +7,30 @@ import 'package:http/http.dart' as http;
 
 class GeminiAIService {
   static const String _apiKey =
-      'YOUR_GEMINI_API_KEY'; // Configure in environment
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'demo_mode'); 
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta';
 
   // 🧠 INTELLIGENT SPACE ANALYSIS
   static Future<Map<String, dynamic>> analyzeSpace(Uint8List imageBytes) async {
+    // Check if we're in demo mode (no API key provided)
+    if (_apiKey == 'demo_mode' || _apiKey.isEmpty) {
+      // Return mock analysis for demo purposes
+      await Future.delayed(const Duration(milliseconds: 1500));
+      return {
+        "space_type": "living_room",
+        "paintable_surfaces": ["walls", "trim", "ceiling"],
+        "lighting_conditions": "natural",
+        "style": "modern",
+        "dominant_colors": ["#F5F5F5", "#E8E8E8"],
+        "surface_areas": {
+          "walls": "large",
+          "cabinets": "none"
+        },
+        "perspective": "straight_on",
+        "quality_score": 0.95
+      };
+    }
     final response = await http.post(
       Uri.parse(
           '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'),
@@ -65,6 +83,13 @@ class GeminiAIService {
     required Map<String, String> surfaceColors, // surface -> hex
     required String style,
   }) async {
+    // Check if we're in demo mode (no API key provided)
+    if (_apiKey == 'demo_mode' || _apiKey.isEmpty) {
+      // Return the original image for demo purposes
+      await Future.delayed(const Duration(milliseconds: 2000));
+      return originalImage;
+    }
+
     final prompt = _buildTransformPrompt(spaceType, surfaceColors, style);
 
     final response = await http.post(

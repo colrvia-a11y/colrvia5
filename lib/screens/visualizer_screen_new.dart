@@ -38,6 +38,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   // 🎯 CORE STATE MANAGEMENT
   final PageController _pageController = PageController();
+  VisualizerMode _currentMode = VisualizerMode.welcome;
 
   // 📸 IMAGE & AI STATE
   Uint8List? _originalImage;
@@ -168,7 +169,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: IconButton(
+      leading: _currentMode != VisualizerMode.welcome ? IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -179,8 +180,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           child: const Icon(Icons.arrow_back_ios_new,
               color: Colors.white, size: 18),
         ),
-        onPressed: () => Navigator.pop(context),
-      ),
+        onPressed: () {
+          if (_currentMode == VisualizerMode.welcome) {
+            Navigator.pop(context);
+          } else {
+            _navigateToMode(VisualizerMode.welcome);
+          }
+        },
+      ) : null,
       title: const Text(
         'AI Visualizer',
         style: TextStyle(
@@ -1408,6 +1415,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   // 🎛️ ACTION METHODS
   void _navigateToMode(VisualizerMode mode) {
+    setState(() {
+      _currentMode = mode;
+    });
     _pageController.animateToPage(
       mode.index,
       duration: const Duration(milliseconds: 600),

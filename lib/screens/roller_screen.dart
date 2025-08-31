@@ -100,6 +100,13 @@ class _RollerScreenState extends RollerScreenStatePublic {
   // Track if user has manually applied brand filters
   final bool _hasAppliedFilters = false;
   
+  // Track scheduled post-frame callbacks to prevent loops
+  final Set<int> _scheduledCallbacks = {};
+  
+  // Track page generation attempts to prevent infinite loops
+  final Map<int, int> _pageGenerationAttempts = {};
+  static const int _maxPageGenerationAttempts = 3;
+  
   // Debug: Track setState calls to identify infinite loops
   int _setStateCount = 0;
   DateTime? _lastSetStateTime;
@@ -826,9 +833,11 @@ class _RollerScreenState extends RollerScreenStatePublic {
                         itemBuilder: (context, index) {
                           if (index >= _pages.length) {
                             // Use post-frame callback to avoid calling _ensurePage during build
-                            // Only schedule if not already generating this page
-                            if (!_generatingPages.contains(index)) {
+                            // Only schedule if not already generating this page AND not already scheduled
+                            if (!_generatingPages.contains(index) && !_scheduledCallbacks.contains(index)) {
+                              _scheduledCallbacks.add(index);
                               WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _scheduledCallbacks.remove(index);
                                 if (mounted && !_generatingPages.contains(index)) {
                                   _ensurePage(index);
                                 }
@@ -1035,6 +1044,14 @@ class _RollerScreenState extends RollerScreenStatePublic {
     
     // Do not generate negative pages
     if (pageIndex < 0) return;
+    
+    // Prevent infinite loops by limiting generation attempts
+    final attempts = _pageGenerationAttempts[pageIndex] ?? 0;
+    if (attempts >= _maxPageGenerationAttempts) {
+      Debug.error('RollerScreen', '_ensurePage', 'Too many generation attempts for page $pageIndex ($attempts). Aborting.');
+      return;
+    }
+    _pageGenerationAttempts[pageIndex] = attempts + 1;
 
     final filtered = _getFilteredPaints();
     if (filtered.isEmpty) {
@@ -1116,6 +1133,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
           }
         }, details: 'Generated and added page $pageIndex');
       });
+      
+      // Reset generation attempts on success
+      _pageGenerationAttempts.remove(pageIndex);
       
 
       // Cap memory by trimming old pages behind the user
