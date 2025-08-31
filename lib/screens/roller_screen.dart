@@ -1032,14 +1032,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
         final paint = i < palette.length ? palette[i] : null;
         final isLocked = i < _lockedStates.length ? _lockedStates[i] : false;
         
-        // Create a more stable key that doesn't change when paint is null
-        final keyString = paint != null 
-            ? '${paint.id}|${paint.hex}|$i' 
-            : 'empty_$i';
-            
         return Expanded(
           child: AnimatedPaintStripe(
-            key: ValueKey(keyString),
+            key: ValueKey(paint?.id ?? 'empty_$i'),
             paint: paint,
             previousPaint: null,
             isLocked: isLocked,
