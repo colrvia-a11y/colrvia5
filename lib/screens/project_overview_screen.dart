@@ -13,10 +13,9 @@ class ProjectOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Get palette IDs from project
-    // Get palette IDs from project's associated story or palette
-    final List<String> paletteIds = project.colorStoryId != null 
-      ? project.colorStory?.paletteColorIds ?? []
-      : [];
+  // Use the project's stored palette ids. If a ColorStory object is needed
+  // later, it should be fetched separately; ProjectDoc only stores a colorStoryId.
+  final List<String> paletteIds = project.paletteIds;
 
     return Scaffold(
       appBar: AppBar(
@@ -32,10 +31,9 @@ class ProjectOverviewScreen extends StatelessWidget {
                     'projectId': project.id, 
                     'paletteColorIds': paletteIds
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_plan_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
                 },
                 icon: const Icon(Icons.auto_awesome), 
@@ -48,10 +46,9 @@ class ProjectOverviewScreen extends StatelessWidget {
                     'projectId': project.id, 
                     'paletteColorIds': paletteIds
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_visualize_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
                 },
                 icon: const Icon(Icons.image), 
@@ -63,10 +60,9 @@ class ProjectOverviewScreen extends StatelessWidget {
                   Navigator.pushNamed(context, '/compareColors', arguments: {
                     'paletteColorIds': paletteIds
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_compare_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
                 }, 
                 icon: const Icon(Icons.compare)

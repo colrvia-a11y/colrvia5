@@ -149,7 +149,8 @@ class MyApp extends StatelessWidget {
             '/visualize': (context) {
               final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
               return VisualizerScreen(
-                initialPalette: args?['initialPalette']
+                projectId: args?['projectId'] as String?,
+                storyId: args?['storyId'] as String?
               );
             },
             '/compare': (context) {
@@ -170,8 +171,8 @@ class MyApp extends StatelessWidget {
                       as Map<String, dynamic>? ??
                   {};
               return VisualizerScreen(
-                storyId: args['storyId'] as String?,
-                initialPalette: args['initialPalette'],
+                projectId: args['projectId'] as String?,
+                storyId: args['storyId'] as String?
               );
             },
           },

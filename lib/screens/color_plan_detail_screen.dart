@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
 import '../models/color_story.dart';
 import '../models/color_plan.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/project.dart';
 import '../models/schema.dart' as schema;
 import '../services/firebase_service.dart';
@@ -488,19 +489,86 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
           }
 
           if (story == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Color Story')),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text('Loading your color story...',
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ],
-                ),
-              ),
+            // If the ColorStory document isn't present, try to find a ColorPlan
+            // with the same id (migration dual-read support). Use a FutureBuilder
+            // to query the collectionGroup('colorPlans') for document id == widget.storyId.
+            return FutureBuilder<ColorPlan?>(
+              future: _fetchPlanFallback(),
+              builder: (context, planSnap) {
+                if (planSnap.hasError) {
+                  debugPrint('ColorPlan fallback error: ${planSnap.error}');
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('Color Plan')),
+                    body: Center(child: Text('Error loading plan: ${planSnap.error}')),
+                  );
+                }
+
+                if (planSnap.connectionState != ConnectionState.done) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('Color Plan')),
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text('Loading...', style: Theme.of(context).textTheme.titleMedium),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final plan = planSnap.data;
+                if (plan == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('Color Story')),
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.search_off, size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text('No color story or plan found', style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 8),
+                          Text('The requested item may have been removed.', style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // Render a simple detail view for ColorPlan
+                return Scaffold(
+                  appBar: AppBar(title: const Text('Color Plan')),
+                  body: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(plan.name, style: Theme.of(context).textTheme.headlineSmall),
+                      const SizedBox(height: 8),
+                      Text(plan.vibe, style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: 16),
+                      _PlanSection(title: 'Palette', child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: plan.paletteColorIds.map((c) => Text('• $c')).toList(),
+                      )),
+                      _PlanSection(title: 'Placement', child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: plan.placementMap.map((p) => Text('${p.area}: ${p.colorId}')).toList(),
+                      )),
+                      _PlanSection(title: 'Cohesion Tips', child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: plan.cohesionTips.map((t) => Text('• $t')).toList(),
+                      )),
+                      const SizedBox(height: 20),
+                      FilledButton.tonal(
+                        onPressed: () => _applyPlanToVisualizer(plan),
+                        child: const Text('Apply to Visualizer (preview)'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           }
 

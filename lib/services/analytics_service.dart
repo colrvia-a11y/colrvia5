@@ -557,11 +557,6 @@ class AnalyticsService {
     }
   }
 
-  /// Public method to log custom events with parameters
-  Future<void> logEvent(String eventName,
-      [Map<String, dynamic>? parameters]) async {
-    await _logEvent(eventName, parameters ?? {});
-  }
 
   /// Internal method to log events - currently uses mock implementation
   Future<void> _logEvent(
