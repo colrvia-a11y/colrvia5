@@ -102,10 +102,15 @@ class _RollerScreenState extends RollerScreenStatePublic {
   
   // Track scheduled post-frame callbacks to prevent loops
   final Set<int> _scheduledCallbacks = {};
-  
+
   // Track page generation attempts to prevent infinite loops
   final Map<int, int> _pageGenerationAttempts = {};
   static const int _maxPageGenerationAttempts = 3;
+
+  // Track palette updates within a frame and pending callbacks that mutate it
+  bool _paletteUpdatedThisFrame = false;
+  final Set<int> _activePaletteCallbacks = {};
+  int _nextPaletteCallbackId = 0;
   
   // Debug: Track setState calls to identify infinite loops
   int _setStateCount = 0;
@@ -146,6 +151,14 @@ class _RollerScreenState extends RollerScreenStatePublic {
     }
     
     setState(callback);
+  }
+
+  void _markPaletteUpdated() {
+    _paletteUpdatedThisFrame = true;
+    _activePaletteCallbacks.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _paletteUpdatedThisFrame = false;
+    });
   }
 
   @override
@@ -362,6 +375,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
       } else if (_pages.isEmpty) {
         _pages.add(List<Paint>.from(_currentPalette));
       }
+      _markPaletteUpdated();
     } catch (e) {
       Debug.error('RollerScreen', '_rollPalette', 'Error: $e');
       if (mounted) {
@@ -454,11 +468,12 @@ class _RollerScreenState extends RollerScreenStatePublic {
     setState(() {
       _currentPalette[index] = newPaint;
     });
-    
+
     // Sync current page cache
     if (_visiblePage < _pages.length) {
       _pages[_visiblePage] = List<Paint>.from(_currentPalette);
     }
+    _markPaletteUpdated();
   }
 
   void _rollStripe(int index) {
@@ -508,6 +523,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
       if (_visiblePage < _pages.length) {
         _pages[_visiblePage] = List<Paint>.from(_currentPalette);
       }
+      _markPaletteUpdated();
     } catch (e) {
       Debug.error('RollerScreen', '_rollStripe', 'Error: $e');
       if (mounted) {
@@ -535,7 +551,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
           if (_visiblePage < _pages.length) {
             _pages[_visiblePage] = List<Paint>.from(_currentPalette);
           }
-          
+          _markPaletteUpdated();
           Navigator.pop(context);
         },
       ),
@@ -560,6 +576,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
     if (_visiblePage < _pages.length) {
       _pages[_visiblePage] = List<Paint>.from(_currentPalette);
     }
+    _markPaletteUpdated();
   }
 
   Future<void> _maybeSeedFromInitial() async {
@@ -1074,12 +1091,17 @@ class _RollerScreenState extends RollerScreenStatePublic {
     if (pageIndex < _pages.length) {
       final existingPage = _pages[pageIndex];
       final sortedPage = _displayColorsForCurrentMode(existingPage);
-      // Only update if the palette is actually different
-      if (pageIndex == _visiblePage && !_palettesEqual(_currentPalette, sortedPage)) {
+      if (pageIndex == _visiblePage &&
+          !_paletteUpdatedThisFrame &&
+          !_palettesEqual(_currentPalette, sortedPage)) {
         Debug.postFrameCallback('RollerScreen', '_ensurePage', details: 'Updating existing page $pageIndex');
+        final callbackId = ++_nextPaletteCallbackId;
+        _activePaletteCallbacks.add(callbackId);
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_activePaletteCallbacks.remove(callbackId)) return;
           if (mounted) {
             _safeSetState(() => _currentPalette = sortedPage, details: 'Updated existing page $pageIndex');
+            _markPaletteUpdated();
           }
         });
       }
@@ -1119,7 +1141,15 @@ class _RollerScreenState extends RollerScreenStatePublic {
       
       // Use postFrameCallback to avoid setState during build
       Debug.postFrameCallback('RollerScreen', '_ensurePage', details: 'Adding generated page $pageIndex');
+      final needsPaletteUpdate =
+          pageIndex == _visiblePage && !_paletteUpdatedThisFrame && !_palettesEqual(_currentPalette, newPage);
+      int? callbackId;
+      if (needsPaletteUpdate) {
+        callbackId = ++_nextPaletteCallbackId;
+        _activePaletteCallbacks.add(callbackId);
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (callbackId != null && !_activePaletteCallbacks.remove(callbackId)) return;
         if (!mounted) return;
         _safeSetState(() {
           if (pageIndex == _pages.length) {
@@ -1127,9 +1157,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
           } else if (pageIndex < _pages.length) {
             _pages[pageIndex] = newPage;
           }
-          // 3) Bind the live palette only when updating the page that is actually visible.
-          if (pageIndex == _visiblePage && !_palettesEqual(_currentPalette, newPage)) {
+          if (needsPaletteUpdate) {
             _currentPalette = List<Paint>.from(newPage);
+            _markPaletteUpdated();
           }
         }, details: 'Generated and added page $pageIndex');
       });
@@ -1179,6 +1209,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
       if (_visiblePage < _pages.length) {
         _pages[_visiblePage] = List<Paint>.from(_currentPalette);
       }
+      _markPaletteUpdated();
     }
   }
 
@@ -1201,6 +1232,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         _pages[_visiblePage] = List<Paint>.from(_currentPalette);
       }
     }, details: 'Added new paint: ${paint.name}, new palette size: $_paletteSize');
+    _markPaletteUpdated();
   }
 }
 
