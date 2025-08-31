@@ -14,3 +14,4 @@
 | `via_invoked` | Via assistant used |
 | `compare_used` | comparison viewed |
 | `variant_generated` | palette variant generated |
+| `painter_pack_exported` | painter pack PDF generated |
