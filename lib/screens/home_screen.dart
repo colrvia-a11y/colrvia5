@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/screens/dashboard_screen.dart';
-import 'package:color_canvas/screens/roller_screen.dart';
+import 'roller_screen.dart';
 import 'package:color_canvas/screens/search_screen.dart';
 import 'package:color_canvas/screens/color_story_main_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';

@@ -174,22 +174,26 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                   decoration: InputDecoration(
                                     hintText: 'Search paints, palettes, rooms…',
                                     hintStyle: TextStyle(
-                                      color: Colors.black.withValues(alpha: 0.5),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.5),
                                     ),
                                     prefixIcon: Icon(
                                       Icons.search,
-                                      color: Colors.black.withValues(alpha: 0.7),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.7),
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: Colors.black.withValues(alpha: 0.1),
+                                        color:
+                                            Colors.black.withValues(alpha: 0.1),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: Colors.black.withValues(alpha: 0.1),
+                                        color:
+                                            Colors.black.withValues(alpha: 0.1),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -237,7 +241,8 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
-                                          color: Colors.black.withValues(alpha: 0.7),
+                                          color: Colors.black
+                                              .withValues(alpha: 0.7),
                                           letterSpacing: 0.5,
                                         ),
                                       ),
@@ -283,7 +288,8 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                   color: Colors.white,
                                   border: Border(
                                     top: BorderSide(
-                                      color: Colors.black.withValues(alpha: 0.08),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.08),
                                       width: 1,
                                     ),
                                   ),
@@ -333,14 +339,19 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                             ),
                                             TextButton(
                                               onPressed: () async {
+                                                // Store context reference before async gap
+                                                final navigator =
+                                                    Navigator.of(context);
+                                                final messenger =
+                                                    ScaffoldMessenger.of(
+                                                        context);
+
                                                 try {
                                                   await FirebaseService
                                                       .signOut();
                                                   if (mounted) {
-                                                    Navigator.of(context).pop();
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
+                                                    navigator.pop();
+                                                    messenger.showSnackBar(
                                                       const SnackBar(
                                                         content: Text(
                                                             'Signed out successfully'),
@@ -349,9 +360,7 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                                   }
                                                 } catch (e) {
                                                   if (mounted) {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
+                                                    messenger.showSnackBar(
                                                       SnackBar(
                                                           content: Text(
                                                               'Error signing out: $e')),
@@ -374,10 +383,12 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                           width: double.infinity,
                                           child: ElevatedButton(
                                             onPressed: () {
+                                              // Store context reference before potential navigation
+                                              final navigator =
+                                                  Navigator.of(context);
                                               if (mounted) {
-                                                Navigator.of(context).pop();
-                                                Navigator.of(context)
-                                                    .pushNamed('/login');
+                                                navigator.pop();
+                                                navigator.pushNamed('/login');
                                               }
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -408,7 +419,8 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
                                         'Version $_appVersion',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.black.withValues(alpha: 0.5),
+                                          color: Colors.black
+                                              .withValues(alpha: 0.5),
                                         ),
                                       ),
                                     ],

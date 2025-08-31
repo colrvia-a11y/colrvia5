@@ -59,6 +59,28 @@ For detailed instructions, see [FIREBASE_PERMANENT_SETUP.md](FIREBASE_PERMANENT_
 - Cross-platform support (Android, iOS, Web)
 - Color visualization and editing
 
+## AI Visualizer Workflow
+
+The Visualizer lets you upload a photo of a space and preview paint colors on detected surfaces with photorealistic results.
+
+1. Open Visualizer: From Home, navigate to the Visualizer tab.
+2. Upload Your Photo: Tap the upload card and select an image.
+   - The app automatically starts analysis after selection.
+3. Analysis (AI): The app sends the photo + a structured prompt to Gemini.
+   - Returns JSON with `space_type`, `paintable_surfaces`, `lighting_conditions`, etc.
+4. Surface & Color Selection: Toggle detected surfaces and pick colors (from your palette or defaults).
+5. Generate: The app sends your photo + per-surface color instructions to an image-capable Gemini model.
+   - Receives a photorealistic image and shows the result.
+
+Key files:
+- `lib/screens/visualizer_screen.dart`: Orchestrates the flow and UI.
+- `lib/services/gemini_ai_service.dart`: Wraps Firebase AI Logic calls (analysis + image render).
+- Optional server path: `lib/services/visualizer_service.dart` with Cloud Functions in `functions-visualizer/index.js`.
+
+Notes:
+- If AI is temporarily unavailable, analysis returns a safe fallback JSON and generation returns the original image to keep UX flowing.
+- You can iterate by changing surfaces/colors and generating again.
+
 ## Development
 
 This project uses:
@@ -81,3 +103,26 @@ flutter run
 ```
 
 For more troubleshooting, see [FIREBASE_PERMANENT_SETUP.md](FIREBASE_PERMANENT_SETUP.md).
+
+## AI Architecture & Models
+
+We use Firebase AI Logic (client SDK) to call Gemini models directly from the app via Firebase’s secure proxy and App Check.
+
+- Provider: Gemini Developer API (recommended to start). You can later switch to Vertex with minimal code changes.
+- Initialization: See `lib/main.dart` (Firebase initialization and AI SDK readiness).
+- Client models used:
+  - Analysis (JSON output): `gemini-2.5-flash`
+  - Image render (photorealistic edits): `gemini-2.5-flash-image-preview` with `responseModalities: [TEXT, IMAGE]`
+- Security: Firebase App Check is enabled to protect the AI endpoint from unauthorized clients.
+
+Optional server-side generation
+- Cloud Function: `functions-visualizer/index.js` exposes `visualizerGenerate`, which uses `gemini-2.5-flash-image-preview` server-side and saves PNGs to Cloud Storage (returns signed URLs).
+- Use when you want tighter quota/billing control, publicly shareable asset URLs, or to keep all image generation off-device.
+
+Switching providers (Developer API ↔ Vertex)
+- Developer API (current): `FirebaseAI.googleAI()`
+- Vertex AI: `FirebaseAI.vertexAI(project: '<project-id>', location: 'us-central1')`
+
+Run requirements
+- Enable Firebase AI Logic in Firebase Console and select your provider (Developer API recommended initially).
+- No `--dart-define` for a Gemini key is needed when using Firebase AI Logic.

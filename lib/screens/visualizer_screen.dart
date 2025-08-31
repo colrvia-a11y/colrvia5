@@ -169,25 +169,28 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: _currentMode != VisualizerMode.welcome ? IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-          ),
-          child: const Icon(Icons.arrow_back_ios_new,
-              color: Colors.white, size: 18),
-        ),
-        onPressed: () {
-          if (_currentMode == VisualizerMode.welcome) {
-            Navigator.pop(context);
-          } else {
-            _navigateToMode(VisualizerMode.welcome);
-          }
-        },
-      ) : null,
+      leading: _currentMode != VisualizerMode.welcome
+          ? IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                child: const Icon(Icons.arrow_back_ios_new,
+                    color: Colors.white, size: 18),
+              ),
+              onPressed: () {
+                if (_currentMode == VisualizerMode.welcome) {
+                  Navigator.pop(context);
+                } else {
+                  _navigateToMode(VisualizerMode.welcome);
+                }
+              },
+            )
+          : null,
       title: const Text(
         'AI Visualizer',
         style: TextStyle(
@@ -467,40 +470,39 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ),
           ),
           const SizedBox(height: 16),
-          ...features
-              .map((feature) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Icon(feature['icon'] as IconData,
-                            color: const Color(0xFFF2B897),
-                            size: 20), // Brand peach
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                feature['title'] as String,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                feature['desc'] as String,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+          ...features.map((feature) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Icon(feature['icon'] as IconData,
+                        color: const Color(0xFFF2B897),
+                        size: 20), // Brand peach
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            feature['title'] as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            feature['desc'] as String,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -532,7 +534,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Widget _buildUploadArea() {
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: _pickImageAndAnalyze,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -621,26 +623,25 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ),
           ),
           const SizedBox(height: 8),
-          ...tips
-              .map((tip) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check_circle,
-                            color: Color(0xFF404934),
-                            size: 16), // Brand forest green
-                        const SizedBox(width: 8),
-                        Text(
-                          tip,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+          ...tips.map((tip) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle,
+                        color: Color(0xFF404934),
+                        size: 16), // Brand forest green
+                    const SizedBox(width: 8),
+                    Text(
+                      tip,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        fontSize: 12,
+                      ),
                     ),
-                  )),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -678,7 +679,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 children: [
                   _buildOverlayButton(
                     icon: Icons.refresh,
-                    onTap: _pickImage,
+                    onTap: _pickImageAndAnalyze,
                   ),
                   const SizedBox(width: 8),
                   _buildOverlayButton(
@@ -761,12 +762,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           // Secondary options
           _buildSecondaryButton(
             title: 'Choose Different Image',
-            onTap: _pickImage,
+            onTap: _pickImageAndAnalyze,
           ),
           const SizedBox(height: 12),
         ],
         _buildSecondaryButton(
-          title: _originalImage != null ? 'Create Mockup Instead' : 'Select Image',
+          title:
+              _originalImage != null ? 'Create Mockup Instead' : 'Select Image',
           onTap: _originalImage != null ? _generateMockup : _pickImage,
         ),
       ],
@@ -1014,7 +1016,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Available Surfaces
           const Text(
             'Detected Surfaces:',
@@ -1025,17 +1027,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Surface Selection with Color Chips
           ..._analysisResult!.availableSurfaces.map((surface) {
             final isSelected = _selectedColors.containsKey(surface);
             final selectedColor = _selectedColors[surface];
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected 
+                color: isSelected
                     ? Colors.white.withValues(alpha: 0.1)
                     : Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
@@ -1069,11 +1071,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       Switch(
                         value: isSelected,
                         onChanged: (value) => _selectSurface(surface),
-                        activeColor: const Color(0xFF6C5CE7),
+                        activeThumbColor: const Color(0xFF6C5CE7),
                       ),
                     ],
                   ),
-                  
+
                   // Color Selection (shown when surface is selected)
                   if (isSelected) ...[
                     const SizedBox(height: 16),
@@ -1091,7 +1093,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -1100,25 +1102,34 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   Widget _buildColorSelection(SurfaceType surface, String? selectedColor) {
     // Get available colors from active palette or recent colors
     final availableColors = <String>[];
-    
+
     if (_activePalette != null && _activePalette!.colors.isNotEmpty) {
       availableColors.addAll(_activePalette!.colors.map((c) => c.hex));
     } else {
       // Fallback to default colors if no palette
       availableColors.addAll([
-        '#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3',
-        '#B8860B', '#8B4513', '#2F4F4F', '#708090',
-        '#483D8B', '#6B8E23', '#A0522D', '#800080'
+        '#FFFFFF',
+        '#F5F5F5',
+        '#E8E8E8',
+        '#D3D3D3',
+        '#B8860B',
+        '#8B4513',
+        '#2F4F4F',
+        '#708090',
+        '#483D8B',
+        '#6B8E23',
+        '#A0522D',
+        '#800080'
       ]);
     }
-    
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: availableColors.map((colorHex) {
         final isSelected = selectedColor == colorHex;
         final color = _parseColor(colorHex);
-        
+
         return GestureDetector(
           onTap: () => _selectColorForSurface(surface, colorHex),
           child: Container(
@@ -1128,13 +1139,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               color: color,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected 
+                color: isSelected
                     ? Colors.white
                     : Colors.white.withValues(alpha: 0.3),
                 width: isSelected ? 3 : 1,
               ),
               boxShadow: [
-                if (isSelected) 
+                if (isSelected)
                   BoxShadow(
                     color: Colors.white.withValues(alpha: 0.3),
                     blurRadius: 8,
@@ -1142,7 +1153,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   ),
               ],
             ),
-            child: isSelected 
+            child: isSelected
                 ? const Icon(Icons.check, color: Colors.white, size: 20)
                 : null,
           ),
@@ -1548,9 +1559,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
     final bytes = await file.readAsBytes();
     setState(() => _originalImage = bytes);
-    
+
     // Note: Analysis will be triggered manually by user pressing "Analyze Image" button
-    print('📷 Image selected and ready for analysis');
+    debugPrint('📷 Image selected and ready for analysis');
+  }
+
+  // Convenience: pick image and immediately analyze
+  Future<void> _pickImageAndAnalyze() async {
+    await _pickImage();
+    if (_originalImage != null) {
+      await _analyzeImage();
+    }
   }
 
   Future<void> _analyzeImage() async {
@@ -1573,15 +1592,17 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       setState(() => _currentStep = 'Analyzing lighting...');
 
       // Actual AI analysis
-      print('🔍 Starting AI analysis...');
+      debugPrint('🔍 Starting AI analysis...');
       _analysisResult =
           await SurfaceDetectionService.analyzeImage(_originalImage!);
-      print('✅ Analysis complete: ${_analysisResult?.availableSurfaces.length} surfaces detected');
+      debugPrint(
+          '✅ Analysis complete: ${_analysisResult?.availableSurfaces.length} surfaces detected');
 
       // Pre-select walls by default
       if (_analysisResult!.availableSurfaces.contains(SurfaceType.walls)) {
         _selectedColors[SurfaceType.walls] = _getDefaultColor();
-        print('🎨 Auto-selected walls with color: ${_selectedColors[SurfaceType.walls]}');
+        debugPrint(
+            '🎨 Auto-selected walls with color: ${_selectedColors[SurfaceType.walls]}');
       }
 
       setState(() {
@@ -1589,7 +1610,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         _currentStep = '';
       });
     } catch (e) {
-      print('❌ Analysis failed: $e');
+      debugPrint('❌ Analysis failed: $e');
       setState(() => _isAnalyzing = false);
       _showError('Failed to analyze image. Please try again.');
     }
@@ -1618,9 +1639,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       return;
     }
 
-    print('🎨 Starting generation with ${_selectedColors.length} surfaces:');
+    debugPrint(
+        '🎨 Starting generation with ${_selectedColors.length} surfaces:');
     _selectedColors.forEach((surface, color) {
-      print('   - ${surface.toString().split('.').last}: $color');
+      debugPrint('   - ${surface.toString().split('.').last}: $color');
     });
 
     _navigateToMode(VisualizerMode.generate);
@@ -1636,7 +1658,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         await Future.delayed(const Duration(milliseconds: 800));
         setState(() => _currentStep = 'Rendering variant ${i + 1}...');
 
-        print('🖼️ Generating variant ${i + 1}...');
+        debugPrint('🖼️ Generating variant ${i + 1}...');
         final imageData = await GeminiAIService.transformSpace(
           originalImage: _originalImage!,
           spaceType: _analysisResult!.spaceType.toString().split('.').last,
@@ -1652,7 +1674,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         ));
       }
 
-      print('✅ Generated ${variants.length} variants successfully');
+      debugPrint('✅ Generated ${variants.length} variants successfully');
       setState(() {
         _variants = variants;
         _currentStep = '';
@@ -1661,7 +1683,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _navigateToMode(VisualizerMode.results);
       _resultsController.forward();
     } catch (e) {
-      print('❌ Generation failed: $e');
+      debugPrint('❌ Generation failed: $e');
       _showError('Failed to generate visualizations. Please try again.');
     }
   }

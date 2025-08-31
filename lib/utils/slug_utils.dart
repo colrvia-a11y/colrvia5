@@ -1,5 +1,5 @@
 class SlugUtils {
-  /// Returns a brand key in the format 'brand_<normalized_name>'
+  /// Returns a brand key in the format 'brand_&lt;normalized_name&gt;'
   /// Normalizes by converting to lowercase and replacing spaces/hyphens with underscores
   static String brandKey(String name) {
     String normalized = name

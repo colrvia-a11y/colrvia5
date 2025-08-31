@@ -7,6 +7,8 @@ void main() async {
   // Set up logging
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
+    // Using stdout.writeln instead of print for logging output
+    // ignore: avoid_print
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
 

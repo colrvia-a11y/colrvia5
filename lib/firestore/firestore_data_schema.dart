@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:color_canvas/utils/color_utils.dart';
+import 'package:color_canvas/utils/slug_utils.dart';
 
 // Brand model
 class Brand {
@@ -118,10 +119,25 @@ class Paint {
       lch = ColorUtils.labToLch(lab);
     }
 
+    // Brand identifiers can be stored as a string id, a DocumentReference, or omitted
+    String brandName = (json['brandName'] ?? '').toString();
+    String brandId;
+    final dynamic rawBrandId = json['brandId'];
+    if (rawBrandId is DocumentReference) {
+      brandId = rawBrandId.id;
+    } else if (rawBrandId is String) {
+      brandId = rawBrandId;
+    } else if (brandName.isNotEmpty) {
+      // Derive a stable key from the brand name if missing
+      brandId = SlugUtils.brandKey(brandName);
+    } else {
+      brandId = '';
+    }
+
     return Paint(
       id: id,
-      brandId: json['brandId'] ?? '',
-      brandName: json['brandName'] ?? '',
+      brandId: brandId,
+      brandName: brandName,
       name: json['name'] ?? '',
       code: json['code']?.toString() ?? '',
       hex: hex,

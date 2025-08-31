@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
-import 'package:color_canvas/screens/roller_screen.dart';
+import 'roller_screen.dart';
 import 'package:color_canvas/utils/palette_generator.dart';
 
 class FeaturesScreen extends StatefulWidget {

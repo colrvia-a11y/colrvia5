@@ -1558,7 +1558,8 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please sign in to remix color stories')),
+          const SnackBar(
+              content: Text('Please sign in to remix color stories')),
         );
       }
     }
@@ -1663,9 +1664,11 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
           '$shareTitle$contextInfo\n\n$excerpt\n\n🎨 View this color story: https://colorcanvas.app/story/${story.id}';
 
       // Share the story
-      await Share.share(
-        shareText,
-        subject: shareTitle,
+      await SharePlus.instance.share(
+        ShareParams(
+          text: shareText,
+          subject: shareTitle,
+        ),
       );
 
       // Update project funnel stage to share

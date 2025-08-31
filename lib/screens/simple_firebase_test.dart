@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:color_canvas/firebase_options.dart';
 import 'package:color_canvas/firebase_config.dart';
 
 class SimpleFirebaseTest extends StatefulWidget {

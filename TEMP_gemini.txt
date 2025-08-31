@@ -3,55 +3,20 @@
 
 import 'dart:typed_data';
 import 'dart:convert';
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:http/http.dart' as http;
 
 class GeminiAIService {
-  // Firebase AI Logic models (Developer API provider)
-  static GenerativeModel _analysisModel() {
-    return FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-2.5-flash',
-    );
-  }
-
-  static GenerativeModel _imageModel() {
-    return FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-2.5-flash-image-preview',
-    );
-  }
+  static const String _apiKey =
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'demo_mode'); 
+  static const String _baseUrl =
+      'https://generativelanguage.googleapis.com/v1beta';
 
   // 🧠 INTELLIGENT SPACE ANALYSIS
   static Future<Map<String, dynamic>> analyzeSpace(Uint8List imageBytes) async {
-    try {
-      final model = _analysisModel();
-      final prompt = '''Analyze this interior/exterior space image and provide a JSON response with:
-{
-  "space_type": "living_room|kitchen|bathroom|bedroom|exterior|office",
-  "paintable_surfaces": ["walls", "cabinets", "trim", "ceiling", "shutters", "doors"],
-  "lighting_conditions": "natural|artificial|mixed",
-  "style": "modern|traditional|contemporary|rustic|industrial",
-  "dominant_colors": ["#hex1", "#hex2"],
-  "surface_areas": {
-    "walls": "large|medium|small",
-    "cabinets": "none|present"
-  },
-  "perspective": "straight_on|angled|wide_shot|close_up",
-  "quality_score": 0.95
-}''';
-
-      final resp = await model.generateContent([
-        Content.multi([
-          TextPart(prompt),
-          InlineDataPart('image/jpeg', imageBytes),
-        ])
-      ]);
-      final text = resp.text;
-      if (text == null || text.isEmpty) {
-        throw Exception('Empty analysis response');
-      }
-      return jsonDecode(text) as Map<String, dynamic>;
-    } catch (e) {
-      // Fallback mock on error
-      await Future.delayed(const Duration(milliseconds: 500));
+    // Check if we're in demo mode (no API key provided)
+    if (_apiKey == 'demo_mode' || _apiKey.isEmpty) {
+      // Return mock analysis for demo purposes
+      await Future.delayed(const Duration(milliseconds: 1500));
       return {
         "space_type": "living_room",
         "paintable_surfaces": ["walls", "trim", "ceiling"],
@@ -63,11 +28,52 @@ class GeminiAIService {
           "cabinets": "none"
         },
         "perspective": "straight_on",
-        "quality_score": 0.85,
-        "_fallback": true,
-        "_error": e.toString(),
+        "quality_score": 0.95
       };
     }
+    final response = await http.post(
+      Uri.parse(
+          '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {
+                'text':
+                    '''Analyze this interior/exterior space image and provide a JSON response with:
+              {
+                "space_type": "living_room|kitchen|bathroom|bedroom|exterior|office",
+                "paintable_surfaces": ["walls", "cabinets", "trim", "ceiling", "shutters", "doors"],
+                "lighting_conditions": "natural|artificial|mixed",
+                "style": "modern|traditional|contemporary|rustic|industrial",
+                "dominant_colors": ["#hex1", "#hex2"],
+                "surface_areas": {
+                  "walls": "large|medium|small",
+                  "cabinets": "none|present"
+                },
+                "perspective": "straight_on|angled|wide_shot|close_up",
+                "quality_score": 0.95
+              }'''
+              },
+              {
+                'inline_data': {
+                  'mime_type': 'image/jpeg',
+                  'data': base64Encode(imageBytes)
+                }
+              }
+            ]
+          }
+        ]
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final text = data['candidates'][0]['content']['parts'][0]['text'];
+      return jsonDecode(text);
+    }
+    throw Exception('Failed to analyze space: ${response.statusCode}');
   }
 
   // 🎨 PHOTOREALISTIC COLOR TRANSFORMATION
@@ -77,24 +83,44 @@ class GeminiAIService {
     required Map<String, String> surfaceColors, // surface -> hex
     required String style,
   }) async {
-    final prompt = _buildTransformPrompt(spaceType, surfaceColors, style);
-    final model = _imageModel();
-    final resp = await model.generateContent([
-      Content.multi([
-        TextPart(prompt),
-        InlineDataPart('image/jpeg', originalImage),
-      ])
-    ]);
+    // Check if we're in demo mode (no API key provided)
+    if (_apiKey == 'demo_mode' || _apiKey.isEmpty) {
+      // Return the original image for demo purposes
+      await Future.delayed(const Duration(milliseconds: 2000));
+      return originalImage;
+    }
 
-    if (resp.inlineDataParts.isNotEmpty) {
-      return resp.inlineDataParts.first.bytes;
+    final prompt = _buildTransformPrompt(spaceType, surfaceColors, style);
+
+    final response = await http.post(
+      Uri.parse(
+          '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': prompt},
+              {
+                'inline_data': {
+                  'mime_type': 'image/jpeg',
+                  'data': base64Encode(originalImage)
+                }
+              }
+            ]
+          }
+        ],
+        'generationConfig': {'response_mime_type': 'image/jpeg'}
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final imageData =
+          data['candidates'][0]['content']['parts'][0]['inline_data']['data'];
+      return base64Decode(imageData);
     }
-    final parts = resp.candidates.firstOrNull?.content.parts ?? const [];
-    for (final p in parts) {
-      if (p is InlineDataPart) return p.bytes;
-    }
-    // Return original image if no image in response to keep UX flowing
-    return originalImage;
+    throw Exception('Failed to transform space: ${response.statusCode}');
   }
 
   // 🏗️ SMART PROMPT BUILDING
@@ -126,19 +152,30 @@ class GeminiAIService {
     required Map<String, String> surfaceColors,
   }) async {
     final prompt = _buildMockupPrompt(spaceType, style, surfaceColors);
-    final model = _imageModel();
-    final resp = await model.generateContent([
-      Content.text(prompt)
-    ]);
 
-    if (resp.inlineDataParts.isNotEmpty) {
-      return resp.inlineDataParts.first.bytes;
+    final response = await http.post(
+      Uri.parse(
+          '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': prompt}
+            ]
+          }
+        ],
+        'generationConfig': {'response_mime_type': 'image/jpeg'}
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final imageData =
+          data['candidates'][0]['content']['parts'][0]['inline_data']['data'];
+      return base64Decode(imageData);
     }
-    final parts = resp.candidates.firstOrNull?.content.parts ?? const [];
-    for (final p in parts) {
-      if (p is InlineDataPart) return p.bytes;
-    }
-    throw Exception('No image returned from Gemini response');
+    throw Exception('Failed to generate mockup: ${response.statusCode}');
   }
 
   static String _buildMockupPrompt(
@@ -166,3 +203,4 @@ class GeminiAIService {
     }
   }
 }
+

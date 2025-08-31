@@ -5,7 +5,7 @@ import '../services/firebase_service.dart';
 import '../services/analytics_service.dart';
 import '../models/project.dart';
 import '../widgets/auth_dialog.dart';
-import 'roller_screen.dart';
+import 'package:color_canvas/screens/roller_screen.dart';
 import 'explore_screen.dart';
 import 'color_story_wizard_screen.dart';
 import 'visualizer_screen.dart';

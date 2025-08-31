@@ -157,7 +157,6 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
                     _selectedBrands =
                         widget.availableBrands.map((b) => b.id).toSet();
                   });
-                  widget.onBrandsSelected(_selectedBrands);
                 },
                 child: const Text('Select All'),
               ),
@@ -166,7 +165,6 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
                   setState(() {
                     _selectedBrands.clear();
                   });
-                  widget.onBrandsSelected(_selectedBrands);
                 },
                 child: const Text('Clear'),
               ),
@@ -195,7 +193,6 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
                         _selectedBrands.remove(brand.id);
                       }
                     });
-                    widget.onBrandsSelected(_selectedBrands);
                   },
                   dense: true,
                 );
@@ -216,7 +213,10 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: widget.onDone,
+                    onPressed: () {
+                      widget.onBrandsSelected(_selectedBrands);
+                      widget.onDone();
+                    },
                     child: Text(_selectedBrands.isEmpty
                         ? 'Show All'
                         : 'Apply (${_selectedBrands.length})'),
@@ -229,7 +229,10 @@ class _BrandFilterPanelState extends State<BrandFilterPanel> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: widget.onDone,
+                onPressed: () {
+                  widget.onBrandsSelected(_selectedBrands);
+                  widget.onDone();
+                },
                 child: const Text('Done'),
               ),
             ),

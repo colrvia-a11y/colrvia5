@@ -113,7 +113,7 @@ class _GradientFallbackHeroState extends State<GradientFallbackHero>
       child: Center(
         child: Icon(
           Icons.palette,
-          color: Colors.white.withOpacity(0.6),
+          color: Colors.white.withValues(alpha: 0.6),
           size: 48,
         ),
       ),

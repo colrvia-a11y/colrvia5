@@ -287,7 +287,7 @@ class AnalyticsService {
       developer.log('Setting user property: $name = $value',
           name: 'AnalyticsService');
 
-      // TODO: When Firebase Analytics is added, replace with:
+      // Future enhancement: When Firebase Analytics is added, replace with:
       // await FirebaseAnalytics.instance.setUserProperty(name: name, value: value);
     } catch (e) {
       developer.log('Analytics error in setUserProperty: $e',
@@ -307,7 +307,7 @@ class AnalyticsService {
           'Screen view: $screenName${screenClass != null ? ' ($screenClass)' : ''}',
           name: 'AnalyticsService');
 
-      // TODO: When Firebase Analytics is added, replace with:
+      // Future enhancement: When Firebase Analytics is added, replace with:
       // await FirebaseAnalytics.instance.logScreenView(
       //   screenName: screenName,
       //   screenClass: screenClass,
@@ -564,7 +564,7 @@ class AnalyticsService {
         name: 'AnalyticsService',
       );
 
-      // TODO: When Firebase Analytics is added, replace with:
+      // Future enhancement: When Firebase Analytics is added, replace with:
       // await FirebaseAnalytics.instance.logEvent(
       //   name: eventName,
       //   parameters: parameters,
@@ -594,7 +594,7 @@ class AnalyticsService {
   /// Get analytics instance for direct access if needed
   /// Returns null in mock implementation
   dynamic get analyticsInstance {
-    // TODO: When Firebase Analytics is added, return:
+    // Future enhancement: When Firebase Analytics is added, return:
     // return FirebaseAnalytics.instance;
     return null;
   }

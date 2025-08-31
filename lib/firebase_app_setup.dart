@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 
 // NOTE: This expects a valid FlutterFire-generated options file at
 // lib/firebase_options.dart. Regenerate with `flutterfire configure` if missing.
-import 'firebase_options.dart';
 import 'firebase_config.dart';
 
 class FirebaseAppSetup {
