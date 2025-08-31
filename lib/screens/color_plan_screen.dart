@@ -378,10 +378,12 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
 
       debugPrint(
           '🐛 Wizard: About to navigate to ColorPlanDetailScreen with storyId = $storyId');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-            builder: (context) => ColorPlanDetailScreen(storyId: storyId)),
-      );
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+              builder: (context) => ColorPlanDetailScreen(storyId: storyId)),
+        );
+      }
 
       // TEST: Create a public test document to verify rules work
       debugPrint(

@@ -1,11 +1,6 @@
-import 'package:color_canvas/services/story_engine.dart';
-import 'package:color_canvas/services/immersive_narrative_engine.dart';
-
 /// Facade for color plan generation and helpers.
 class ColorPlanService {
   ColorPlanService._();
-  static final StoryEngine _storyEngine = StoryEngine();
-  static final ImmersiveNarrativeEngine _narrative = ImmersiveNarrativeEngine();
 
   /// Generate a color plan. This is a thin wrapper around the existing
   /// story engine while the backend is migrated from "Story" to "Color Plan".

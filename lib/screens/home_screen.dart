@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/project_service.dart';
+import '../firestore/firestore_data_schema.dart';
 import 'create_screen.dart';
 import 'projects_screen.dart';
 import 'search_screen.dart';
@@ -16,16 +17,19 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   /// Called by SearchScreen to load a paint into the RollerScreen.
-  void onPaintSelectedFromSearch(dynamic paint) {
-    // TODO: Implement logic to load paint into RollerScreen or update state.
-    // For now, just navigate to RollerScreen.
+  /// This method navigates to RollerScreen with the selected paint ready to be added.
+  void onPaintSelectedFromSearch(Paint paint) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RollerScreen()),
+      MaterialPageRoute(
+        builder: (_) => RollerScreen(
+          initialPaintIds: [paint.id],
+        ),
+      ),
     );
   }
+
   int _currentIndex = 0;
-  String? _initialProjectId;
 
   final _screens = <Widget>[
     const CreateScreen(),
@@ -45,7 +49,6 @@ class HomeScreenState extends State<HomeScreen> {
     if (list.isNotEmpty) {
       setState(() {
         _currentIndex = 1;
-        _initialProjectId = list.first.id;
       });
     }
   }

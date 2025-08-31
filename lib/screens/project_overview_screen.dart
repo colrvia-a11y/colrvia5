@@ -12,7 +12,7 @@ class ProjectOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(project.title ?? 'Project')),
+      appBar: AppBar(title: Text(project.title)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

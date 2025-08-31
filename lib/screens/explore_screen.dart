@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart' as m;
 import 'package:flutter/material.dart';
-import 'color_plan_detail_screen.dart';
-import 'color_plan_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
