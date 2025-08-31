@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
 import '../models/color_story.dart';
+import '../models/color_plan.dart';
 import '../models/project.dart';
 import '../models/schema.dart' as schema;
 import '../services/firebase_service.dart';
@@ -23,8 +24,6 @@ import '../widgets/gradient_fallback_hero.dart';
 import '../utils/gradient_hero_utils.dart';
 import '../screens/visualizer_screen.dart';
 import 'color_plan_screen.dart';
-import 'package:printing/printing.dart';
-import '../services/painter_pack_service.dart';
 
 class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
@@ -543,27 +542,32 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                   icon: const Icon(Icons.picture_as_pdf),
                   tooltip: 'Export Painter Pack',
                   onPressed: () async {
-                    // Convert palette colors to schema colors
-                    final colors = story.palette.map((color) => schema.PaletteColor(
-                          paintId: color.paintId ?? 'generic_${color.hex}',
-                          locked: false,
-                          position: story.palette.indexOf(color),
-                          brand: color.brandName ?? 'Generic',
-                          name: color.name ?? 'Color ${story.palette.indexOf(color) + 1}',
-                          code: color.code ?? color.hex,
-                          hex: color.hex,
-                        )).toList();
-
-                    // Generate and show PDF
-                    final pdf = await PainterPackService().buildPdf(colors, {});
-                    await Printing.layoutPdf(onLayout: (_) => pdf);
-
-                    // Log analytics event
-                    await AnalyticsService().logEvent(
+                    final plan = ColorPlan(
+                      id: story.id,
+                      projectId: story.userId,
+                      name: story.title,
+                      vibe: story.vibeWords.join(', '),
+                      paletteColorIds: story.palette
+                          .map((c) => c.paintId ?? c.hex)
+                          .toList(),
+                      placementMap: [],
+                      cohesionTips: [],
+                      accentRules: [],
+                      doDont: [],
+                      sampleSequence: [],
+                      roomPlaybook: [],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    final pdf =
+                        await PainterPackService().buildPdf(plan, {});
+                    await Printing.layoutPdf(
+                        onLayout: (_) async => pdf);
+                    await AnalyticsService.instance.logEvent(
                       'painter_pack_exported',
                       {
                         'pageCount': 1,
-                        'colorCount': colors.length,
+                        'colorCount': plan.paletteColorIds.length,
                       },
                     );
                   },
