@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:color_canvas/screens/compare_screen.dart';
+import 'package:color_canvas/widgets/more_menu_sheet.dart';
 import 'package:color_canvas/firebase_config.dart';
 import 'package:color_canvas/theme.dart';
 import 'package:color_canvas/screens/auth_wrapper.dart';
@@ -12,10 +14,11 @@ import 'package:color_canvas/screens/home_screen.dart';
 import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/color_plan_detail_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
+import 'package:color_canvas/screens/color_plan_screen.dart';
 import 'package:color_canvas/services/firebase_service.dart';
-import 'package:color_canvas/widgets/more_menu_sheet.dart';
 import 'package:color_canvas/services/network_utils.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
+import 'package:color_canvas/models/user_palette.dart';
 
 // Global Firebase state
 bool isFirebaseInitialized = false;
@@ -135,6 +138,26 @@ class MyApp extends StatelessWidget {
             '/auth': (context) => const AuthWrapper(),
             '/home': (context) => const HomeScreen(),
             '/login': (context) => const LoginScreen(),
+            '/colorPlan': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+              return ColorPlanScreen(
+                projectId: args['projectId'] as String,
+                paletteId: args['paletteId'] as String?,
+                remixStoryId: args['remixStoryId'] as String?
+              );
+            },
+            '/visualize': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+              return VisualizerScreen(
+                initialPalette: args?['initialPalette']
+              );
+            },
+            '/compare': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments as Map<String, UserPalette>?;
+              return CompareScreen(
+                comparePalette: args?['palette']
+              );
+            },
             '/colorPlanDetail': (context) {
               final storyId =
                   ModalRoute.of(context)!.settings.arguments as String;

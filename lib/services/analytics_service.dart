@@ -21,6 +21,18 @@ class AnalyticsService {
     _isEnabled = enabled;
   }
 
+  /// Log a screen view event
+  void logScreenView(String screenName) {
+    if (!_isEnabled) return;
+    developer.log('Screen View: $screenName', name: 'Analytics');
+  }
+
+  /// Log a generic event with parameters
+  Future<void> logEvent(String name, [Map<String, dynamic>? parameters]) async {
+    if (!_isEnabled) return;
+    await _logEvent(name, parameters ?? {});
+  }
+
   /// Track when a user opens/views a color story
   Future<void> trackColorStoryOpen({
     required String storyId,

@@ -1,0 +1,110 @@
+// lib/utils/palette_transforms.dart
+// Deterministic palette transforms for one-tap variants in Roller.
+// These operate in CIE Lab space and snap back to the nearest catalog color.
+
+import 'dart:math' as math;
+import 'lab.dart';
+
+/// Color identifier used in the app's catalog (e.g., hex, GUID, slug).
+typedef ColorId = String;
+
+/// Lookup a Lab value for a color id.
+typedef LabLookup = Lab Function(ColorId id);
+
+/// Given a Lab value, return the nearest catalog color id.
+typedef NearestId = ColorId Function(Lab lab);
+
+List<ColorId> softer(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        return nearestId(
+          Lab(
+            math.min(100.0, lab.l + 5.0),
+            lab.a * 0.9,
+            lab.b * 0.9,
+          ),
+        );
+      })
+      .toList(growable: false);
+}
+
+List<ColorId> brighter(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        return nearestId(
+          Lab(
+            math.min(100.0, lab.l + 10.0),
+            lab.a,
+            lab.b,
+          ),
+        );
+      })
+      .toList(growable: false);
+}
+
+List<ColorId> moodier(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        return nearestId(
+          Lab(
+            math.max(0.0, lab.l - 10.0),
+            lab.a,
+            lab.b,
+          ),
+        );
+      })
+      .toList(growable: false);
+}
+
+List<ColorId> warmer(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        return nearestId(
+          Lab(
+            lab.l,
+            lab.a + 4.0,
+            lab.b - 2.0,
+          ),
+        );
+      })
+      .toList(growable: false);
+}
+
+List<ColorId> cooler(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        return nearestId(
+          Lab(
+            lab.l,
+            lab.a - 4.0,
+            lab.b + 2.0,
+          ),
+        );
+      })
+      .toList(growable: false);
+}

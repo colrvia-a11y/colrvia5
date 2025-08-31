@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:printing/printing.dart';
 import '../models/color_story.dart';
 import '../models/project.dart';
+import '../models/schema.dart' as schema;
 import '../services/firebase_service.dart';
 import '../services/project_service.dart';
 import '../services/ai_service.dart';
@@ -12,6 +14,7 @@ import '../services/network_utils.dart';
 import '../services/ambient_audio_controller.dart';
 import '../services/accessibility_service.dart';
 import '../services/analytics_service.dart';
+import '../services/painter_pack_service.dart';
 import '../widgets/usage_guide_card.dart';
 import '../widgets/motion_aware_parallax.dart';
 import '../widgets/contrast_coaching_widgets.dart';
@@ -20,6 +23,8 @@ import '../widgets/gradient_fallback_hero.dart';
 import '../utils/gradient_hero_utils.dart';
 import '../screens/visualizer_screen.dart';
 import 'color_plan_screen.dart';
+import 'package:printing/printing.dart';
+import '../services/painter_pack_service.dart';
 
 class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
@@ -534,6 +539,35 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                 ],
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.picture_as_pdf),
+                  tooltip: 'Export Painter Pack',
+                  onPressed: () async {
+                    // Convert palette colors to schema colors
+                    final colors = story.palette.map((color) => schema.PaletteColor(
+                          paintId: color.paintId ?? 'generic_${color.hex}',
+                          locked: false,
+                          position: story.palette.indexOf(color),
+                          brand: color.brandName ?? 'Generic',
+                          name: color.name ?? 'Color ${story.palette.indexOf(color) + 1}',
+                          code: color.code ?? color.hex,
+                          hex: color.hex,
+                        )).toList();
+
+                    // Generate and show PDF
+                    final pdf = await PainterPackService().buildPdf(colors, {});
+                    await Printing.layoutPdf(onLayout: (_) => pdf);
+
+                    // Log analytics event
+                    await AnalyticsService().logEvent(
+                      'painter_pack_exported',
+                      {
+                        'pageCount': 1,
+                        'colorCount': colors.length,
+                      },
+                    );
+                  },
+                ),
                 IconButton(
                   tooltip: _colorBlindOn
                       ? 'Disable color-blind sim'

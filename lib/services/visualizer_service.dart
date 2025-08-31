@@ -1,49 +1,43 @@
-import 'dart:typed_data';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// lib/services/visualizer_service.dart
+import 'dart:async';
+import 'package:firebase_functions/firebase_functions.dart';
+
+class VisualizerJob {
+  final String jobId;
+  final String status;
+  final String? previewUrl;
+  final String? resultUrl;
+  VisualizerJob({required this.jobId, required this.status, this.previewUrl, this.resultUrl});
+  factory VisualizerJob.fromMap(Map<String, dynamic> m) => VisualizerJob(
+        jobId: m['jobId'],
+        status: m['status'],
+        previewUrl: m['previewUrl'],
+        resultUrl: m['resultUrl'],
+      );
+}
 
 class VisualizerService {
-  static final _f = FirebaseFunctions.instanceFor(region: 'us-central1');
-  static final _storage = FirebaseStorage.instance;
+  final _functions = FirebaseFunctions.instance;
 
-  /// Uploads a picked file to gs:// under the user path and returns gsPath
-  static Future<String> uploadInputBytes(
-      String uid, String filename, List<int> bytes) async {
-    final ref = _storage.ref('visualizer/$uid/inputs/$filename');
-    await ref.putData(
-        Uint8List.fromList(bytes), SettableMetadata(contentType: 'image/png'));
-    final bucket = _storage.bucket;
-    return 'gs://$bucket/${ref.fullPath}';
+  Future<VisualizerJob> renderFast(String imageUrl, List<String> paletteColorIds) async {
+    final callable = _functions.httpsCallable('renderFast');
+    final resp = await callable.call({'imageUrl': imageUrl, 'palette': paletteColorIds});
+    return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }
 
-  static Future<List<Map<String, dynamic>>> generateFromPhoto({
-    required String inputGsPath,
-    required String roomType,
-    required List<String> surfaces,
-    required List<String> variants,
-    String? storyId,
-  }) async {
-    final callable = _f.httpsCallable('visualizerGenerate');
-    final res = await callable.call({
-      'inputGsPath': inputGsPath,
-      'roomType': roomType,
-      'surfaces': surfaces,
-      'variantHexes': variants,
-      'storyId': storyId,
-    });
-    final data = Map<String, dynamic>.from(res.data as Map);
-    return List<Map<String, dynamic>>.from(data['results'] as List);
+  Future<VisualizerJob> renderHq(String imageUrl, List<String> paletteColorIds) async {
+    final callable = _functions.httpsCallable('renderHq');
+    final resp = await callable.call({'imageUrl': imageUrl, 'palette': paletteColorIds});
+    return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }
 
-  static Future<List<Map<String, dynamic>>> generateMockup({
-    required String roomType,
-    required String style,
-    required List<String> variants,
-  }) async {
-    final callable = _f.httpsCallable('visualizerMockup');
-    final res = await callable
-        .call({'roomType': roomType, 'style': style, 'variants': variants});
-    final data = Map<String, dynamic>.from(res.data as Map);
-    return List<Map<String, dynamic>>.from(data['results'] as List);
+  Stream<VisualizerJob> watchJob(String jobId) async* {
+    final callable = _functions.httpsCallable('getJob');
+    while (true) {
+      final resp = await callable.call({'jobId': jobId});
+      yield VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+      await Future.delayed(const Duration(seconds: 2));
+    }
   }
 }
+

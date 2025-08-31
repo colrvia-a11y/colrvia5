@@ -12,12 +12,6 @@ class ProjectOverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get palette IDs from project
-    // Get palette IDs from project's associated story or palette
-    final List<String> paletteIds = project.colorStoryId != null 
-      ? project.colorStory?.paletteColorIds ?? []
-      : [];
-
     return Scaffold(
       appBar: AppBar(
         title: Text(project.title),
@@ -29,13 +23,12 @@ class ProjectOverviewScreen extends StatelessWidget {
               Expanded(child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pushNamed(context, '/colorPlan', arguments: {
-                    'projectId': project.id, 
-                    'paletteColorIds': paletteIds
+                    'projectId': project.id,
+                    'paletteColorIds': project.paletteIds,
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_plan_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
                 },
                 icon: const Icon(Icons.auto_awesome), 
@@ -45,13 +38,12 @@ class ProjectOverviewScreen extends StatelessWidget {
               Expanded(child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pushNamed(context, '/visualizer', arguments: {
-                    'projectId': project.id, 
-                    'paletteColorIds': paletteIds
+                    'projectId': project.id,
+                    'paletteColorIds': project.paletteIds,
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_visualize_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
                 },
                 icon: const Icon(Icons.image), 
@@ -61,15 +53,15 @@ class ProjectOverviewScreen extends StatelessWidget {
               IconButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/compareColors', arguments: {
-                    'paletteColorIds': paletteIds
+                    'paletteColorIds': project.paletteIds,
                   });
-                  AnalyticsService.instance.logProjectAction(
+                  AnalyticsService.instance.logEvent(
                     'cta_compare_clicked',
-                    project.id,
-                    sourceView: 'project_overview'
+                    {'source': 'project_overview', 'project_id': project.id},
                   );
-                }, 
-                icon: const Icon(Icons.compare)
+                },
+                icon: const Icon(Icons.compare),
+                tooltip: 'Compare Colors',
               ),
             ]),
           ),

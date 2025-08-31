@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { generateColorPlanV2 } = require('./color-plan-v2');
 
 admin.initializeApp();
 
