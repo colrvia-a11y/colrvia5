@@ -69,6 +69,11 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred. Please try again.';
 
+      final emsg = (e.message ?? e.code).toLowerCase();
+      if (emsg.contains('api key not valid') || emsg.contains('api key') && emsg.contains('not valid')) {
+        message = 'Sign-in is unavailable: invalid Firebase API key. Please update the app\'s Firebase configuration.';
+      }
+
       switch (e.code) {
         case 'user-not-found':
           message = 'No account found with this email.';

@@ -692,3 +692,4 @@ class _HomeScreenWithRollerInitialColorsState
     );
   }
 }
+// ignore_for_file: deprecated_member_use

@@ -22,7 +22,7 @@ class AuthGuard {
         ],
       ),
     );
-    if (ok == true) {
+    if (ok == true && context.mounted) {
       // Route to your existing auth screen or settings sign-in section
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));

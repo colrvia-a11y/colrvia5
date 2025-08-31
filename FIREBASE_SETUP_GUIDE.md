@@ -1,22 +1,44 @@
 # 🔥 Firebase Setup Complete Guide
 
-## ✅ What I've Fixed:
+⚠️ **IMPORTANT**: This guide describes the current temporary/placeholder setup. 
+
+**For production use, see [FIREBASE_PERMANENT_SETUP.md](FIREBASE_PERMANENT_SETUP.md) for proper configuration with real Firebase credentials.**
+
+## Current Setup Status:
 
 ### 1. **Android Configuration**
-- ✅ Added `google-services.json` to `android/app/`
+- ✅ Added `google-services.json` to `android/app/` (placeholder)
 - ✅ Added Google Services plugin to `android/build.gradle`
 - ✅ Added Firebase plugin to `android/app/build.gradle`
 - ✅ Fixed package name from `com.mycompany.CounterApp` to `com.example.color_canvas`
 - ✅ Updated Android Manifest with correct package name
 
 ### 2. **iOS Configuration**
-- ✅ Added `GoogleService-Info.plist` to `ios/Runner/`
+- ✅ Added `GoogleService-Info.plist` to `ios/Runner/` (placeholder)
 
 ### 3. **Project Structure**
 - ✅ Firebase dependencies are correct in `pubspec.yaml`
-- ✅ Firebase options are properly configured in `firebase_options.dart`
+- ✅ Firebase options are properly configured in `firebase_options.dart` (placeholder)
+- ✅ Runtime configuration override system in place (`firebase_config.dart`)
 
-## 🚀 Next Steps:
+## 🚀 Choose Your Setup Method:
+
+### Option A: Quick Testing (Runtime Override)
+Use this for immediate testing with your Firebase project:
+
+1. Copy `firebase.env.example` to `firebase.env`
+2. Fill in your real Firebase credentials
+3. Run: `flutter run --dart-define-from-file=firebase.env`
+
+### Option B: Permanent Setup (Recommended)
+For production and long-term use:
+
+1. **Windows**: Run `.\setup_firebase_permanent.ps1`
+2. **Manual**: Follow [FIREBASE_PERMANENT_SETUP.md](FIREBASE_PERMANENT_SETUP.md)
+
+This will replace all placeholder configs with real ones from your Firebase project.
+
+## 🚀 Original Next Steps (for reference):
 
 ### **Step 1: Update Your Real Firebase Config Files**
 

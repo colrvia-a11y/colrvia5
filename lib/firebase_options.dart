@@ -43,30 +43,28 @@ class DefaultFirebaseOptions {
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
     authDomain: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebaseapp.com',
-    databaseURL:
-        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC_ZaIYwU5M7uIVTbFWqFp_vGa-VYFz4ak',
-    appId: '1:596436988958:android:e5a7c74a7c5b7a9e6a0f',
+    apiKey: 'AIzaSyDyX1wCqWd3u6FQ-5lTSiW6C1crkySH0zU',
+    appId: '1:596436988958:android:90ee03dbcf78051f9e6a0f',
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
-    databaseURL:
-        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDGxe_YcFtaehqE_Kl2d9J5UwXsQbJbF2c',
-    appId: '1:596436988958:ios:c8a2d9f5b4e3a6c19e6a0f',
+    apiKey: 'AIzaSyAKYIozRQMefm2GEdDzDzOu_L2ynwn9_mo',
+    appId: '1:596436988958:ios:1e67267ee219a5f79e6a0f',
     messagingSenderId: '596436988958',
     projectId: 'v29bvc2fec6tbbyy7j9h4tddz1dq28',
-    databaseURL:
-        'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
+    databaseURL: 'https://v29bvc2fec6tbbyy7j9h4tddz1dq28-default-rtdb.firebaseio.com',
     storageBucket: 'v29bvc2fec6tbbyy7j9h4tddz1dq28.firebasestorage.app',
-    iosBundleId: 'com.example.colorCanvas',
+    iosClientId: '596436988958-gineedfhq6e5ufdj6oid4jl1hlmc6oas.apps.googleusercontent.com',
+    iosBundleId: 'com.mycompany.CounterApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

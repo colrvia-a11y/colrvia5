@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:color_canvas/firebase_options.dart';
+import 'package:color_canvas/firebase_config.dart';
 import 'package:color_canvas/theme.dart';
 import 'package:color_canvas/screens/auth_wrapper.dart';
 import 'package:color_canvas/screens/home_screen.dart';
@@ -27,9 +29,17 @@ void main() async {
   // Initialize Firebase with platform-specific options
   try {
     Debug.info('App', 'main', 'Starting Firebase initialization');
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    
+    // Check if Firebase is already initialized
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: FirebaseConfig.options,
+      );
+      Debug.info('App', 'main', 'Firebase app initialized');
+    } else {
+      Debug.info('App', 'main', 'Firebase app already initialized');
+    }
+    Debug.info('App', 'main', 'Firebase project: \'${Firebase.app().options.projectId}\'');
     
     // Initialize Firebase App Check for security
     // Production reCAPTCHA site key for ColorCanvas app
@@ -39,19 +49,22 @@ void main() async {
       // For web: Using production reCAPTCHA v3 site key
       webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
       
-      // For Android: Use Play Integrity for production (requires Play Store)
-      // For development/testing, this will use debug token automatically
-      androidProvider: AndroidProvider.playIntegrity,
+      // For Android: Use debug provider for development, Play Integrity for production
+      androidProvider: kDebugMode 
+          ? AndroidProvider.debug 
+          : AndroidProvider.playIntegrity,
       
-      // For iOS: Use DeviceCheck for production
-      appleProvider: AppleProvider.deviceCheck,
+      // For iOS: Use debug provider for development, DeviceCheck for production  
+      appleProvider: kDebugMode 
+          ? AppleProvider.debug 
+          : AppleProvider.deviceCheck,
     );
     
     Debug.info('App', 'main', 'Firebase App Check activated with PRODUCTION reCAPTCHA key');
     
     // Initialize the Gemini Developer API backend service
     // Create a `GenerativeModel` instance with a model that supports your use case
-    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash');
+    FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash');
     Debug.info('App', 'main', 'Firebase AI GenerativeModel initialized with gemini-2.5-flash');
     
     await FirebaseService.enableOfflineSupport();

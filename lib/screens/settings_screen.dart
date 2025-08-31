@@ -4,6 +4,7 @@ import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/admin_screen.dart';
+import 'package:color_canvas/screens/simple_firebase_test.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1424,6 +1425,15 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () => _showFirebaseDebug(context),
               icon: Icons.bug_report_rounded,
               label: 'Debug Firebase Status',
+              isSecondary: true,
+            ),
+            const SizedBox(height: 8),
+            _buildBrandedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SimpleFirebaseTest()),
+              ),
+              icon: Icons.security_rounded,
+              label: 'Test Firebase Auth',
               isSecondary: true,
             ),
           ],

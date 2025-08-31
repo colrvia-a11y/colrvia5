@@ -1,4 +1,5 @@
 {
     "dart.flutterSdkPath": "C:\\src\\flutter",
-    "github.copilot.chat.agent.autoFix": true
+    "github.copilot.chat.agent.autoFix": true,
+    "chatgpt.openOnStartup": true
 }

@@ -115,14 +115,44 @@ class FirebaseService {
   // Authentication methods
   static Future<UserCredential> signInWithEmailAndPassword(
       String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
-        email: email, password: password);
+    try {
+      debugPrint('🔐 FirebaseService: Attempting sign in for email: $email');
+      debugPrint('🔐 FirebaseService: Auth instance app: ${_auth.app.name}');
+      debugPrint('🔐 FirebaseService: Project ID: ${_auth.app.options.projectId}');
+      
+      final result = await _auth.signInWithEmailAndPassword(
+          email: email, password: password);
+      
+      debugPrint('🔐 FirebaseService: Sign in successful for user: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('🔐 FirebaseService: Sign in failed with error: $e');
+      if (e.toString().contains('API key not valid')) {
+        debugPrint('🔐 FirebaseService: API key issue detected. Check SHA-1 fingerprint in Firebase Console.');
+        debugPrint('🔐 FirebaseService: Debug SHA-1: A4:DA:E3:7A:D1:EA:DA:3C:9C:E4:62:0F:53:CA:86:0A:E1:22:60:11');
+      }
+      rethrow;
+    }
   }
 
   static Future<UserCredential> createUserWithEmailAndPassword(
       String email, String password) async {
-    return await _auth.createUserWithEmailAndPassword(
-        email: email, password: password);
+    try {
+      debugPrint('🔐 FirebaseService: Attempting user creation for email: $email');
+      
+      final result = await _auth.createUserWithEmailAndPassword(
+          email: email, password: password);
+      
+      debugPrint('🔐 FirebaseService: User creation successful for user: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('🔐 FirebaseService: User creation failed with error: $e');
+      if (e.toString().contains('API key not valid')) {
+        debugPrint('🔐 FirebaseService: API key issue detected. Check SHA-1 fingerprint in Firebase Console.');
+        debugPrint('🔐 FirebaseService: Debug SHA-1: A4:DA:E3:7A:D1:EA:DA:3C:9C:E4:62:0F:53:CA:86:0A:E1:22:60:11');
+      }
+      rethrow;
+    }
   }
 
   static Future<void> createUserProfile(UserProfile profile) async {
@@ -281,8 +311,13 @@ class FirebaseService {
 
   static Future<void> enableOfflineSupport() async {
     try {
-      // Enable offline persistence for Firestore
-      await _db.settings.persistenceEnabled;
+      // Enable offline persistence for Firestore (only on mobile platforms)
+      if (!kIsWeb) {
+        // On mobile platforms, persistence is enabled by default
+        debugPrint('Firestore offline persistence is enabled by default on mobile');
+      } else {
+        debugPrint('Firestore offline persistence not available on web');
+      }
     } catch (e) {
       // Persistence may already be enabled, or not supported on web
       debugPrint('Firestore persistence error (this is usually ok on web): $e');
@@ -291,14 +326,27 @@ class FirebaseService {
 
   static Future<Map<String, dynamic>> getFirebaseStatus() async {
     final user = currentUser;
-    return {
+    final status = {
       'isAuthenticated': user != null,
       'userId': user?.uid,
       'userEmail': user?.email,
-      'isFirestoreOnline':
-          true, // Simplified - in real app would check connectivity
+      'isFirestoreOnline': true, // Simplified - in real app would check connectivity
       'error': null,
+      'projectId': _auth.app.options.projectId,
+      'appId': _auth.app.options.appId,
+      'apiKey': '${_auth.app.options.apiKey.substring(0, 20)}...',
     };
+
+    // Test basic Firebase connectivity
+    try {
+      await _db.collection('_test').limit(1).get(const GetOptions(source: Source.server));
+      status['firestoreConnected'] = true;
+    } catch (e) {
+      status['firestoreConnected'] = false;
+      status['firestoreError'] = e.toString();
+    }
+
+    return status;
   }
 
   // Missing methods for library_screen.dart and palette_detail_screen.dart
@@ -519,7 +567,7 @@ class FirebaseService {
 
       return results.take(50).toList();
     } catch (e) {
-      print('Firebase search error: $e, falling back to sample data');
+      debugPrint('Firebase search error: $e, falling back to sample data');
       // Fallback to sample data search
       return await _searchSamplePaints(query);
     }
@@ -546,7 +594,7 @@ class FirebaseService {
           .take(50)
           .toList();
     } catch (e) {
-      print('Sample data search error: $e');
+      debugPrint('Sample data search error: $e');
       return [];
     }
   }

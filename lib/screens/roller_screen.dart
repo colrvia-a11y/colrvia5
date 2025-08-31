@@ -65,7 +65,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
   bool _isRolling = false;
   
   // Enhanced color history tracking for each strip
-  List<ColorStripHistory> _stripHistories = [];
+  final List<ColorStripHistory> _stripHistories = [];
   
   // TikTok-style vertical swipe feed
   final PageController _pageCtrl = PageController();
