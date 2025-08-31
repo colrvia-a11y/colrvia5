@@ -21,18 +21,25 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen>
     implements HomeScreenPaintSelection {
-  int _currentIndex = 0; // Start with Roller tab
+  int _currentIndex = 0; // Home tab is now index 0
   final GlobalKey<RollerScreenStatePublic> _rollerKey =
       GlobalKey<RollerScreenStatePublic>();
 
   late final List<Widget> _screens = [
-    RollerScreen(key: _rollerKey),
-    const ColorStoryMainScreen(),
+    const HomeLandingScreen(), // 0: Home
     SearchScreen(
-        onPaintSelectedForRoller: onPaintSelectedFromSearch), // Pass callback
-    const VisualizerScreen(),
-    const DashboardScreen(), // Now the Account page
+        onPaintSelectedForRoller: onPaintSelectedFromSearch), // 1: Search
+    const DashboardScreen(), // 2: Account
+    RollerScreen(key: _rollerKey), // 3: Roller
+    const ColorStoryMainScreen(), // 4: Story
+    const VisualizerScreen(), // 5: Visualizer
   ];
+
+  void setTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   void onPaintSelectedFromSearch(Paint paint) {
@@ -41,7 +48,7 @@ class HomeScreenState extends State<HomeScreen>
 
     // Switch to roller screen
     setState(() {
-      _currentIndex = 0; // Roller is now at index 0
+      _currentIndex = 1; // Roller is now at index 1
     });
 
     Debug.info('HomeScreen', 'onPaintSelectedFromSearch',
@@ -428,7 +435,7 @@ class HomeScreenState extends State<HomeScreen>
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: _currentIndex,
+        currentIndex: _currentIndex > 2 ? 0 : _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor:
@@ -437,14 +444,9 @@ class HomeScreenState extends State<HomeScreen>
         showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.color_lens_outlined),
-            activeIcon: Icon(Icons.color_lens),
-            label: 'Roller',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'Story',
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search_outlined),
@@ -452,16 +454,343 @@ class HomeScreenState extends State<HomeScreen>
             label: 'Search',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.weekend_outlined),
-            activeIcon: Icon(Icons.weekend),
-            label: 'Visualizer',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.account_circle_outlined),
             activeIcon: Icon(Icons.account_circle),
             label: 'Account',
           ),
         ],
+      ),
+    );
+  }
+}
+
+// --- NEW HOME LANDING SCREEN ---
+class HomeLandingScreen extends StatelessWidget {
+  const HomeLandingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section 1: Getting Started
+                Text('Getting Started', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                _GettingStartedChecklist(),
+                const SizedBox(height: 32),
+                // Section 2: Color Stories
+                Text('Color Stories', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                _ColorStoriesSection(),
+                const SizedBox(height: 32),
+                // Section 3: Color Story Tools
+                Text('Color Story Tools', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                _ToolsCarousel(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GettingStartedChecklist extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // TODO: Replace with actual user state
+    final bool hasAccount = false;
+    final bool hasStartedStory = false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ChecklistItem(
+          label: 'Create Account',
+          checked: hasAccount,
+          onTap: () {
+            // TODO: Link to create account center
+          },
+        ),
+        _ChecklistItem(
+          label: 'Start a Color Story',
+          checked: hasStartedStory,
+          onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const StartColorStoryScreen(),
+            ));
+          },
+        ),
+        _ChecklistItem(
+          label: 'Color Your Space',
+          checked: false,
+          onTap: () {
+            // TODO: Link to visualizer page
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  final String label;
+  final bool checked;
+  final VoidCallback onTap;
+
+  const _ChecklistItem({required this.label, required this.checked, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Checkbox(
+              value: checked,
+              onChanged: (_) => onTap(),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+            Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorStoriesSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // TODO: Replace with actual user color stories
+    final List<_ColorStory> stories = [
+      _ColorStory('Example Story 1', true),
+      _ColorStory('Example Story 2', true),
+      _ColorStory('Example Story 3', true),
+    ];
+    return Row(
+      children: [
+        ...stories.map((story) => _ColorStoryPill(story: story)),
+        GestureDetector(
+          onTap: () {
+            // TODO: Link to view more page
+          },
+          child: Container(
+            margin: const EdgeInsets.only(left: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text('View More', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ColorStory {
+  final String title;
+  final bool isExample;
+  _ColorStory(this.title, this.isExample);
+}
+
+class _ColorStoryPill extends StatelessWidget {
+  final _ColorStory story;
+  const _ColorStoryPill({required this.story});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: story.isExample ? Colors.grey[100] : Colors.blue[50],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: story.isExample ? Colors.grey : Colors.blue, width: 1),
+      ),
+      child: Row(
+        children: [
+          Text(story.title, style: TextStyle(fontWeight: FontWeight.bold)),
+          if (story.isExample)
+            Container(
+              margin: const EdgeInsets.only(left: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text('Example', style: TextStyle(fontSize: 10, color: Colors.orange[800])),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolsCarousel extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final List<_ToolCardData> tools = [
+      _ToolCardData('Color Roller', Icons.palette, Colors.purple[100]!, tabIndex: 3),
+      _ToolCardData('Story', Icons.auto_stories, Colors.green[100]!, tabIndex: 4),
+      _ToolCardData('Visualizer', Icons.psychology, Colors.blue[100]!, tabIndex: 5),
+      _ToolCardData('Explore', Icons.explore, Colors.orange[100]!, tabIndex: null),
+    ];
+    return SizedBox(
+      height: 180,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: tools.length,
+        separatorBuilder: (_, __) => SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          final tool = tools[index];
+          return AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: 260,
+            child: _ToolCard(tool: tool),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ToolCardData {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final int? tabIndex;
+  _ToolCardData(this.title, this.icon, this.color, {this.tabIndex});
+}
+
+class _ToolCard extends StatelessWidget {
+  final _ToolCardData tool;
+  const _ToolCard({required this.tool});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: tool.color,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 4,
+      child: InkWell(
+        onTap: () {
+          if (tool.tabIndex != null) {
+            // Use ancestor HomeScreenState to set tab index
+            final homeState = context.findAncestorStateOfType<HomeScreenState>();
+            if (homeState != null) {
+              homeState.setTab(tool.tabIndex!);
+            }
+          } else {
+            // TODO: Link to Explore page
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(tool.icon, size: 48, color: Colors.black54),
+              const SizedBox(height: 16),
+              Text(tool.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Placeholder for Start Color Story page
+class StartColorStoryScreen extends StatefulWidget {
+  const StartColorStoryScreen({super.key});
+
+  @override
+  State<StartColorStoryScreen> createState() => _StartColorStoryScreenState();
+}
+
+class _StartColorStoryScreenState extends State<StartColorStoryScreen> {
+  String? _selectedRoom;
+  final List<String> _rooms = [
+    'Living Room',
+    'Bedroom',
+    'Kitchen',
+    'Bathroom',
+    'Dining Room',
+    'Office',
+    'Other',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Start a Color Story'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Let's Design Your Space",
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'A Color Story guides you through the process of designing your space. You will: \n\n• Design your room\n• Learn about color and style\n• Visualize your ideas',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 32),
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Start a Color Story', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    Text('What room are we designing?', style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedRoom,
+                      items: _rooms.map((room) => DropdownMenuItem(
+                        value: room,
+                        child: Text(room),
+                      )).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedRoom = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        labelText: 'Room',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

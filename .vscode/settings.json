@@ -12,5 +12,14 @@
         "C:\\Users\\corey\\OneDrive\\Desktop\\colrvia5\\flutter\\": true,
         "flutter\\": true,
         "github.copilot.chat.useWorkspaceContext": true
+    },
+    "github.copilot.codex.enable": {
+        "Codex": true,
+        "fullAccess": true,
+        "useWorkspaceContext": true,
+        "dart": true,
+        "flutter": true,
+        "C:\\Users\\corey\\OneDrive\\Desktop\\colrvia5\\flutter\\": true,
+        "flutter\\": true
     }
 }
