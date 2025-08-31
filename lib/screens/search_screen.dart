@@ -1,8 +1,9 @@
+import 'package:color_canvas/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/color_utils.dart';
-import 'package:color_canvas/screens/home_screen.dart';
+
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'dart:async';
@@ -230,7 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     // Fallback: Find the HomeScreen state in the widget tree
-    final homeScreenState = context.findAncestorStateOfType<HomeScreenState>();
+  final homeScreenState = context.findAncestorStateOfType<HomeScreenState>();
 
     if (homeScreenState != null) {
       Debug.info('SearchScreen', '_loadPaintIntoRoller',

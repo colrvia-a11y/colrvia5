@@ -11,10 +11,19 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
+  /// Called by SearchScreen to load a paint into the RollerScreen.
+  void onPaintSelectedFromSearch(dynamic paint) {
+    // TODO: Implement logic to load paint into RollerScreen or update state.
+    // For now, just navigate to RollerScreen.
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RollerScreen()),
+    );
+  }
   int _currentIndex = 0;
   String? _initialProjectId;
 
