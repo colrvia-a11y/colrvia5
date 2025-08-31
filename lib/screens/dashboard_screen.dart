@@ -8,10 +8,10 @@ import '../models/project.dart';
 import '../widgets/auth_dialog.dart';
 import 'package:color_canvas/screens/roller_screen.dart';
 import 'explore_screen.dart';
-import 'color_story_wizard_screen.dart';
+import 'color_plan_screen.dart';
 import 'visualizer_screen.dart';
 import 'settings_screen.dart';
-import 'library_screen.dart';
+import 'projects_screen.dart';
 import 'photo_library_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 
@@ -490,7 +490,7 @@ class _QuickActionsGrid extends StatelessWidget {
             ],
           ),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => const LibraryScreen(initialFilter: LibraryFilter.all))),
+              builder: (_) => const ProjectsScreen(initialFilter: LibraryFilter.all))),
         ),
       ],
     );
@@ -1003,7 +1003,7 @@ class _BrandedProjectCard extends StatelessWidget {
         break;
       case FunnelStage.story:
         Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ColorStoryWizardScreen(projectId: p.id)));
+            builder: (_) => ColorPlanScreen(projectId: p.id)));
         break;
       case FunnelStage.visualize:
       case FunnelStage.share:
@@ -1163,7 +1163,7 @@ class _BrandedLibrarySection extends StatelessWidget {
   void _openLibraryWithFilter(BuildContext context, LibraryFilter filter) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => LibraryScreen(initialFilter: filter),
+        builder: (_) => ProjectsScreen(initialFilter: filter),
       ),
     );
   }

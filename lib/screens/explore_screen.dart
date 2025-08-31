@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart' as m;
 import 'package:flutter/material.dart';
+import 'color_plan_detail_screen.dart';
+import 'color_plan_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -341,7 +343,7 @@ class _CardSkeleton extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ColorStoryDetailScreen(storyId: storyId),
+        builder: (context) => ColorPlanDetailScreen(storyId: storyId),
       ),
     );
     
@@ -406,7 +408,7 @@ class _CardSkeleton extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ColorStoryWizardScreen(projectId: project.id),
+            builder: (context) => ColorPlanScreen(projectId: project.id),
           ),
         );
         
@@ -1937,7 +1939,7 @@ class ColorStoryCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ColorStoryDetailScreen(storyId: story.id),
+              builder: (context) => ColorPlanDetailScreen(storyId: story.id),
             ),
           );
         },
@@ -2321,7 +2323,7 @@ class ColorStoryCard extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ColorStoryDetailScreen(storyId: story.id),
+        builder: (context) => ColorPlanDetailScreen(storyId: story.id),
       ),
     );
   }

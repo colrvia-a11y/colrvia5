@@ -89,7 +89,7 @@ Future<void> checkNetworkStatus() async {
 /// ✅ NetworkAwareImage widget with tap-to-load overlay
 /// ✅ NetworkAwareAudio widget with load button
 /// ✅ GradientFallbackHero integration
-/// ✅ ColorStoryDetailScreen integration
+/// ✅ ColorPlanDetailScreen integration
 /// ✅ ExploreScreen ColorStoryCard integration
 /// ✅ User preference loading from Firebase
 /// ✅ Heavy asset threshold (>500KB assumption)

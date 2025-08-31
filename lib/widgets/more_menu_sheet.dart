@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:color_canvas/screens/library_screen.dart';
+import 'package:color_canvas/screens/projects_screen.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'dart:ui';
 
@@ -94,7 +94,7 @@ class _MoreMenuSheetState extends State<MoreMenuSheet>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) =>
-            const LibraryScreen(initialFilter: LibraryFilter.palettes),
+            const ProjectsScreen(initialFilter: LibraryFilter.palettes),
       ),
     );
   }

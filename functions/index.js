@@ -3,18 +3,18 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-exports.generateColorStoryV2 = functions.https.onCall(async (data, context) => {
+exports.generateColorPlanV1 = functions.https.onCall(async (data, context) => {
   try {
-    console.log('generateColorStoryV2 called with context:', JSON.stringify(context.auth));
-    console.log('generateColorStoryV2 data:', JSON.stringify(data));
+    console.log('generateColorPlanV1 called with context:', JSON.stringify(context.auth));
+    console.log('generateColorPlanV1 data:', JSON.stringify(data));
     
     const uid = context.auth?.uid;
     if (!uid) {
-      console.error('generateColorStoryV2: No authenticated user');
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required to generate color stories. Please sign in and try again.');
+      console.error('generateColorPlanV1: No authenticated user');
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required to generate color plans. Please sign in and try again.');
     }
-    
-    console.log('generateColorStoryV2: Authenticated user:', uid);
+
+    console.log('generateColorPlanV1: Authenticated user:', uid);
     
     // Get basic data from request
     const { room = "living room", style = "modern", palette, paletteName, colors } = data || {};
@@ -70,10 +70,10 @@ exports.generateColorStoryV2 = functions.https.onCall(async (data, context) => {
     return { storyId: docRef.id, docId: docRef.id };
     
   } catch (error) {
-    console.error("generateColorStoryV2 error:", error);
-    console.error("generateColorStoryV2 error type:", typeof error);
-    console.error("generateColorStoryV2 error code:", error.code);
-    console.error("generateColorStoryV2 error message:", error.message);
+    console.error("generateColorPlanV1 error:", error);
+    console.error("generateColorPlanV1 error type:", typeof error);
+    console.error("generateColorPlanV1 error code:", error.code);
+    console.error("generateColorPlanV1 error message:", error.message);
     
     // If it's already a proper HttpsError, rethrow it
     if (error.code && error.code.startsWith('functions/')) {
