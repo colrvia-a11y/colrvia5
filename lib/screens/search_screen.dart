@@ -5,6 +5,7 @@ import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 
 import 'package:color_canvas/screens/paint_detail_screen.dart';
+import 'package:color_canvas/screens/compare_colors_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'dart:async';
 // ...existing code...
@@ -29,6 +30,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isSearching = false;
   bool _showSearchResults = false;
   bool _showClearButton = false;
+  final Set<String> _selectedForCompare = {};
 
   // Debouncing variables
   Timer? _debounceTimer;
@@ -258,6 +260,16 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  void _toggleCompareSelection(Paint paint) {
+    setState(() {
+      if (_selectedForCompare.contains(paint.id)) {
+        _selectedForCompare.remove(paint.id);
+      } else if (_selectedForCompare.length < 4) {
+        _selectedForCompare.add(paint.id);
+      }
+    });
+  }
+
   void _loadPaletteIntoRoller(ColorPalette palette) {
     // For now, show a snackbar. Later this can load the palette into the roller
     ScaffoldMessenger.of(context).showSnackBar(
@@ -282,6 +294,21 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      floatingActionButton: _selectedForCompare.length >= 2
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CompareColorsScreen(
+                      paletteColorIds: _selectedForCompare.toList(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.compare),
+              label: Text('Compare (${_selectedForCompare.length})'),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -430,13 +457,18 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildPaintSearchCard(Paint paint) {
     final color = ColorUtils.getPaintColor(paint.hex);
+    final selected = _selectedForCompare.contains(paint.id);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => _selectPaint(paint),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
+      child: Stack(
+        children: [
+          Card(
+            child: InkWell(
+              onTap: () => _selectPaint(paint),
+              onLongPress: () => _toggleCompareSelection(paint),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
@@ -535,7 +567,16 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
       ),
-    );
+      if (selected)
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Icon(Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary),
+        ),
+    ],
+  ),
+);
   }
 
   Widget _buildPaletteGrid() {
