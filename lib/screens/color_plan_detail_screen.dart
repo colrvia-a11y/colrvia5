@@ -19,16 +19,16 @@ import '../widgets/story_generation_progress.dart';
 import '../widgets/gradient_fallback_hero.dart';
 import '../utils/gradient_hero_utils.dart';
 import '../screens/visualizer_screen.dart';
-import '../screens/color_story_wizard_screen.dart';
+import 'color_plan_screen.dart';
 
-class ColorStoryDetailScreen extends StatefulWidget {
+class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
-  const ColorStoryDetailScreen({super.key, required this.storyId});
+  const ColorPlanDetailScreen({super.key, required this.storyId});
   @override
-  State<ColorStoryDetailScreen> createState() => _ColorStoryDetailScreenState();
+  State<ColorPlanDetailScreen> createState() => _ColorPlanDetailScreenState();
 }
 
-class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
+class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
   final _player = AudioPlayer();
   bool _colorBlindOn = false;
   bool _loadingAudio = false;
@@ -428,17 +428,17 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     debugPrint(
-        '🐛 ColorStoryDetailScreen: Building with storyId = ${widget.storyId}');
+        '🐛 ColorPlanDetailScreen: Building with storyId = ${widget.storyId}');
 
     return StreamBuilder<ColorStory>(
         stream: FirebaseService.storyStream(widget.storyId),
         builder: (context, snap) {
           debugPrint(
-              '🐛 ColorStoryDetailScreen: StreamBuilder state = ${snap.connectionState}');
+              '🐛 ColorPlanDetailScreen: StreamBuilder state = ${snap.connectionState}');
 
           if (snap.hasError) {
             debugPrint(
-                '🐛 ColorStoryDetailScreen: Stream error = ${snap.error}');
+                '🐛 ColorPlanDetailScreen: Stream error = ${snap.error}');
             return Scaffold(
               appBar: AppBar(title: const Text('Color Story')),
               body: Center(
@@ -466,7 +466,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
 
           final story = snap.data;
           debugPrint(
-              '🐛 ColorStoryDetailScreen: Story data exists = ${story != null}');
+              '🐛 ColorPlanDetailScreen: Story data exists = ${story != null}');
 
           // Check ownership - compute outside of null check so it's available throughout the builder
           final currentUser = FirebaseService.currentUser;
@@ -474,13 +474,13 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
 
           if (story != null) {
             debugPrint(
-                '🐛 ColorStoryDetailScreen: Story status = ${story.status}');
+                '🐛 ColorPlanDetailScreen: Story status = ${story.status}');
             debugPrint(
-                '🐛 ColorStoryDetailScreen: Story progress = ${story.progress}');
+                '🐛 ColorPlanDetailScreen: Story progress = ${story.progress}');
             debugPrint(
-                '🐛 ColorStoryDetailScreen: Story narration length = ${story.narration.length}');
+                '🐛 ColorPlanDetailScreen: Story narration length = ${story.narration.length}');
             debugPrint(
-                '🐛 ColorStoryDetailScreen: Story heroImageUrl = ${story.heroImageUrl}');
+                '🐛 ColorPlanDetailScreen: Story heroImageUrl = ${story.heroImageUrl}');
           }
 
           if (story == null) {
@@ -1302,7 +1302,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ColorStoryDetailScreen(storyId: variant.id),
+              builder: (_) => ColorPlanDetailScreen(storyId: variant.id),
             ),
           );
         },
@@ -1546,7 +1546,7 @@ class _ColorStoryDetailScreenState extends State<ColorStoryDetailScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ColorStoryWizardScreen(
+            builder: (context) => ColorPlanScreen(
               projectId: project.id,
               remixStoryId: story.id,
             ),

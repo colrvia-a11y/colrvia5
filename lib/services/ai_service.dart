@@ -48,10 +48,10 @@ class AiService {
 
     try {
       _logger.info(
-          'Calling generateColorStory with parameters: $parameters');
+          'Calling generateColorPlan with parameters: $parameters');
 
       final res =
-          await _f.httpsCallable('generateColorStoryV2').call(parameters);
+          await _f.httpsCallable('generateColorPlanV1').call(parameters);
       _logger.info('Cloud Function response type: ${res.runtimeType}');
       _logger.info('Cloud Function raw response: $res');
 
@@ -65,7 +65,7 @@ class AiService {
         throw Exception('Server error: $errorMessage');
       }
 
-      // Extract storyId from standardized Cloud Function response
+      // Extract plan ID from standardized Cloud Function response
       // Note: Server returns 'docId' field, not 'storyId'
       String? storyId = data['docId'] as String?;
 
@@ -74,7 +74,7 @@ class AiService {
       _logger.info('Available keys in response: ${data.keys.toList()}');
 
       if (storyId == null || storyId.isEmpty) {
-        _logger.warning('Invalid storyId - null or empty');
+        _logger.warning('Invalid plan id - null or empty');
         throw Exception(
             'Server did not return a valid story ID. Response: $data');
       }

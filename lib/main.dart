@@ -10,7 +10,7 @@ import 'package:color_canvas/theme.dart';
 import 'package:color_canvas/screens/auth_wrapper.dart';
 import 'package:color_canvas/screens/home_screen.dart';
 import 'package:color_canvas/screens/login_screen.dart';
-import 'package:color_canvas/screens/color_story_detail_screen.dart';
+import 'package:color_canvas/screens/color_plan_detail_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/widgets/more_menu_sheet.dart';
@@ -135,12 +135,12 @@ class MyApp extends StatelessWidget {
             '/auth': (context) => const AuthWrapper(),
             '/home': (context) => const HomeScreen(),
             '/login': (context) => const LoginScreen(),
-            '/colorStoryDetail': (context) {
+            '/colorPlanDetail': (context) {
               final storyId =
                   ModalRoute.of(context)!.settings.arguments as String;
               debugPrint(
-                  '🐛 Route: NavigatingTo ColorStoryDetailScreen with storyId = $storyId');
-              return ColorStoryDetailScreen(storyId: storyId);
+                  '🐛 Route: NavigatingTo ColorPlanDetailScreen with storyId = $storyId');
+              return ColorPlanDetailScreen(storyId: storyId);
             },
             '/visualizer': (context) {
               final args = ModalRoute.of(context)?.settings.arguments

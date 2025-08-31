@@ -8,7 +8,7 @@ import 'roller_screen.dart';
 import 'package:color_canvas/screens/search_screen.dart';
 import 'package:color_canvas/screens/explore_screen.dart';
 // ...existing code...
-import 'package:color_canvas/screens/color_story_wizard_screen.dart';
+import 'color_plan_screen.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/services/auth_guard.dart';
@@ -293,7 +293,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ColorStoryWizardScreen(
+                        builder: (context) => ColorPlanScreen(
                           projectId: project.id,
                           paletteId: widget.palette.id,
                         ),

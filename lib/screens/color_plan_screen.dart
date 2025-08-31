@@ -8,22 +8,23 @@ import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/services/ai_service.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 // ...existing code...
+import 'color_plan_detail_screen.dart';
 import 'package:color_canvas/screens/settings_screen.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 
-class ColorStoryWizardScreen extends StatefulWidget {
+class ColorPlanScreen extends StatefulWidget {
   final String projectId;
   final String? paletteId; // Pre-selected palette
   final String? remixStoryId; // Story ID for remix mode
 
-  const ColorStoryWizardScreen(
+  const ColorPlanScreen(
       {super.key, required this.projectId, this.paletteId, this.remixStoryId});
 
   @override
-  State<ColorStoryWizardScreen> createState() => _ColorStoryWizardScreenState();
+  State<ColorPlanScreen> createState() => _ColorPlanScreenState();
 }
 
-class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
+class _ColorPlanScreenState extends State<ColorPlanScreen> {
   final PageController _pageController = PageController();
 
   // Form data
@@ -376,7 +377,11 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
       }
 
       debugPrint(
-          '🐛 Wizard: About to navigate to ColorStoryDetailScreen with storyId = $storyId');
+          '🐛 Wizard: About to navigate to ColorPlanDetailScreen with storyId = $storyId');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+            builder: (context) => ColorPlanDetailScreen(storyId: storyId)),
+      );
 
       // TEST: Create a public test document to verify rules work
       debugPrint(
@@ -488,10 +493,10 @@ class _ColorStoryWizardScreenState extends State<ColorStoryWizardScreen> {
 
       if (!mounted) return;
 
-      // Navigate to the color story detail screen
+      // Navigate to the color plan detail screen
       Navigator.pushReplacementNamed(
         context,
-        '/colorStoryDetail',
+        '/colorPlanDetail',
         arguments: storyId,
       );
 

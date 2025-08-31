@@ -11,23 +11,23 @@ import 'package:color_canvas/screens/palette_detail_screen.dart';
 import 'package:color_canvas/screens/roller_screen.dart';
 import 'package:color_canvas/screens/search_screen.dart';
 import 'package:color_canvas/screens/explore_screen.dart';
-import 'package:color_canvas/screens/color_story_wizard_screen.dart';
+import 'color_plan_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/main.dart' show isFirebaseInitialized;
 
 enum LibraryFilter { all, palettes, stories }
 
-class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key, this.initialFilter = LibraryFilter.all});
+class ProjectsScreen extends StatefulWidget {
+  const ProjectsScreen({super.key, this.initialFilter = LibraryFilter.all});
   final LibraryFilter initialFilter;
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  State<ProjectsScreen> createState() => _ProjectsScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
-  static final _logger = Logger('LibraryScreen');
+class _ProjectsScreenState extends State<ProjectsScreen> {
+  static final _logger = Logger('ProjectsScreen');
   
   bool _isLoading = true;
   bool _hasPermissionError = false;
@@ -377,7 +377,7 @@ class _ProjectCard extends StatelessWidget {
         break;
       case FunnelStage.story:
         Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ColorStoryWizardScreen(projectId: project.id)));
+            builder: (_) => ColorPlanScreen(projectId: project.id)));
         break;
       case FunnelStage.visualize:
       case FunnelStage.share:

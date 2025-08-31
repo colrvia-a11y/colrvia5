@@ -5,12 +5,12 @@ import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:flutter/foundation.dart';
 
-/// Example integration for Color Story Detail Screen
-class ColorStoryDetailScreenAnalyticsExample {
+/// Example integration for Color Plan Detail Screen
+class ColorPlanDetailScreenAnalyticsExample {
   final AnalyticsService _analytics = AnalyticsService.instance;
 
-  /// Call this in initState() to track when a color story is opened
-  Future<void> trackStoryOpen(ColorStory colorStory, {String? source}) async {
+  /// Call this in initState() to track when a color plan is opened
+  Future<void> trackPlanOpen(ColorStory colorStory, {String? source}) async {
     await _analytics.trackColorStoryOpen(
       storyId: colorStory.id,
       slug: colorStory.slug,
@@ -19,7 +19,7 @@ class ColorStoryDetailScreenAnalyticsExample {
       families: colorStory.families,
       rooms: colorStory.rooms,
       isFeatured: colorStory.isFeatured,
-      source: source, // e.g., 'explore', 'featured', 'direct_link'
+      source: source,
     );
   }
 
@@ -53,15 +53,15 @@ class ColorStoryDetailScreenAnalyticsExample {
       storyId: colorStory.id,
       slug: colorStory.slug,
       title: colorStory.title,
-      shareMethod: method, // e.g., 'native_share', 'copy_link'
+      shareMethod: method,
     );
   }
 
   /// Call this when screen appears to set current screen
   Future<void> setScreenView() async {
     await _analytics.setCurrentScreen(
-      screenName: 'color_story_detail',
-      screenClass: 'ColorStoryDetailScreen',
+      screenName: 'color_plan_detail',
+      screenClass: 'ColorPlanDetailScreen',
     );
   }
 }
