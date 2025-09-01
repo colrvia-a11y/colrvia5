@@ -8,6 +8,8 @@ import '../models/fixed_elements.dart';
 import 'fixed_element_service.dart';
 import '../services/feature_flags.dart';
 import 'sync_queue_service.dart';
+import 'diagnostics_service.dart';
+import 'notifications_service.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -83,8 +85,13 @@ class ColorPlanService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
-  await doc.set(plan.toJson());
-  await AnalyticsService.instance.planGenerated(projectId, doc.id);
+      await doc.set(plan.toJson());
+      await AnalyticsService.instance.planGenerated(projectId, doc.id);
+      DiagnosticsService.instance
+          .logBreadcrumb('plan_generated:${doc.id}');
+      NotificationsService.instance.scheduleNudge(
+          'resume_project', 'Resume your project',
+          'Jump back into your project', const Duration(days: 3));
       return plan;
     } catch (e) {
       await SyncQueueService.instance.enqueue('createPlan', {

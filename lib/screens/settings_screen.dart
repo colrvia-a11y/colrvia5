@@ -6,6 +6,9 @@ import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/admin_screen.dart';
 import 'package:color_canvas/screens/simple_firebase_test.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'diagnostics_screen.dart';
+import '../services/referral_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -48,6 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   String _ambientAudioMode = 'off';
   int _paintCount = 0;
   int _brandCount = 0;
+  String _appVersion = '';
+  int _rewardCount = 0;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _initializeAnimations();
     _loadUserData();
     _loadAppStats();
+    _loadVersion();
   }
 
   void _initializeAnimations() {
@@ -117,6 +123,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     _slideController.forward();
     _scaleController.forward();
     _shimmerController.repeat(reverse: true);
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() => _appVersion = '${info.version} (${info.buildNumber})');
   }
 
   @override
@@ -1238,6 +1249,19 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 20),
             _buildBrandedButton(
+              onPressed: () =>
+                  ReferralService.instance.createAndShareLink(),
+              icon: Icons.group_add_rounded,
+              label: 'Refer a friend',
+              isSecondary: false,
+            ),
+            if (_rewardCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Chip(label: Text('Rewards $_rewardCount')),
+              ),
+            const SizedBox(height: 20),
+            _buildBrandedButton(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -1247,6 +1271,22 @@ class _SettingsScreenState extends State<SettingsScreen>
               icon: Icons.admin_panel_settings_rounded,
               label: 'Import Paint Data',
               isSecondary: true,
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onLongPress: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const DiagnosticsScreen()),
+                );
+              },
+              child: Text(
+                'Version $_appVersion',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: _forestGreen.withValues(alpha: 0.6)),
+              ),
             ),
           ],
         ),

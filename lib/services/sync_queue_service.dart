@@ -71,4 +71,9 @@ class SyncQueueService {
       }
     }
   }
+
+  Future<List<Map<String, dynamic>>> listPending() async {
+    await _ensureBox();
+    return _box!.values.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
 }

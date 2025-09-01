@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/visualizer_mask.dart';
+import 'diagnostics_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sync_queue_service.dart';
 
@@ -212,6 +213,7 @@ class VisualizerService {
 
   Future<VisualizerJob> renderHq(String imageUrl, List<String> paletteColorIds,
       {String? lightingProfile, List<VisualizerMask>? masks}) async {
+    DiagnosticsService.instance.logBreadcrumb('viz_hq_requested');
     final callable = _functions.httpsCallable('renderHq');
     final resp = await callable.call({
       'imageUrl': imageUrl,
@@ -228,7 +230,12 @@ class VisualizerService {
     final callable = _functions.httpsCallable('getJob');
     while (true) {
       final resp = await callable.call({'jobId': jobId});
-      yield VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+      final job =
+          VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+      if (job.status == 'complete') {
+        DiagnosticsService.instance.logBreadcrumb('viz_hq_completed');
+      }
+      yield job;
       await Future.delayed(const Duration(seconds: 2));
     }
   }

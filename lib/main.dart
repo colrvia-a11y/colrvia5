@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:color_canvas/screens/compare_screen.dart';
 // REGION: CODEX-ADD compare-colors-import
 import 'package:color_canvas/screens/compare_colors_screen.dart';
@@ -26,17 +27,20 @@ import 'services/feature_flags.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'services/sync_queue_service.dart';
 import 'services/notifications_service.dart';
+import 'services/deep_link_service.dart';
 
 // Global Firebase state
 bool isFirebaseInitialized = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  Debug.info('App', 'main', 'Flutter bindings initialized');
+  await runZonedGuarded(() async {
+    Debug.info('App', 'main', 'Flutter bindings initialized');
 
-  // Initialize Firebase with platform-specific options
-  try {
+    // Initialize Firebase with platform-specific options
+    try {
     Debug.info('App', 'main', 'Starting Firebase initialization');
     
     // Check if Firebase is already initialized
@@ -50,26 +54,31 @@ void main() async {
     }
     Debug.info('App', 'main', 'Firebase project: \'${Firebase.app().options.projectId}\'');
     
-    // Initialize Firebase App Check for security
-    // Production reCAPTCHA site key for ColorCanvas app
-    const String recaptchaSiteKey = '6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4'; // PRODUCTION KEY
-    
-    await FirebaseAppCheck.instance.activate(
-      // For web: Using production reCAPTCHA v3 site key
-      webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
-      
-      // For Android: Use debug provider for development, Play Integrity for production
-      androidProvider: kDebugMode 
-          ? AndroidProvider.debug 
-          : AndroidProvider.playIntegrity,
-      
-      // For iOS: Use debug provider for development, DeviceCheck for production  
-      appleProvider: kDebugMode 
-          ? AppleProvider.debug 
-          : AppleProvider.deviceCheck,
-    );
-    
-    Debug.info('App', 'main', 'Firebase App Check activated with PRODUCTION reCAPTCHA key');
+    // REGION: app-check-setup
+    const bool enableAppCheck =
+        bool.fromEnvironment('ENABLE_APPCHECK', defaultValue: true);
+    if (enableAppCheck) {
+      // Production reCAPTCHA site key for ColorCanvas app
+      const String recaptchaSiteKey =
+          '6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4'; // PRODUCTION KEY
+
+      await FirebaseAppCheck.instance.activate(
+        // For web: Using production reCAPTCHA v3 site key
+        webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
+
+        // For Android: Use debug provider for development, Play Integrity for production
+        androidProvider:
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+
+        // For iOS: Use debug provider for development, DeviceCheck for production
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      );
+
+      Debug.info('App', 'main',
+          'Firebase App Check activated with PRODUCTION reCAPTCHA key');
+    }
+    // END REGION: app-check-setup
     
     // Initialize the Gemini Developer API backend service
     // Create a `GenerativeModel` instance with a model that supports your use case
@@ -98,9 +107,13 @@ void main() async {
   });
 
   await NotificationsService.instance.init();
+  await DeepLinkService.instance.init();
 
-  Debug.info('App', 'main', 'Running app');
-  runApp(const MyApp());
+    Debug.info('App', 'main', 'Running app');
+    runApp(const MyApp());
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
 }
 
 class MyApp extends StatelessWidget {
