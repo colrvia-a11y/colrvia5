@@ -17,6 +17,9 @@ import 'package:color_canvas/models/color_strip_history.dart';
 // REGION: CODEX-ADD analytics-service-import
 import 'package:color_canvas/services/analytics_service.dart';
 // END REGION: CODEX-ADD analytics-service-import
+import 'package:color_canvas/utils/palette_transforms.dart' as transforms;
+import 'package:color_canvas/utils/lab.dart';
+import 'package:color_canvas/services/project_service.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -60,6 +63,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
   List<bool> _lockedStates = [];
   List<Paint> _availablePaints = [];
   List<Brand> _availableBrands = [];
+  final Map<String, Paint> _paintById = {};
   Set<String> _selectedBrandIds = {};
   HarmonyMode _currentMode = HarmonyMode.neutral;
   bool _isLoading = true;
@@ -283,7 +287,12 @@ class _RollerScreenState extends RollerScreenStatePublic {
     }
     
     Debug.info('RollerScreen', '_loadPaints', 'Final loaded: ${paints.length} paints, ${brands.length} brands');
-    
+
+    _paintById.clear();
+    for (final p in paints) {
+      _paintById[p.id] = p;
+    }
+
     setState(() {
       _availablePaints = paints;
       _availableBrands = brands;
@@ -1001,6 +1010,80 @@ class _RollerScreenState extends RollerScreenStatePublic {
       _ensurePage(i + 1);
     }
   }
+
+  void _applyVariant(String kind) {
+    final ids = _currentPalette.map((p) => p.id).toList();
+    if (ids.isEmpty) return;
+
+    Lab labOf(String id) {
+      final p = _paintById[id];
+      if (p == null) return const Lab(0, 0, 0);
+      return Lab(p.lab[0], p.lab[1], p.lab[2]);
+    }
+
+    String? nearestId(Lab lab) {
+      final paints = _getFilteredPaints();
+      final nearest =
+          ColorUtils.nearestByDeltaE([lab.l, lab.a, lab.b], paints);
+      return nearest?.id;
+    }
+
+    List<String> newIds;
+    switch (kind) {
+      case 'brighter':
+        newIds = transforms.brighter(ids, labOf, nearestId);
+        break;
+      case 'moodier':
+        newIds = transforms.moodier(ids, labOf, nearestId);
+        break;
+      case 'warmer':
+        newIds = transforms.warmer(ids, labOf, nearestId);
+        break;
+      case 'cooler':
+        newIds = transforms.cooler(ids, labOf, nearestId);
+        break;
+      case 'softer':
+      default:
+        newIds = transforms.softer(ids, labOf, nearestId);
+        break;
+    }
+
+    for (int i = 0; i < newIds.length; i++) {
+      if (i < _lockedStates.length && _lockedStates[i]) {
+        newIds[i] = ids[i];
+      } else if (!_paintById.containsKey(newIds[i])) {
+        newIds[i] = ids[i];
+      }
+    }
+
+    final newPalette = <Paint>[];
+    for (int i = 0; i < newIds.length; i++) {
+      final id = newIds[i];
+      newPalette.add(_paintById[id] ?? _currentPalette[i]);
+    }
+
+    _ensureStripHistories();
+    for (int i = 0; i < newPalette.length; i++) {
+      final isLocked = i < _lockedStates.length ? _lockedStates[i] : false;
+      if (!isLocked) {
+        _stripHistories[i].addPaint(newPalette[i]);
+      }
+    }
+
+    _safeSetState(() {
+      _currentPalette = newPalette;
+      if (_visiblePage < _pages.length) {
+        _pages[_visiblePage] = List<Paint>.from(_currentPalette);
+      }
+    });
+    _markPaletteUpdated();
+
+    AnalyticsService.instance
+        .logEvent('palette_variant_applied', {'kind': kind, 'size': newPalette.length});
+    if (widget.projectId != null) {
+      ProjectService.addPaletteHistory(widget.projectId!, kind, newIds);
+    }
+  }
   
   void _shareCurrentPalette() {
     // Minimal placeholder to clear analyzer warning; hook up Share later
@@ -1013,64 +1096,103 @@ class _RollerScreenState extends RollerScreenStatePublic {
     final paletteIds = _currentPalette.map((p) => p.id).toList();
     final hasPalette = paletteIds.isNotEmpty;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: hasPalette && widget.projectId != null
-                    ? () {
-                        Navigator.pushNamed(context, '/colorPlan', arguments: {
-                          'projectId': widget.projectId!,
-                          'paletteColorIds': paletteIds,
-                        });
-                        AnalyticsService.instance.logEvent(
-                          'cta_plan_clicked',
-                          {'source': 'roller', 'project_id': widget.projectId},
-                        );
-                      }
-                    : null,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Make a Color Plan'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasPalette)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  ActionChip(
+                    label: const Text('Softer'),
+                    onPressed: () => _applyVariant('softer'),
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text('Brighter'),
+                    onPressed: () => _applyVariant('brighter'),
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text('Moodier'),
+                    onPressed: () => _applyVariant('moodier'),
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text('Warmer'),
+                    onPressed: () => _applyVariant('warmer'),
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text('Cooler'),
+                    onPressed: () => _applyVariant('cooler'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/visualizer', arguments: {
-                    'projectId': widget.projectId,
-                    'paletteColorIds': paletteIds,
-                  });
-                  AnalyticsService.instance.logEvent(
-                    'cta_visualize_clicked',
-                    {'source': 'roller', 'project_id': widget.projectId},
-                  );
-                },
-                icon: const Icon(Icons.image),
-                label: const Text('Visualize'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: hasPalette
-                  ? () {
-                      Navigator.pushNamed(context, '/compareColors', arguments: {
+          if (hasPalette) const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: hasPalette && widget.projectId != null
+                        ? () {
+                            Navigator.pushNamed(context, '/colorPlan', arguments: {
+                              'projectId': widget.projectId!,
+                              'paletteColorIds': paletteIds,
+                            });
+                            AnalyticsService.instance.logEvent(
+                              'cta_plan_clicked',
+                              {'source': 'roller', 'project_id': widget.projectId},
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.auto_awesome),
+                    label: const Text('Make a Color Plan'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/visualizer', arguments: {
                         'projectId': widget.projectId,
                         'paletteColorIds': paletteIds,
                       });
                       AnalyticsService.instance.logEvent(
-                        'cta_compare_clicked',
+                        'cta_visualize_clicked',
                         {'source': 'roller', 'project_id': widget.projectId},
                       );
-                    }
-                  : null,
-              icon: const Icon(Icons.compare),
-              tooltip: 'Compare',
+                    },
+                    icon: const Icon(Icons.image),
+                    label: const Text('Visualize'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: hasPalette
+                      ? () {
+                          Navigator.pushNamed(context, '/compareColors', arguments: {
+                            'projectId': widget.projectId,
+                            'paletteColorIds': paletteIds,
+                          });
+                          AnalyticsService.instance.logEvent(
+                            'cta_compare_clicked',
+                            {'source': 'roller', 'project_id': widget.projectId},
+                          );
+                        }
+                      : null,
+                  icon: const Icon(Icons.compare),
+                  tooltip: 'Compare',
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

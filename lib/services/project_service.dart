@@ -121,4 +121,22 @@ class ProjectService {
     if (!snap.exists) return null;
     return ProjectDoc.fromSnap(snap);
   }
+
+  static Future<void> addPaletteHistory(
+      String projectId, String kind, List<String> palette) async {
+    final uid = _uid;
+    if (uid == null) {
+      throw Exception('Sign in required to update projects');
+    }
+
+    try {
+      await _col.doc(projectId).collection('paletteHistory').add({
+        'kind': kind,
+        'palette': palette,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('ProjectService: Failed to append palette history: $e');
+    }
+  }
 }
