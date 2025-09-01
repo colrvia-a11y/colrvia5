@@ -23,6 +23,9 @@ import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/widgets/via_overlay.dart';
 import 'package:color_canvas/screens/color_plan_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
+import 'package:color_canvas/widgets/fixed_elements_sheet.dart';
+import 'package:color_canvas/models/fixed_elements.dart';
+import 'package:color_canvas/services/fixed_element_service.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -73,6 +76,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
   bool _diversifyBrands = true;
   int _paletteSize = 5;
   bool _isRolling = false;
+  List<FixedElement> _fixedElements = [];
   
   // Enhanced color history tracking for each strip
   final List<ColorStripHistory> _stripHistories = [];
@@ -177,9 +181,17 @@ class _RollerScreenState extends RollerScreenStatePublic {
     
     Debug.info('RollerScreen', 'initState', 'Component initializing');
     Debug.info('RollerScreen', 'initState', 'About to load paints');
-    
+
     // Load paints from database with fallback to sample data
     _loadPaints();
+
+    if (widget.projectId != null) {
+      FixedElementService().listElements(widget.projectId!).then((els) {
+        if (mounted) {
+          setState(() => _fixedElements = els);
+        }
+      });
+    }
   }
   
 
@@ -323,6 +335,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
       'modeIndex': _currentMode.index,
       'diversify': _diversifyBrands,
       'slotLrvHints': slotLrvHints,
+      'fixedUndertones': _fixedElements.map((e) => e.undertone).toList(),
     };
 
     final resultMaps = await compute(rollPaletteInIsolate, args);
@@ -361,6 +374,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
           anchors: anchors,
           mode: _currentMode,
           diversifyBrands: _diversifyBrands,
+          fixedUndertones: _fixedElements.map((e) => e.undertone).toList(),
         );
       }
       
@@ -519,6 +533,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
         anchors: anchors,
         mode: _currentMode,
         diversifyBrands: _diversifyBrands,
+        fixedUndertones: _fixedElements.map((e) => e.undertone).toList(),
       );
       
       final adjusted = _applyAdjustments(rolled);
@@ -571,6 +586,21 @@ class _RollerScreenState extends RollerScreenStatePublic {
         },
       ),
     );
+  }
+
+  Future<void> _openFixedElements() async {
+    if (widget.projectId == null) return;
+    final updated = await showModalBottomSheet<List<FixedElement>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FixedElementsSheet(
+        projectId: widget.projectId!,
+        elements: _fixedElements,
+      ),
+    );
+    if (updated != null) {
+      setState(() => _fixedElements = updated);
+    }
   }
 
   void _removeStripe(int index) {
@@ -1219,6 +1249,12 @@ class _RollerScreenState extends RollerScreenStatePublic {
                       : null,
                   icon: const Icon(Icons.compare),
                   tooltip: 'Compare',
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: widget.projectId == null ? null : _openFixedElements,
+                  icon: const Icon(Icons.layers_outlined),
+                  tooltip: 'Fixed Elements',
                 ),
               ],
             ),
