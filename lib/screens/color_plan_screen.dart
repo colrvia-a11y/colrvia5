@@ -28,6 +28,7 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
   ColorPlan? _plan;
   bool _loading = false;
   String? _error;
+  bool _showRetry = false;
 
   @override
   void initState() {
@@ -61,7 +62,10 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
         'has_playbook': plan.roomPlaybook.isNotEmpty,
       });
 
-      setState(() => _plan = plan);
+      setState(() {
+        _plan = plan;
+        _showRetry = plan.isFallback;
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -76,11 +80,28 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
   if (_plan == null) return Scaffold(appBar: AppBar(title: const Text('Color Plan')), body: const Center(child: Text('No plan generated')));
 
     final plan = _plan!;
+    final banner = _showRetry
+        ? MaterialBanner(
+            content: const Text('Showing quick plan. Tap retry for full plan.'),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    setState(() => _showRetry = false);
+                    _generate();
+                  },
+                  child: const Text('Retry')),
+            ],
+          )
+        : null;
     return Scaffold(
       appBar: AppBar(title: Text(plan.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
+          if (banner != null) banner,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
           Text(plan.vibe, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           _Section(
@@ -122,7 +143,11 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
             title: 'Room-by-Room Playbook',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: plan.roomPlaybook.map((r) => Text('${r.roomType}: ${r.notes}')).toList(),
+              children:
+                  plan.roomPlaybook.map((r) => Text('${r.roomType}: ${r.notes}')).toList(),
+            ),
+          ),
+        ],
             ),
           ),
         ],

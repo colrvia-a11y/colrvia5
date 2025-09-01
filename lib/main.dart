@@ -22,6 +22,7 @@ import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/services/network_utils.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'package:color_canvas/models/user_palette.dart';
+import 'services/feature_flags.dart';
 
 // Global Firebase state
 bool isFirebaseInitialized = false;
@@ -84,6 +85,8 @@ void main() async {
   // Initialize NetworkGuard and clear session overrides
   NetworkGuard.clearSessionOverrides();
   Debug.info('App', 'main', 'NetworkGuard initialized');
+
+  await FeatureFlags.instance.init();
 
   Debug.info('App', 'main', 'Running app');
   runApp(const MyApp());
