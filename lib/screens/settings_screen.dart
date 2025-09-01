@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   int _paintCount = 0;
   int _brandCount = 0;
   String _appVersion = '';
-  // int _rewardCount = 0;
+  final int _rewardCount = 0;
 
   @override
   void initState() {
