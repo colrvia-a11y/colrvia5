@@ -75,6 +75,7 @@ class VisualizerService {
     required List<String> surfaces,
     required int variants,
     String? storyId,
+    String? lightingProfile,
   }) async {
   final callable = _firebaseFunctionsShimInstance.httpsCallable('generateFromPhoto');
     final resp = await callable.call({
@@ -83,6 +84,7 @@ class VisualizerService {
       'surfaces': surfaces,
       'variants': variants,
       'storyId': storyId,
+      if (lightingProfile != null) 'lightingProfile': lightingProfile,
     });
     return List<Map<String, dynamic>>.from(resp.data['results'] as List);
   }
@@ -91,25 +93,37 @@ class VisualizerService {
     required String roomType,
     required String style,
     required int variants,
+    String? lightingProfile,
   }) async {
   final callable = _firebaseFunctionsShimInstance.httpsCallable('generateMockup');
     final resp = await callable.call({
       'roomType': roomType,
       'style': style,
       'variants': variants,
+      if (lightingProfile != null) 'lightingProfile': lightingProfile,
     });
     return List<Map<String, dynamic>>.from(resp.data['results'] as List);
   }
 
-  Future<VisualizerJob> renderFast(String imageUrl, List<String> paletteColorIds) async {
+  Future<VisualizerJob> renderFast(String imageUrl, List<String> paletteColorIds,
+      {String? lightingProfile}) async {
     final callable = _functions.httpsCallable('renderFast');
-    final resp = await callable.call({'imageUrl': imageUrl, 'palette': paletteColorIds});
+    final resp = await callable.call({
+      'imageUrl': imageUrl,
+      'palette': paletteColorIds,
+      if (lightingProfile != null) 'lightingProfile': lightingProfile,
+    });
     return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }
 
-  Future<VisualizerJob> renderHq(String imageUrl, List<String> paletteColorIds) async {
+  Future<VisualizerJob> renderHq(String imageUrl, List<String> paletteColorIds,
+      {String? lightingProfile}) async {
     final callable = _functions.httpsCallable('renderHq');
-    final resp = await callable.call({'imageUrl': imageUrl, 'palette': paletteColorIds});
+    final resp = await callable.call({
+      'imageUrl': imageUrl,
+      'palette': paletteColorIds,
+      if (lightingProfile != null) 'lightingProfile': lightingProfile,
+    });
     return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }
 

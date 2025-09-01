@@ -43,6 +43,7 @@ exports.generateColorPlanV2 = functions.https.onCall(async (data, context) => {
     roomPlaybook: [
       { roomType: 'living', placements: placementMap, notes: 'Adjust accents as needed.' },
     ],
+    debugLightingProfile: ctx?.lightingProfile || null,
   };
 });
 // END REGION: CODEX-ADD color-plan-fn
@@ -172,6 +173,7 @@ exports.generateColorPlanV1 = functions.https.onCall(async (data, context) => {
     doDont,
     sampleSequence,
     roomPlaybook,
+    debugLightingProfile: ctx?.lightingProfile || null,
   };
 });
 

@@ -17,6 +17,9 @@ import '../models/color_story.dart';
 import '../data/sample_rooms.dart';
 import '../widgets/via_overlay.dart';
 import 'color_plan_screen.dart';
+import '../models/lighting_profile.dart';
+import '../services/lighting_service.dart';
+import 'photo_import_sheet.dart';
 
 enum CompareMode { none, grid, split, slider }
 
@@ -64,6 +67,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   String? _previewUrl;
   String? _hqStatus;
 
+  LightingProfile _lightingProfile = LightingProfile.mixed;
+
   // Output
   bool _busy = false;
   List<Map<String, dynamic>> _results = []; // {hex, downloadUrl, filePath}
@@ -81,6 +86,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     // Track funnel analytics if opened with projectId
     if (widget.projectId != null) {
       AnalyticsService.instance.logVisualizerOpenedFromStory(widget.projectId!);
+    }
+
+    if (widget.projectId != null) {
+      LightingService().getProfile(widget.projectId!).then((p) {
+        if (mounted) {
+          setState(() => _lightingProfile = p);
+        }
+      });
     }
     
     // Seed from palette if present
@@ -123,6 +136,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _previewUrl = null;
       _results = [];
     });
+    if (widget.projectId != null) {
+      final selected = await showLightingProfilePicker(
+        context,
+        current: _lightingProfile,
+      );
+      if (selected != null) {
+        setState(() => _lightingProfile = selected);
+        await LightingService().setProfile(widget.projectId!, selected);
+      }
+    }
   }
 
   Future<void> _loadSample(String url) async {
@@ -164,7 +187,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       return;
     }
     AnalyticsService.instance.logEvent('render_fast_requested');
-    final job = await _viz.renderFast('sample', _variants);
+    final job = await _viz.renderFast('sample', _variants,
+        lightingProfile: _lightingProfile.name);
     setState(() {
       _previewUrl = job.previewUrl;
       _results = [
@@ -186,7 +210,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     }
     AnalyticsService.instance.logEvent('render_hq_requested');
     final start = DateTime.now();
-    final job = await _viz.renderHq('sample', _variants);
+    final job = await _viz.renderHq('sample', _variants,
+        lightingProfile: _lightingProfile.name);
     setState(() {
       _hqStatus = job.status;
     });
@@ -244,12 +269,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           surfaces: _surfaces,
           variants: _variants.length,
           storyId: widget.storyId,
+          lightingProfile: _lightingProfile.name,
         );
       } else {
         out = await VisualizerService.generateMockup(
           roomType: _roomType,
           style: _style,
           variants: _variants.length,
+          lightingProfile: _lightingProfile.name,
         );
       }
 
@@ -372,6 +399,34 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 ),
               ),
             ),
+
+          // Lighting profile quick control
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 8,
+            child: _Frosted(
+              child: InkWell(
+                onTap: widget.projectId == null
+                    ? null
+                    : () async {
+                        final selected = await showLightingProfilePicker(
+                          context,
+                          current: _lightingProfile,
+                        );
+                        if (selected != null && widget.projectId != null) {
+                          setState(() => _lightingProfile = selected);
+                          await LightingService()
+                              .setProfile(widget.projectId!, selected);
+                        }
+                      },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text('Light: ${_lightingProfile.label}'),
+                ),
+              ),
+            ),
+          ),
 
           // Busy overlay
           if (_busy)
