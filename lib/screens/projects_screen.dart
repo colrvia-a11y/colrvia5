@@ -15,6 +15,10 @@ import 'color_plan_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/main.dart' show isFirebaseInitialized;
+// REGION: CODEX-ADD user-prefs-import
+import 'package:color_canvas/services/user_prefs_service.dart';
+import 'package:color_canvas/services/analytics_service.dart';
+// END REGION: CODEX-ADD user-prefs-import
 
 enum LibraryFilter { all, palettes, stories }
 
@@ -28,16 +32,21 @@ class ProjectsScreen extends StatefulWidget {
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
   static final _logger = Logger('ProjectsScreen');
-  
+
   bool _isLoading = true;
   bool _hasPermissionError = false;
   late LibraryFilter _filter;
+  String? _lastProjectId;
+  String? _lastScreen;
+  bool _bannerVisible = false;
+  bool _bannerLogged = false;
 
   @override
   void initState() {
     super.initState();
     _filter = widget.initialFilter;
     _loadData();
+    _loadPrefs();
   }
 
   Future<void> _loadData() async {
@@ -135,6 +144,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
+  Future<void> _loadPrefs() async {
+    final prefs = await UserPrefsService.fetch();
+    if (!mounted) return;
+    setState(() {
+      _lastProjectId = prefs.lastOpenedProjectId;
+      _lastScreen = prefs.lastVisitedScreen;
+      _bannerVisible =
+          _lastProjectId != null && _lastScreen != null && _lastProjectId!.isNotEmpty;
+    });
+    if (_bannerVisible && !_bannerLogged) {
+      await AnalyticsService.instance.resumeLastShown(_lastProjectId!);
+      _bannerLogged = true;
+    }
+  }
+
   Widget _buildFilterChips(BuildContext context) {
     Chip chip(LibraryFilter f, String label) => Chip(
           label: m.Text(label),
@@ -203,6 +227,60 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
+  // REGION: CODEX-ADD resume-banner
+  Widget _resumeBanner() {
+    if (!_bannerVisible || _lastProjectId == null || _lastScreen == null) {
+      return const m.SizedBox.shrink();
+    }
+    final labelMap = {
+      'roller': 'Roller',
+      'plan': 'Plan',
+      'visualizer': 'Visualizer',
+    };
+    final label = labelMap[_lastScreen] ?? _lastScreen!;
+    return Dismissible(
+      key: const Key('resume_banner'),
+      onDismissed: (_) => setState(() => _bannerVisible = false),
+      child: Container(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            m.Text('Resume last: $label'),
+            TextButton(
+              onPressed: _handleResume,
+              child: const m.Text('Resume'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleResume() {
+    final pid = _lastProjectId;
+    final screen = _lastScreen;
+    if (pid == null || screen == null) return;
+    AnalyticsService.instance.resumeLastClicked(pid, screen);
+    Widget? page;
+    switch (screen) {
+      case 'roller':
+        page = RollerScreen(projectId: pid);
+        break;
+      case 'plan':
+        page = ColorPlanScreen(projectId: pid);
+        break;
+      case 'visualizer':
+        page = VisualizerScreen(projectId: pid);
+        break;
+    }
+    if (page != null) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    }
+  }
+  // END REGION: CODEX-ADD resume-banner
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseService.currentUser;
@@ -247,6 +325,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           : SafeArea(
               child: CustomScrollView(
                 slivers: [
+                  SliverToBoxAdapter(child: _resumeBanner()),
                   SliverToBoxAdapter(
                       child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),

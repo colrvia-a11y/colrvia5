@@ -17,6 +17,9 @@ import 'package:color_canvas/models/color_strip_history.dart';
 // REGION: CODEX-ADD analytics-service-import
 import 'package:color_canvas/services/analytics_service.dart';
 // END REGION: CODEX-ADD analytics-service-import
+// REGION: CODEX-ADD user-prefs-import
+import 'package:color_canvas/services/user_prefs_service.dart';
+// END REGION: CODEX-ADD user-prefs-import
 import 'package:color_canvas/utils/palette_transforms.dart' as transforms;
 import 'package:color_canvas/utils/lab.dart';
 import 'package:color_canvas/services/project_service.dart';
@@ -186,6 +189,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
     _loadPaints();
 
     if (widget.projectId != null) {
+      UserPrefsService.setLastProject(widget.projectId!, 'roller');
       FixedElementService().listElements(widget.projectId!).then((els) {
         if (mounted) {
           setState(() => _fixedElements = els);

@@ -704,6 +704,21 @@ class AnalyticsService {
       'project_id': projectId,
     });
   }
+
+  // REGION: CODEX-ADD resume-last analytics
+  Future<void> resumeLastShown(String projectId) async {
+    await _logEvent('resume_last_shown', {
+      'project_id': projectId,
+    });
+  }
+
+  Future<void> resumeLastClicked(String projectId, String screen) async {
+    await _logEvent('resume_last_clicked', {
+      'project_id': projectId,
+      'screen': screen,
+    });
+  }
+  // END REGION: CODEX-ADD resume-last analytics
 }
 
 // Extension methods for easy access
