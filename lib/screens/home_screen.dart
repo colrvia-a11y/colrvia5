@@ -12,9 +12,12 @@ import 'settings_screen.dart';
 import 'roller_screen.dart';
 import 'package:color_canvas/widgets/via_overlay.dart';
 
-/// Home scaffold with 4 bottom tabs: Create, Projects, Search, Account.
+/// Index in the bottom nav where the Via bubble lives (center slot).
+const int kViaNavIndex = 2;
+
+/// Home scaffold with bottom tabs: Create, Projects, (Via), Search, Account.
 /// Custom circular, icons-only bottom navigation with transparent background.
-/// SINGLE access point: new floating ViaBubble (replaces old FAB design).
+/// Via access moved into the center of the bottom nav (no floating bubble).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -34,8 +37,11 @@ class HomeScreenState extends State<HomeScreen> {
 
   int _currentIndex = 0;
 
+  /// Screens map to non-Via nav indices:
+  /// 0: Create, 1: Projects, 3: Search, 4: Account
+  /// (Index 2 is Via; it opens an overlay and never becomes the active tab.)
   final _screens = <Widget>[
-    const CreateScreen(),
+    const CreateHubScreen(),
     const ProjectsScreen(),
     const SearchScreen(),
     const SettingsScreen(),
@@ -52,7 +58,14 @@ class HomeScreenState extends State<HomeScreen> {
     setState(() => _currentIndex = prefs.firstRunCompleted ? 1 : 0);
   }
 
-  void _onItemTapped(int index) => setState(() => _currentIndex = index);
+  void _onItemTapped(int index) {
+    if (index == kViaNavIndex) {
+      HapticFeedback.selectionClick();
+      _openVia(contextLabel: 'Home');
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
 
   void _openVia({String contextLabel = 'ViaBubble'}) {
     showDialog(
@@ -62,30 +75,25 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  int get _bodyIndex => _currentIndex > kViaNavIndex ? _currentIndex - 1 : _currentIndex;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true, // allows content behind the transparent nav
-      body: _screens[_currentIndex],
+      body: _screens[_bodyIndex],
       bottomNavigationBar: _CircularIconNavBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      // NEW persistent access bubble for Via (single source of truth)
-      floatingActionButton: ViaBubble(
-        tooltip: 'Ask Via',
-        onTap: () {
-          HapticFeedback.selectionClick();
-          _openVia(contextLabel: 'Home');
-        },
-      ),
+      // Floating Via bubble removed; Via is now in the nav bar center.
     );
   }
 }
 
 /// Icons-only circular nav with semi-transparent dark circles.
 /// Selected item shows thin border and icon in #f2b897 while the circle bg stays the same.
+/// The center (index 2) is a tappable Via bubble that opens the Via overlay.
 class _CircularIconNavBar extends StatelessWidget {
   const _CircularIconNavBar({
     required this.currentIndex,
@@ -96,6 +104,9 @@ class _CircularIconNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   static const _highlight = Color(0xFFF2B897);
+
+  // Base icons for non-Via slots, in order without Via:
+  // 0: Create, 1: Projects, 2: Search, 3: Account
   static const _icons = <IconData>[
     Icons.add_circle_outline, // Create
     Icons.folder,             // Projects
@@ -115,10 +126,18 @@ class _CircularIconNavBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(_icons.length, (index) {
+          children: List.generate(5, (index) {
+            // Center slot = Via bubble
+            if (index == kViaNavIndex) {
+              return _ViaNavBubble(onPressed: () => onTap(index));
+            }
+
+            // Map visual index to _icons index (skip Via slot)
+            final iconIndex = index > kViaNavIndex ? index - 1 : index;
             final selected = currentIndex == index;
+
             return _NavCircleButton(
-              icon: _icons[index],
+              icon: _icons[iconIndex],
               selected: selected,
               onPressed: () => onTap(index),
               circleColor: circleBg,
@@ -192,7 +211,30 @@ class _NavCircleButton extends StatelessWidget {
   }
 }
 
-/// ---------------------- New Via access bubble ----------------------
+/// Center Via bubble inside the nav. Uses the same bubble design, sized to fit.
+class _ViaNavBubble extends StatelessWidget {
+  const _ViaNavBubble({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    const double diameter = 56;
+    return SizedBox(
+      width: diameter,
+      height: diameter,
+      child: Center(
+        child: ViaBubble(
+          size: diameter,
+          tooltip: 'Ask Via',
+          onTap: onPressed,
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------- Via access bubble (unchanged design) ----------------------
 /// Frosted, glowing, feathered bubble that feels integrated with the UI.
 /// Tap → opens ViaOverlay. Keep ViaOverlay free of any access bubble UI.
 class ViaBubble extends StatefulWidget {

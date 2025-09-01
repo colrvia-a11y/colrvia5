@@ -6,7 +6,7 @@ import '../services/via_service.dart';
 import '../services/analytics_service.dart';
 
 /// Premium floating assistant overlay for "Via".
-/// Now *overlay-only*: no access bubble here. The access bubble lives in HomeScreen.
+/// Overlay-only: access bubble lives in HomeScreen.
 /// States: peek card ↔ expanded chat (no collapsed bubble state).
 class ViaOverlay extends StatefulWidget {
   final String contextLabel;
@@ -64,6 +64,15 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
   final List<_ChatBubble> _messages = <_ChatBubble>[];
 
   static const _brandPeach = Color(0xFFF2B897);
+
+  // --- Layout tuning ---------------------------------------------------------
+  // Reserve space so the overlay panel does NOT cover the bottom circular nav.
+  static const double _kBottomNavGuard = 86; // ~56 button + paddings + buffer
+  static const double _kSideGutter = 14;
+  static const double _kPanelRadius = 28;
+
+  // Stronger dim behind the panel (adds on top of showDialog barrierColor).
+  static const double _kBackdropOpacity = 0.38;
 
   @override
   void initState() {
@@ -230,14 +239,19 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
     final isExpanded = _stage == _OverlayStage.expanded;
 
     // Heights for peek/expanded relative to screen.
-    final double peekHeight = media.height * 0.46;
+    // Peek is a touch bigger for breathing room (was 0.46).
+    final double peekHeight = media.height * 0.54;
     final double expandedHeight = media.height * 0.86;
+
+    // When keyboard is up, let the panel sit near the bottom (14).
+    // Otherwise, hold it above the custom bottom nav by reserving extra space.
+    final double bottomOffset = viewInsets > 0 ? _kSideGutter : (_kSideGutter + _kBottomNavGuard);
 
     return Material(
       type: MaterialType.transparency,
       child: Stack(
         children: [
-          // Interactive backdrop: tap outside to collapse -> peek, or close if already peek.
+          // Interactive backdrop with a stronger scrim to fix "too transparent".
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -248,15 +262,19 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
                   _closeOverlay();
                 }
               },
-              child: const SizedBox.expand(),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                color: Colors.black.withOpacity(_kBackdropOpacity),
+              ),
             ),
           ),
 
           // Feathered glass overlay (peek/expanded)
           Positioned(
-            left: 14,
-            right: 14,
-            bottom: 14,
+            left: _kSideGutter,
+            right: _kSideGutter,
+            bottom: bottomOffset,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 240),
               curve: Curves.easeOutCubic,
@@ -264,13 +282,14 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
               child: _FeatheredGlass(
                 blurSigma: 18,
                 feather: 38,
+                // Slightly more opaque interior so content pops against the dim.
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xB3FFFFFF), // ~70% white
-                    Color(0x7FFFFFFF), // ~50% white
-                    Color(0x4DFFFFFF), // ~30% white
+                    Color(0xCCFFFFFF), // ~80% white
+                    Color(0xA6FFFFFF), // ~65% white
+                    Color(0x80FFFFFF), // ~50% white
                   ],
                 ),
                 child: SafeArea(
@@ -457,7 +476,6 @@ class _ChatList extends StatelessWidget {
         final m = messages[i];
         final align = m.fromUser ? Alignment.centerRight : Alignment.centerLeft;
         final bg = m.fromUser ? const Color(0xFFEFE8E1) : Colors.white.withAlpha(209);
-        final txt = Colors.black87;
 
         return Align(
           alignment: align,
@@ -599,7 +617,7 @@ class _FeatheredGlass extends StatelessWidget {
       },
       child: ClipRRect(
         // Mild rounding—actual edge softness comes from the mask.
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(_ViaOverlayState._kPanelRadius),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -615,7 +633,7 @@ class _FeatheredGlass extends StatelessWidget {
             // Subtle inner highlight + outer ambient glow
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(_ViaOverlayState._kPanelRadius),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x1A000000),
