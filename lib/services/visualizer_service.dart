@@ -1,5 +1,10 @@
 // lib/services/visualizer_service.dart
 import 'dart:async';
+import 'dart:ui';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/visualizer_mask.dart';
 
 // The project sometimes doesn't include `firebase_functions` in pubspec for
 // certain build environments. To keep the analyzer and builds working when
@@ -59,6 +64,19 @@ class VisualizerService {
   // Includes support for fast preview and asynchronous HQ jobs.
   final _FirebaseFunctionsShim _functions = _firebaseFunctionsShimInstance;
 
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> _maskCollection(
+          String uid, String projectId, String photoId) =>
+      _db
+          .collection('users')
+          .doc(uid)
+          .collection('projects')
+          .doc(projectId)
+          .collection('photos')
+          .doc(photoId)
+          .collection('masks');
+
   static Future<String> uploadInputBytes(String uid, String fileName, List<int> bytes) async {
   final callable = _firebaseFunctionsShimInstance.httpsCallable('uploadInputBytes');
     final resp = await callable.call({
@@ -105,24 +123,61 @@ class VisualizerService {
     return List<Map<String, dynamic>>.from(resp.data['results'] as List);
   }
 
+  // Mask CRUD ---------------------------------------------------------------
+
+  Stream<List<VisualizerMask>> watchMasks(
+      String uid, String projectId, String photoId) {
+    return _maskCollection(uid, projectId, photoId).snapshots().map((snap) =>
+        snap.docs
+            .map((d) => VisualizerMask.fromJson({...d.data(), 'id': d.id}))
+            .toList());
+  }
+
+  Future<void> saveMask(String uid, String projectId, String photoId,
+      VisualizerMask mask) async {
+    await _maskCollection(uid, projectId, photoId)
+        .doc(mask.id)
+        .set(mask.toJson());
+  }
+
+  Future<void> deleteMask(
+          String uid, String projectId, String photoId, String maskId) async =>
+      _maskCollection(uid, projectId, photoId).doc(maskId).delete();
+
+  Future<Map<String, List<List<Offset>>>> maskAssist(String imageUrl) async {
+    final callable = _functions.httpsCallable('maskAssist');
+    final resp = await callable.call({'imageUrl': imageUrl});
+    final data = Map<String, dynamic>.from(resp.data as Map);
+    return data.map((k, v) => MapEntry(
+        k,
+        (v as List)
+            .map<List<Offset>>((poly) => (poly as List)
+                .map<Offset>((p) =>
+                    Offset((p['x'] as num).toDouble(), (p['y'] as num).toDouble()))
+                .toList())
+            .toList()));
+  }
+
   Future<VisualizerJob> renderFast(String imageUrl, List<String> paletteColorIds,
-      {String? lightingProfile}) async {
+      {String? lightingProfile, List<VisualizerMask>? masks}) async {
     final callable = _functions.httpsCallable('renderFast');
     final resp = await callable.call({
       'imageUrl': imageUrl,
       'palette': paletteColorIds,
       if (lightingProfile != null) 'lightingProfile': lightingProfile,
+      if (masks != null) 'masks': masks.map((m) => m.toJson()).toList(),
     });
     return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }
 
   Future<VisualizerJob> renderHq(String imageUrl, List<String> paletteColorIds,
-      {String? lightingProfile}) async {
+      {String? lightingProfile, List<VisualizerMask>? masks}) async {
     final callable = _functions.httpsCallable('renderHq');
     final resp = await callable.call({
       'imageUrl': imageUrl,
       'palette': paletteColorIds,
       if (lightingProfile != null) 'lightingProfile': lightingProfile,
+      if (masks != null) 'masks': masks.map((m) => m.toJson()).toList(),
     });
     return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
   }

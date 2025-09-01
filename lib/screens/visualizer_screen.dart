@@ -20,6 +20,7 @@ import 'color_plan_screen.dart';
 import '../models/lighting_profile.dart';
 import '../services/lighting_service.dart';
 import 'photo_import_sheet.dart';
+import '../models/visualizer_mask.dart';
 // REGION: CODEX-ADD user-prefs-import
 import '../services/user_prefs_service.dart';
 // END REGION: CODEX-ADD user-prefs-import
@@ -75,6 +76,14 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   String? _hqStatus;
 
   LightingProfile _lightingProfile = LightingProfile.mixed;
+
+  // Masking
+  bool _showMaskTools = false;
+  bool _eraseMode = false;
+  double _brushSize = 24;
+  final List<VisualizerMask> _masks = [];
+  final List<VisualizerMask> _undoStack = [];
+  final List<VisualizerMask> _redoStack = [];
 
   // Output
   bool _busy = false;
@@ -337,6 +346,22 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             child: _buildPreviewCanvas(theme),
           ),
 
+          Positioned(
+            top: 12,
+            left: 12,
+            child: IconButton(
+              icon: Icon(_showMaskTools ? Icons.close : Icons.brush),
+              onPressed: () =>
+                  setState(() => _showMaskTools = !_showMaskTools),
+            ),
+          ),
+          Positioned(
+            top: 56,
+            left: 12,
+            right: 12,
+            child: _buildMaskingToolbar(),
+          ),
+
           // Frosted control dock (Draggable bottom sheet feel)
           Align(
             alignment: Alignment.bottomCenter,
@@ -488,6 +513,90 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ? _buildResults()
           : _buildSourcePreview(theme),
     );
+  }
+
+  // REGION: CODEX-ADD viz-masking-toolbar
+  Widget _buildMaskingToolbar() {
+    if (!_showMaskTools) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(_eraseMode ? Icons.crop_square : Icons.brush),
+            onPressed: () => setState(() => _eraseMode = !_eraseMode),
+          ),
+          Slider(
+            value: _brushSize,
+            min: 4,
+            max: 100,
+            onChanged: (v) => setState(() => _brushSize = v),
+            divisions: 19,
+          ),
+          IconButton(
+            icon: const Icon(Icons.undo),
+            onPressed: _undoStack.isEmpty
+                ? null
+                : () {
+                    final last = _undoStack.removeLast();
+                    _redoStack.add(last);
+                    _masks.remove(last);
+                    AnalyticsService.instance.logEvent('mask_undo');
+                    setState(() {});
+                  },
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            onPressed: _redoStack.isEmpty
+                ? null
+                : () {
+                    final mask = _redoStack.removeLast();
+                    _masks.add(mask);
+                    _undoStack.add(mask);
+                    AnalyticsService.instance.logEvent('mask_redo');
+                    setState(() {});
+                  },
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high),
+            onPressed: _onMaskAssist,
+          ),
+        ],
+      ),
+    );
+  }
+  // END REGION: CODEX-ADD viz-masking-toolbar
+
+  Future<void> _onMaskAssist() async {
+    if (_previewUrl == null) return;
+    AnalyticsService.instance
+        .logEvent('mask_assist_requested', {'image': _previewUrl});
+    final polygons = await _viz.maskAssist(_previewUrl!);
+    polygons.forEach((surface, polys) {
+      final mask = VisualizerMask(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        surface: surface,
+        polygons: polys,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      _masks.add(mask);
+      _undoStack.add(mask);
+      AnalyticsService.instance
+          .logEvent('mask_created', {'surface': surface, 'points': polys.length});
+      // TODO: integrate real user/project/photo IDs
+      if (widget.projectId != null) {
+        _viz.saveMask('user', widget.projectId!, 'photo', mask);
+      }
+    });
+    setState(() {});
+    AnalyticsService.instance.logEvent(
+        'mask_assist_applied', {'polygons': polygons.length});
   }
 
   Widget _buildSourcePreview(ThemeData theme) {

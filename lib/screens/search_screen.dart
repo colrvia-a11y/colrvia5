@@ -566,6 +566,8 @@ class _SearchScreenState extends State<SearchScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 6),
+                          _buildCompanionChips(paint),
                         ],
                       ),
                     ),
@@ -598,6 +600,38 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildCompanionChips(Paint paint) {
+    final companions = paint.companionIds ?? [];
+    final similar = paint.similarIds ?? [];
+    if (companions.isEmpty && similar.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final chips = <Widget>[];
+    for (final id in companions) {
+      chips.add(ActionChip(
+        label: Text(id),
+        onPressed: () {
+          AnalyticsService.instance
+              .logEvent('companion_chip_tapped', {'colorId': id});
+          _selectedForCompare.add(id);
+          setState(() {});
+        },
+      ));
+    }
+    for (final id in similar) {
+      chips.add(ActionChip(
+        label: Text(id),
+        onPressed: () {
+          AnalyticsService.instance
+              .logEvent('similar_chip_tapped', {'colorId': id});
+          _selectedForCompare.add(id);
+          setState(() {});
+        },
+      ));
+    }
+    return Wrap(spacing: 4, children: chips);
   }
 
   Widget _buildPaletteGrid() {
