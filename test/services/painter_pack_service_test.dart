@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:color_canvas/models/color_plan.dart';
 import 'package:color_canvas/services/painter_pack_service.dart';
+import 'package:color_canvas/models/schema.dart' as schema;
 
 void main() {
   group('PainterPackService', () {
@@ -51,8 +52,24 @@ void main() {
       );
 
       final pdf = await service.buildPdf(plan, {
-        'color1': {'Matte': 'SW1234'},
-        'color2': {'Semi-Gloss': 'SW5678'},
+        'color1': schema.PaletteColor(
+          paintId: 'color1',
+          locked: false,
+          position: 0,
+          brand: 'Sherwin-Williams',
+          name: 'Test Color 1',
+          code: 'SW1234',
+          hex: '#FFFFFF',
+        ),
+        'color2': schema.PaletteColor(
+          paintId: 'color2',
+          locked: false,
+          position: 1,
+          brand: 'Sherwin-Williams',
+          name: 'Test Color 2',
+          code: 'SW5678',
+          hex: '#000000',
+        ),
       });
 
       expect(pdf.length, greaterThan(0));

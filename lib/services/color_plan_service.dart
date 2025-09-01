@@ -66,7 +66,11 @@ class ColorPlanService {
     });
 
     await doc.set(plan.toJson());
-    await AnalyticsService().planGenerated(projectId, doc.id);
+    // Record plan generation via analytics
+    await AnalyticsService.instance.logEvent('plan_generated', {
+      'project_id': projectId,
+      'plan_id': doc.id,
+    });
     return plan;
   }
 

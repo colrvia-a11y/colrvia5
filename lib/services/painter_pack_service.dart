@@ -93,7 +93,28 @@ class PainterPackService {
       ),
     );
 
-    lastPageCount = doc.document.pdfPageList.pagesCount;
+    // pdf package exposes pages via pdfPageList; use length for page count
+    // Pdf package internals vary; attempt to read pagesCount, fallback to 0
+    try {
+      final dynamic list = doc.document.pdfPageList;
+      if (list == null) {
+        lastPageCount = 0;
+      } else if (list is int) {
+        lastPageCount = list;
+      } else {
+        try {
+          lastPageCount = (list as dynamic).pagesCount as int? ?? (list as dynamic).length as int? ?? 0;
+        } catch (_) {
+          try {
+            lastPageCount = (list as dynamic).length as int;
+          } catch (_) {
+            lastPageCount = 0;
+          }
+        }
+      }
+    } catch (_) {
+      lastPageCount = 0;
+    }
     return doc.save();
   }
 }

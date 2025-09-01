@@ -29,9 +29,9 @@ class _CompareColorsScreenState extends State<CompareColorsScreen> {
       future: _paintsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(
-            appBar: AppBar(title: Text('Compare Colors')),
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            appBar: AppBar(title: const Text('Compare Colors')),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
         final paints = snapshot.data!;
@@ -133,7 +133,7 @@ class _ContrastCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorA = ColorUtils.getPaintColor(a.hex);
     final colorB = ColorUtils.getPaintColor(b.hex);
-    final contrast = ColorUtils.contrastRatio(colorA, colorB);
+  final contrast = contrastRatio(colorA, colorB);
     final lrvDiff = (a.computedLrv - b.computedLrv).abs();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

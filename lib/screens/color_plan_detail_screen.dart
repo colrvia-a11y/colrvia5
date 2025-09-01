@@ -30,6 +30,28 @@ import '../services/color_plan_service.dart';
 // END REGION: CODEX-ADD color-plan-detail-screen-imports
 import '../widgets/via_overlay.dart';
 
+// Small helper used when rendering ColorPlan fallback views
+class _PlanSection extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _PlanSection({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
 class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
   // REGION: CODEX-ADD color-plan-detail-screen
@@ -102,6 +124,37 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
         });
       }
     });
+  }
+
+  // Fallback: try to find a ColorPlan by document id across projects for migration support
+  Future<ColorPlan?> _fetchPlanFallback() async {
+    try {
+      // Attempt a collectionGroup query for colorPlans with matching id
+      final snaps = await FirebaseFirestore.instance
+          .collectionGroup('colorPlans')
+          .where(FieldPath.documentId, isEqualTo: widget.storyId)
+          .get();
+      if (snaps.docs.isEmpty) return null;
+      final doc = snaps.docs.first;
+      return ColorPlan.fromJson(doc.id, doc.data());
+    } catch (e) {
+      debugPrint('fetchPlanFallback error: $e');
+      return null;
+    }
+  }
+
+  // Apply a ColorPlan to the Visualizer (minimal stub used by button)
+  void _applyPlanToVisualizer(ColorPlan plan) {
+    // For now just navigate to VisualizerScreen with initial palette
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VisualizerScreen(
+          projectId: widget.projectId,
+          initialPalette: null,
+        ),
+      ),
+    );
   }
 
   Future<void> _loadUserPreferences() async {

@@ -52,12 +52,7 @@ class AnalyticsService {
   Future<void> ctaCompareClicked(String source) =>
       log('cta_compare_clicked', {'source': source});
 
-  Future<void> planGenerated(int count, bool hasMap, bool hasPlaybook) =>
-      log('plan_generated', {
-        'count': count,
-        'has_map': hasMap,
-        'has_playbook': hasPlaybook,
-      });
+  // Legacy planGenerated signatures removed; use logEvent or planGenerated(projectId, planId) wrapper below.
 
   Future<void> renderFastRequested() => log('render_fast_requested');
 
@@ -608,9 +603,9 @@ class AnalyticsService {
 
   /// Internal method to log events - currently uses mock implementation
   Future<void> _logEvent(
-      String eventName, Map<String, dynamic> parameters) async {
+      String eventName, Map<String, Object?> parameters) async {
     try {
-      await _analytics.logEvent(name: eventName, parameters: parameters);
+  await _analytics.logEvent(name: eventName, parameters: parameters as Map<String, Object>?);
     } catch (e) {
       developer.log('Failed to log analytics event $eventName: $e',
           name: 'AnalyticsService');
@@ -685,6 +680,14 @@ class AnalyticsService {
     await _logEvent('story_generated', {
       'project_id': projectId,
       'color_story_id': colorStoryId,
+    });
+  }
+
+  /// Compatibility wrapper used by some services to log plan generation
+  Future<void> planGenerated(String projectId, String planId) async {
+    await _logEvent('plan_generated', {
+      'project_id': projectId,
+      'plan_id': planId,
     });
   }
 
