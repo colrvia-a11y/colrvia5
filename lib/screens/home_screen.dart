@@ -47,9 +47,7 @@ class HomeScreenState extends State<HomeScreen> {
   Future<void> _determineLanding() async {
     // REGION: CODEX-ADD adaptive-landing
     final prefs = await UserPrefsService.fetch();
-    if (prefs.firstRunCompleted) {
-      setState(() => _currentIndex = 1);
-    }
+    setState(() => _currentIndex = prefs.firstRunCompleted ? 1 : 0);
     // END REGION: CODEX-ADD adaptive-landing
   }
 

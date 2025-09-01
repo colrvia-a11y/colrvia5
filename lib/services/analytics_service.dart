@@ -719,6 +719,20 @@ class AnalyticsService {
     });
   }
   // END REGION: CODEX-ADD resume-last analytics
+
+  // REGION: CODEX-ADD onboarding-permissions analytics
+  Future<void> onboardingCompleted() async {
+    await _logEvent('onboarding_completed', {});
+  }
+
+  Future<void> permissionMicrocopyShown(String type) async {
+    await _logEvent('permission_microcopy_shown', {'type': type});
+  }
+
+  Future<void> permissionRequested(String type) async {
+    await _logEvent('permission_requested', {'type': type});
+  }
+  // END REGION: CODEX-ADD onboarding-permissions analytics
 }
 
 // Extension methods for easy access

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart' hide Paint;
 import 'package:image_picker/image_picker.dart';
+// REGION: CODEX-ADD permissions-import
+import '../services/permissions_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+// END REGION: CODEX-ADD permissions-import
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:color_canvas/utils/slug_utils.dart';
@@ -199,6 +203,11 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     try {
+      final granted = await PermissionsService.confirmAndRequest(
+        context,
+        Permission.photos,
+      );
+      if (!granted) return;
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1200,
