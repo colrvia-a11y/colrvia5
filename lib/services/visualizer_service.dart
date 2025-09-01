@@ -56,6 +56,7 @@ class VisualizerJob {
 class VisualizerService {
   // Use the shimbed functions instance. If the real package is added, this
   // file can be updated to use `FirebaseFunctions.instance` directly.
+  // Includes support for fast preview and asynchronous HQ jobs.
   final _FirebaseFunctionsShim _functions = _firebaseFunctionsShimInstance;
 
   static Future<String> uploadInputBytes(String uid, String fileName, List<int> bytes) async {

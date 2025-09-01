@@ -4,14 +4,17 @@
 
 import 'dart:ui' show ImageFilter;
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
+import 'package:http/http.dart' as http;
 
 import '../services/visualizer_service.dart';
 import '../firestore/firestore_data_schema.dart'; // for UserPalette
 import '../services/analytics_service.dart';
 import '../models/color_story.dart';
+import '../data/sample_rooms.dart';
 
 enum CompareMode { none, grid, split, slider }
 
@@ -49,7 +52,15 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   String _roomType = 'living room';
   String _style = 'modern minimal';
   final List<String> _surfaces = ['walls']; // can include cabinets/trim/etc
-  final List<String> _variants = []; // hexes (max 5 UI)
+  final List<String> _variants = []; // active palette hexes
+  final List<String> _paletteA = [];
+  final List<String> _paletteB = [];
+  int _activePalette = 0;
+
+  final VisualizerService _viz = VisualizerService();
+  StreamSubscription<VisualizerJob>? _jobSub;
+  String? _previewUrl;
+  String? _hqStatus;
 
   // Output
   bool _busy = false;
@@ -88,6 +99,15 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         _variants.addAll(['#F5F5F5', '#EAEAEA', '#CCCCCC']);
       }
     }
+
+    _paletteA.addAll(_variants);
+    _paletteB.addAll(_variants);
+  }
+
+  @override
+  void dispose() {
+    _jobSub?.cancel();
+    super.dispose();
   }
 
   // ─────────────────────────── Actions
@@ -96,7 +116,99 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         await _picker.pickImage(source: ImageSource.gallery, imageQuality: 95);
     if (file == null) return;
     final bytes = await file.readAsBytes();
-    setState(() => _inputBytes = bytes);
+    setState(() {
+      _inputBytes = bytes;
+      _previewUrl = null;
+      _results = [];
+    });
+  }
+
+  Future<void> _loadSample(String url) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      setState(() {
+        _inputBytes = response.bodyBytes;
+        _previewUrl = null;
+        _results = [];
+      });
+    }
+  }
+
+  void _switchPalette(int index) {
+    setState(() {
+      if (_activePalette == 0) {
+        _paletteA
+          ..clear()
+          ..addAll(_variants);
+      } else {
+        _paletteB
+          ..clear()
+          ..addAll(_variants);
+      }
+      _activePalette = index;
+      _variants
+        ..clear()
+        ..addAll(index == 0 ? _paletteA : _paletteB);
+    });
+  }
+
+  Future<void> _renderFast() async {
+    if (_variants.isEmpty) {
+      _toast('Add one or more HEX colors.');
+      return;
+    }
+    if (_inputBytes == null) {
+      _toast('Upload or pick a photo.');
+      return;
+    }
+    AnalyticsService.instance.logEvent('render_fast_requested');
+    final job = await _viz.renderFast('sample', _variants);
+    setState(() {
+      _previewUrl = job.previewUrl;
+      _results = [
+        {'hex': _variants.isNotEmpty ? _variants.first : '#000000', 'downloadUrl': job.previewUrl}
+      ];
+      _selectedA = 0;
+      _selectedB = 0;
+    });
+  }
+
+  Future<void> _renderHq() async {
+    if (_variants.isEmpty) {
+      _toast('Add one or more HEX colors.');
+      return;
+    }
+    if (_inputBytes == null) {
+      _toast('Upload or pick a photo.');
+      return;
+    }
+    AnalyticsService.instance.logEvent('render_hq_requested');
+    final start = DateTime.now();
+    final job = await _viz.renderHq('sample', _variants);
+    setState(() {
+      _hqStatus = job.status;
+    });
+    _jobSub?.cancel();
+    _jobSub = _viz.watchJob(job.jobId).listen((j) {
+      setState(() {
+        _hqStatus = j.status;
+        if (j.resultUrl != null) {
+          _previewUrl = j.resultUrl;
+          if (_results.isNotEmpty) {
+            _results[0]['downloadUrl'] = j.resultUrl;
+          } else {
+            _results = [
+              {'hex': _variants.isNotEmpty ? _variants.first : '#000000', 'downloadUrl': j.resultUrl}
+            ];
+          }
+        }
+      });
+      if (j.status == 'complete') {
+        final ms = DateTime.now().difference(start).inMilliseconds;
+        AnalyticsService.instance.logEvent('render_hq_completed', {'ms_elapsed': ms});
+        _jobSub?.cancel();
+      }
+    });
   }
 
   Future<void> _runGeneration() async {
@@ -216,13 +328,48 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                       _variants
                         ..clear()
                         ..addAll(list.take(5));
+                      if (_activePalette == 0) {
+                        _paletteA
+                          ..clear()
+                          ..addAll(_variants);
+                      } else {
+                        _paletteB
+                          ..clear()
+                          ..addAll(_variants);
+                      }
                     });
                   },
+                  paletteIndex: _activePalette,
+                  onPaletteChanged: _switchPalette,
+                  onFast: _renderFast,
+                  onHq: _renderHq,
                   onGenerate: _runGeneration,
                 ),
               ),
             ),
           ),
+
+          if (_hqStatus != null && _hqStatus != 'complete')
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _Frosted(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(_hqStatus!),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // Busy overlay
           if (_busy)
@@ -282,12 +429,24 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             ),
           ),
         if (_inputBytes == null)
-          const Center(
-            child: Text(
-              'Upload a photo or switch to Mockup.\nThen choose up to 5 colors to render.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+          GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
             ),
+            itemCount: SampleRooms.images.length,
+            itemBuilder: (_, i) {
+              final url = SampleRooms.images[i];
+              return GestureDetector(
+                onTap: () => _loadSample(url),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(url, fit: BoxFit.cover),
+                ),
+              );
+            },
           ),
       ],
     );
@@ -375,7 +534,10 @@ class _ControlDock extends StatelessWidget {
 
   final List<String> variants;
   final ValueChanged<List<String>> onVariantsChanged;
-
+  final int paletteIndex;
+  final ValueChanged<int> onPaletteChanged;
+  final VoidCallback onFast;
+  final VoidCallback onHq;
   final VoidCallback onGenerate;
 
   const _ControlDock({
@@ -392,6 +554,10 @@ class _ControlDock extends StatelessWidget {
     required this.onToggleSurface,
     required this.variants,
     required this.onVariantsChanged,
+    required this.paletteIndex,
+    required this.onPaletteChanged,
+    required this.onFast,
+    required this.onHq,
     required this.onGenerate,
   });
 
@@ -452,6 +618,20 @@ class _ControlDock extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
+        // Palette A/B
+        Row(
+          children: [
+            const Text('Palette'),
+            const SizedBox(width: 8),
+            _Segmented(
+              options: const ['A', 'B'],
+              selectedIndex: paletteIndex,
+              onChanged: onPaletteChanged,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
         // Surfaces + Variants
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,6 +649,25 @@ class _ControlDock extends StatelessWidget {
                 onChanged: onVariantsChanged,
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Fast/HQ render buttons
+        Row(
+          children: [
+            OutlinedButton(
+              onPressed: busy ? null : onFast,
+              child: const Text('Fast'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: onHq,
+              child: const Text('HQ'),
+            ),
+            const SizedBox(width: 12),
+            const Text('HQ renders in background',
+                style: TextStyle(color: Colors.black54)),
           ],
         ),
         const SizedBox(height: 10),

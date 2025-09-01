@@ -1,14 +1,9 @@
-// lib/data/sample_rooms.dart
-class SampleRoom {
-  final String id;
-  final String title;
-  final String assetPath;
-  const SampleRoom(this.id, this.title, this.assetPath);
+class SampleRooms {
+  /// Remote sample images used when the user has not provided a photo.
+  /// These are hosted externally to avoid bundling binary assets.
+  static const images = [
+    'https://images.unsplash.com/photo-1585559605028-1141edf14f91?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1598300054515-698d7aa01460?auto=format&fit=crop&w=800&q=80',
+  ];
 }
-
-const sampleRooms = [
-  SampleRoom('living1', 'Modern Living', 'assets/sample_rooms/living1.jpg'),
-  SampleRoom('kitchen1', 'Bright Kitchen', 'assets/sample_rooms/kitchen1.jpg'),
-  SampleRoom('bed1', 'Cozy Bedroom', 'assets/sample_rooms/bed1.jpg'),
-];
-
