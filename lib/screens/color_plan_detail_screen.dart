@@ -622,40 +622,57 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                 ],
               ),
               actions: [
+                // REGION: CODEX-ADD painter-pack-export-action
                 IconButton(
                   icon: const Icon(Icons.picture_as_pdf),
                   tooltip: 'Export Painter Pack',
                   onPressed: () async {
-                    final plan = ColorPlan(
-                      id: story.id,
-                      projectId: story.userId,
-                      name: story.title,
-                      vibe: story.vibeWords.join(', '),
-                      paletteColorIds: story.palette
-                          .map((c) => c.paintId ?? c.hex)
-                          .toList(),
-                      placementMap: [],
-                      cohesionTips: [],
-                      accentRules: [],
-                      doDont: [],
-                      sampleSequence: [],
-                      roomPlaybook: [],
-                      createdAt: DateTime.now(),
-                      updatedAt: DateTime.now(),
-                    );
-                    final pdf =
-                        await PainterPackService().buildPdf(plan, {});
+                    final plan = _plan ??
+                        ColorPlan(
+                          id: story.id,
+                          projectId: story.userId,
+                          name: story.title,
+                          vibe: story.vibeWords.join(', '),
+                          paletteColorIds: story.palette
+                              .map((c) => c.paintId ?? c.hex)
+                              .toList(),
+                          placementMap: [],
+                          cohesionTips: [],
+                          accentRules: [],
+                          doDont: [],
+                          sampleSequence: [],
+                          roomPlaybook: [],
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                        );
+
+                    final skuMap = {
+                      for (final c in story.palette)
+                        (c.paintId ?? c.hex): schema.PaletteColor(
+                          paintId: c.paintId ?? c.hex,
+                          locked: false,
+                          position: 0,
+                          brand: c.brandName ?? '',
+                          name: c.name ?? '',
+                          code: c.code ?? '',
+                          hex: c.hex,
+                        )
+                    };
+
+                    final service = PainterPackService();
+                    final pdfBytes = await service.buildPdf(plan, skuMap);
                     await Printing.layoutPdf(
-                        onLayout: (_) async => pdf);
+                        onLayout: (_) async => pdfBytes);
                     await AnalyticsService.instance.logEvent(
                       'painter_pack_exported',
                       {
-                        'pageCount': 1,
+                        'pageCount': service.lastPageCount,
                         'colorCount': plan.paletteColorIds.length,
                       },
                     );
                   },
                 ),
+                // END REGION: CODEX-ADD painter-pack-export-action
                 IconButton(
                   tooltip: _colorBlindOn
                       ? 'Disable color-blind sim'

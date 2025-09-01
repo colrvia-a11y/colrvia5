@@ -1,99 +1,99 @@
+// lib/services/painter_pack_service.dart
 import 'dart:typed_data';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 import '../models/color_plan.dart';
+import '../models/schema.dart' as schema;
 
 class PainterPackService {
+  int lastPageCount = 0;
+
   Future<Uint8List> buildPdf(
-      ColorPlan plan, Map<String, Map<String, String>> skuMap) async {
+      ColorPlan plan, Map<String, schema.PaletteColor> skuMap) async {
     final doc = pw.Document();
-    doc.addPage(pw.MultiPage(
-      build: (ctx) => [
-        pw.Header(level: 0, child: pw.Text(plan.name)),
-        pw.Paragraph(text: plan.vibe),
-        pw.Header(level: 1, child: pw.Text('SKUs & Sheens')),
-        _skuTable(plan, skuMap),
-        pw.Header(level: 1, child: pw.Text('Placement Map')),
-        _placement(plan),
-        pw.Header(level: 1, child: pw.Text('Do / Don\'t')),
-        _doDont(plan),
-        pw.Header(level: 1, child: pw.Text('Swatch Cards')),
-        _swatches(plan),
-      ],
-    ));
+
+    PdfColor? _parseColor(String? hex) {
+      if (hex == null || hex.isEmpty) return null;
+      try {
+        return PdfColor.fromHex(hex);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final swatchWidgets = plan.paletteColorIds.map((id) {
+      final info = skuMap[id];
+      final color = _parseColor(info?.hex);
+      return pw.Container(
+        width: 60,
+        padding: const pw.EdgeInsets.all(4),
+        child: pw.Column(
+          children: [
+            pw.Container(
+              width: double.infinity,
+              height: 40,
+              color: color ?? PdfColors.grey300,
+            ),
+            if (info != null)
+              pw.Text('${info.name}\n${info.code}',
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 8)),
+          ],
+        ),
+      );
+    }).toList();
+
+    doc.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Text('Painter Pack: ${plan.name}',
+              style: pw.TextStyle(fontSize: 24)),
+          pw.SizedBox(height: 16),
+          pw.Text('SKUs & Sheens', style: pw.TextStyle(fontSize: 18)),
+          pw.Table.fromTextArray(
+            headers: const ['Area', 'Color', 'Brand', 'Code', 'Sheen'],
+            data: plan.placementMap.map((p) {
+              final info = skuMap[p.colorId];
+              return [
+                p.area,
+                info?.name ?? p.colorId,
+                info?.brand ?? '',
+                info?.code ?? '',
+                p.sheen,
+              ];
+            }).toList(),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text('Placements', style: pw.TextStyle(fontSize: 18)),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: plan.placementMap
+                .map((p) => pw.Bullet(
+                    text:
+                        '${p.area}: ${skuMap[p.colorId]?.name ?? p.colorId}'))
+                .toList(),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text("Do / Don't", style: pw.TextStyle(fontSize: 18)),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: plan.doDont
+                .map((e) => pw.Bullet(
+                    text: 'Do: ${e.doText}\nDon\'t: ${e.dontText}'))
+                .toList(),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text('Swatch Cards', style: pw.TextStyle(fontSize: 18)),
+          pw.Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: swatchWidgets,
+          ),
+        ],
+      ),
+    );
+
+    lastPageCount = doc.document.pdfPageList.pagesCount;
     return doc.save();
   }
-
-  pw.Widget _skuTable(
-      ColorPlan plan, Map<String, Map<String, String>> skuMap) {
-    final rows = <pw.TableRow>[
-      pw.TableRow(children: [
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text('Color ID')),
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text('Surface')),
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text('Sheen')),
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text('Brand SKU')),
-      ])
-    ];
-    for (final p in plan.placementMap) {
-      final sku = skuMap[p.colorId]?[p.sheen] ?? '—';
-      rows.add(pw.TableRow(children: [
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text(p.colorId)),
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text(p.area)),
-        pw.Padding(
-            padding: const pw.EdgeInsets.all(4), child: pw.Text(p.sheen)),
-        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(sku)),
-      ]));
-    }
-    return pw.Table(border: pw.TableBorder.all(width: 0.5), children: rows);
-  }
-
-  pw.Widget _placement(ColorPlan plan) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: plan.placementMap
-          .map((p) =>
-              pw.Text('• ${p.area}: ${p.colorId} (${p.sheen})'))
-          .toList(),
-    );
-  }
-
-  pw.Widget _doDont(ColorPlan plan) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: plan.doDont
-          .map((d) => pw.Bullet(
-              text: 'Do: ${d.doText}\nDon\'t: ${d.dontText}'))
-          .toList(),
-    );
-  }
-
-  pw.Widget _swatches(ColorPlan plan) {
-    return pw.Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: plan.paletteColorIds.map((id) {
-        return pw.Container(
-          width: 150,
-          padding: const pw.EdgeInsets.all(8),
-          decoration:
-              pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
-          child: pw.Column(children: [
-            pw.Container(
-                height: 60,
-                width: double.infinity,
-                color: PdfColors.grey300), // TODO: real color sample
-            pw.SizedBox(height: 6),
-            pw.Text(id, style: const pw.TextStyle(fontSize: 12)),
-          ]),
-        );
-      }).toList(),
-    );
-  }
 }
-
