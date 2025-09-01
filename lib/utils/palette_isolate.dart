@@ -8,6 +8,7 @@ class _RollArgs {
   final int modeIndex;
   final bool diversify;
   final List<List<double>>? slotLrvHints;
+  final List<String>? fixedUndertones;
 
   _RollArgs({
     required this.available,
@@ -15,6 +16,7 @@ class _RollArgs {
     required this.modeIndex,
     required this.diversify,
     this.slotLrvHints,
+    this.fixedUndertones,
   });
 
   Map<String, dynamic> toMap() => {
@@ -23,6 +25,7 @@ class _RollArgs {
         'modeIndex': modeIndex,
         'diversify': diversify,
         'slotLrvHints': slotLrvHints,
+        'fixedUndertones': fixedUndertones,
       };
 
   static _RollArgs fromMap(Map<String, dynamic> m) => _RollArgs(
@@ -33,6 +36,9 @@ class _RollArgs {
         slotLrvHints: m['slotLrvHints'] != null
             ? List<List<double>>.from(
                 (m['slotLrvHints'] as List).map((e) => List<double>.from(e)))
+            : null,
+        fixedUndertones: m['fixedUndertones'] != null
+            ? List<String>.from(m['fixedUndertones'] as List)
             : null,
       );
 }
@@ -56,6 +62,7 @@ List<Map<String, dynamic>> rollPaletteInIsolate(Map<String, dynamic> raw) {
     mode: HarmonyMode.values[args.modeIndex],
     diversifyBrands: args.diversify,
     slotLrvHints: args.slotLrvHints,
+    fixedUndertones: args.fixedUndertones,
   );
 
   // Send back serializable maps (we'll map to Paint on the main isolate)

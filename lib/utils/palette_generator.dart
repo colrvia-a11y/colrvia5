@@ -1,12 +1,39 @@
 import 'dart:math' as math;
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 
 String paintIdentity(Paint p) {
   final brand = p.brandId.isNotEmpty ? p.brandId : p.brandName;
   final code = (p.code.isNotEmpty ? p.code : p.name).toLowerCase();
   final collection = (p.collection ?? '').toLowerCase();
   return '$brand|$collection|$code';
+}
+
+bool isCompatibleUndertone(String paintUndertone, List<String> fixedUndertones) {
+  if (fixedUndertones.isEmpty) return true;
+  if (fixedUndertones.contains('neutral')) return true;
+  if (paintUndertone == 'neutral') return true;
+  if (fixedUndertones.contains('warm') && paintUndertone == 'cool') return false;
+  if (fixedUndertones.contains('cool') && paintUndertone == 'warm') return false;
+  return true;
+}
+
+List<Paint> filterByFixedUndertones(
+    List<Paint> paints, List<String> fixedUndertones) {
+  if (fixedUndertones.isEmpty) return paints;
+  final filtered = paints.where((p) {
+    final hue = p.lch[2];
+    final u = (hue >= 45 && hue <= 225) ? 'cool' : 'warm';
+    return isCompatibleUndertone(u, fixedUndertones);
+  }).toList();
+  if (filtered.length != paints.length) {
+    AnalyticsService().logEvent('palette_constraint_applied', {
+      'constraint': 'fixed_undertone',
+      'count': fixedUndertones.length,
+    });
+  }
+  return filtered.isNotEmpty ? filtered : paints;
 }
 
 enum HarmonyMode {
@@ -27,8 +54,14 @@ class PaletteGenerator {
     required HarmonyMode mode,
     bool diversifyBrands = true,
     List<List<double>>? slotLrvHints, // NEW: optional [min,max] per slot
+    List<String>? fixedUndertones,
   }) {
     if (availablePaints.isEmpty) return [];
+
+    final undertones = fixedUndertones ?? const [];
+    final List<Paint> paints =
+        undertones.isNotEmpty ? filterByFixedUndertones(availablePaints, undertones) : availablePaints;
+    if (paints.isEmpty) return [];
 
     final int size = anchors.length;
     final List<Paint?> result = List.filled(size, null, growable: false);
@@ -48,7 +81,7 @@ class PaletteGenerator {
         break;
       }
     }
-    seedPaint ??= availablePaints[_random.nextInt(availablePaints.length)];
+    seedPaint ??= paints[_random.nextInt(paints.length)];
 
     // Add randomization factor to ensure different results on subsequent rolls
     final double randomOffset =
@@ -59,9 +92,10 @@ class PaletteGenerator {
     // Branch Designer mode to specialized generator
     if (mode == HarmonyMode.designer) {
       return _rollDesignerWithScoring(
-        availablePaints: availablePaints,
+        availablePaints: paints,
         anchors: anchors,
         diversifyBrands: diversifyBrands,
+        fixedUndertones: undertones,
       );
     }
 
@@ -87,7 +121,7 @@ class PaletteGenerator {
     }
 
     double minAvail = 100.0, maxAvail = 0.0;
-    for (final p in availablePaints) {
+    for (final p in paints) {
       if (p.computedLrv < minAvail) minAvail = p.computedLrv;
       if (p.computedLrv > maxAvail) maxAvail = p.computedLrv;
     }
@@ -138,9 +172,9 @@ class PaletteGenerator {
         continue;
       }
 
-      List<Paint> candidates = availablePaints;
+      List<Paint> candidates = paints;
       if (diversifyBrands && usedBrands.isNotEmpty) {
-        final unused = availablePaints
+        final unused = paints
             .where((p) => !usedBrands.contains(p.brandName))
             .toList();
         if (unused.isNotEmpty) candidates = unused;
@@ -477,15 +511,19 @@ class PaletteGenerator {
     required List<Paint> availablePaints,
     required List<Paint?> anchors,
     bool diversifyBrands = true,
+    List<String>? fixedUndertones,
   }) {
+    final undertones = fixedUndertones ?? const [];
+    final List<Paint> paints =
+        undertones.isNotEmpty ? filterByFixedUndertones(availablePaints, undertones) : availablePaints;
+
     final size = anchors.length;
-    if (size <= 0 || availablePaints.isEmpty) return [];
+    if (size <= 0 || paints.isEmpty) return [];
 
     // Generate size-based Designer targets (no roles): N evenly spaced values,
     // gentle bias to keep one light anchor and one deep anchor.
-    final seedPaint =
-        anchors.firstWhere((p) => p != null, orElse: () => null) ??
-            availablePaints[_random.nextInt(availablePaints.length)];
+    final seedPaint = anchors.firstWhere((p) => p != null, orElse: () => null) ??
+        paints[_random.nextInt(paints.length)];
     final seedLch = ColorUtils.labToLch(seedPaint.lab);
     final List<List<double>> targetLabs = _designerTargetsForSize(
         size: size, seedL: seedLch[0], seedC: seedLch[1], seedH: seedLch[2]);
@@ -511,7 +549,7 @@ class PaletteGenerator {
       }
       final low = minLrv[i], high = maxLrv[i];
       final nearest = ColorUtils.nearestByDeltaEMultipleHueWindow(
-          targetLabs[i], availablePaints);
+          targetLabs[i], paints);
       final band = (nearest != null)
           ? [nearest].where((p) {
               final l = p.computedLrv;
@@ -522,7 +560,7 @@ class PaletteGenerator {
       if (band.isNotEmpty) {
         slotCandidates.add(band);
       } else {
-        final sorted = [...availablePaints]..sort((a, b) =>
+        final sorted = [...paints]..sort((a, b) =>
             ColorUtils.deltaE2000(targetLabs[i], a.lab)
                 .compareTo(ColorUtils.deltaE2000(targetLabs[i], b.lab)));
         slotCandidates.add(sorted.take(24).toList());

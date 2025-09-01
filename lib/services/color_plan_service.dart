@@ -5,6 +5,8 @@ import '../models/color_plan.dart';
 import '../models/lighting_profile.dart';
 import 'analytics_service.dart';
 import 'lighting_service.dart';
+import '../models/fixed_elements.dart';
+import 'fixed_element_service.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -28,6 +30,7 @@ class ColorPlanService {
     required List<String> paletteColorIds,
     String? vibe,
     Map<String, dynamic>? context,
+    List<FixedElement>? fixedElements,
   }) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
@@ -36,6 +39,9 @@ class ColorPlanService {
 
     final profile = await LightingService().getProfile(projectId);
 
+    final elements =
+        fixedElements ?? await FixedElementService().listElements(projectId);
+
     final callable = _functions.httpsCallable('generateColorPlanV2');
     final resp = await callable.call({
       'projectId': projectId,
@@ -43,6 +49,8 @@ class ColorPlanService {
       'vibe': vibe,
       'context': {
         'lightingProfile': profile.name,
+        if (elements.isNotEmpty)
+          'fixedElements': elements.map((e) => e.toJson()).toList(),
         ...?context,
       },
     });

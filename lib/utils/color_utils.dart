@@ -234,22 +234,29 @@ class ColorUtils {
   }
 
   // Get color temperature description
-  static String getColorTemperature(Color color) {
-    final rgb = [((color.r * 255.0).round() & 0xff), ((color.g * 255.0).round() & 0xff), ((color.b * 255.0).round() & 0xff)];
-    final r = rgb[0];
-    final g = rgb[1];
-    final b = rgb[2];
+    static String getColorTemperature(Color color) {
+      final rgb = [((color.r * 255.0).round() & 0xff), ((color.g * 255.0).round() & 0xff), ((color.b * 255.0).round() & 0xff)];
+      final r = rgb[0];
+      final g = rgb[1];
+      final b = rgb[2];
 
     // Simple temperature analysis
-    if ((r + g) > (b * 1.3)) {
-      return 'Warm';
-    } else if ((g + b) > (r * 1.3)) {
-      return 'Cool';
-    } else {
-      return 'Neutral';
+      if ((r + g) > (b * 1.3)) {
+        return 'Warm';
+      } else if ((g + b) > (r * 1.3)) {
+        return 'Cool';
+      } else {
+        return 'Neutral';
+      }
+    }
+
+    /// Placeholder for future image-based undertone inference.
+    /// Currently unimplemented and always returns `null`.
+    static Future<String?> inferUndertoneFromImage(dynamic image) async {
+      // TODO: Implement real undertone analysis from an image.
+      return null;
     }
   }
-}
 
 // LRV helper function for paint data
 double lrvForPaint({double? paintLrv, required String hex}) {
