@@ -34,7 +34,6 @@ bool isFirebaseInitialized = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
   await runZonedGuarded(() async {
     Debug.info('App', 'main', 'Flutter bindings initialized');
@@ -48,8 +47,10 @@ void main() async {
       await Firebase.initializeApp(
         options: FirebaseConfig.options,
       );
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
       Debug.info('App', 'main', 'Firebase app initialized');
     } else {
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
       Debug.info('App', 'main', 'Firebase app already initialized');
     }
     Debug.info('App', 'main', 'Firebase project: \'${Firebase.app().options.projectId}\'');
@@ -180,7 +181,6 @@ class MyApp extends StatelessWidget {
             '/visualize': (context) {
               final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
               return VisualizerScreen(
-                projectId: args?['projectId'] as String?,
                 storyId: args?['storyId'] as String?
               );
             },
@@ -206,15 +206,7 @@ class MyApp extends StatelessWidget {
                   '🐛 Route: NavigatingTo ColorPlanDetailScreen with storyId = $storyId');
               return ColorPlanDetailScreen(storyId: storyId);
             },
-            '/visualizer': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments
-                      as Map<String, dynamic>? ??
-                  {};
-              return VisualizerScreen(
-                projectId: args['projectId'] as String?,
-                storyId: args['storyId'] as String?
-              );
-            },
+            
           },
         ),
       ),

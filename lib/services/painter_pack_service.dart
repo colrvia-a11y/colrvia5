@@ -50,7 +50,7 @@ class PainterPackService {
               style: pw.TextStyle(fontSize: 24)),
           pw.SizedBox(height: 16),
           pw.Text('SKUs & Sheens', style: pw.TextStyle(fontSize: 18)),
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headers: const ['Area', 'Color', 'Brand', 'Code', 'Sheen'],
             data: plan.placementMap.map((p) {
               final info = skuMap[p.colorId];

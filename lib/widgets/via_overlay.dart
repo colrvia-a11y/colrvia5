@@ -21,7 +21,7 @@ class ViaOverlay extends StatefulWidget {
 }
 
 class _ViaOverlayState extends State<ViaOverlay> {
-  bool _open = false;
+  bool _open = true;
 
   void _toggle() => setState(() => _open = !_open);
 

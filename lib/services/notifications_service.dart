@@ -74,12 +74,10 @@ class NotificationsService {
   void _handlePayload(String payload) {
     final data = jsonDecode(payload);
     if (data['type'] == 'viz_hq_complete') {
-      final projectId = data['projectId'] as String?;
+      
       final jobId = data['jobId'] as String?;
       MyApp.navigatorKey.currentState?.push(MaterialPageRoute(
           builder: (_) => VisualizerScreen(
-                projectId: projectId,
-                jobId: jobId,
               )));
       AnalyticsService.instance
           .log('viz_hq_push_opened', {'jobId': jobId});
@@ -97,7 +95,7 @@ class NotificationsService {
         android: AndroidNotificationDetails('nudges', 'Nudges'),
         iOS: DarwinNotificationDetails(),
       ),
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
     AnalyticsService.instance

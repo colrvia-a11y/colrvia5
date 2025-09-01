@@ -23,11 +23,18 @@ Future<LightingProfile?> showLightingProfilePicker(
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
                 ...LightingProfile.values.map(
-                  (p) => RadioListTile<LightingProfile>(
+                  (p) => ListTile(
                     title: Text(p.label),
-                    value: p,
-                    groupValue: temp,
-                    onChanged: (v) => setState(() => temp = v ?? temp),
+                    leading: Radio<LightingProfile>(
+                      value: p,
+                      groupValue: temp,
+                      onChanged: (v) => setState(() => temp = v ?? temp),
+                    ),
+                    onTap: () {
+                      if (p != temp) {
+                        setState(() => temp = p);
+                      }
+                    },
                   ),
                 ),
                 TextButton(
@@ -42,4 +49,3 @@ Future<LightingProfile?> showLightingProfilePicker(
     },
   );
 }
-

@@ -272,7 +272,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         page = ColorPlanScreen(projectId: pid);
         break;
       case 'visualizer':
-        page = VisualizerScreen(projectId: pid);
+        page = VisualizerScreen();
         break;
     }
     if (page != null) {

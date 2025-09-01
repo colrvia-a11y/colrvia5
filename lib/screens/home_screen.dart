@@ -6,6 +6,7 @@ import 'projects_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'roller_screen.dart';
+import 'package:color_canvas/widgets/via_overlay.dart';
 
 /// Home scaffold with 4 bottom tabs: Create, Projects, Search, Account.
 class HomeScreen extends StatefulWidget {
@@ -71,12 +72,14 @@ class HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => RollerScreen()),
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return ViaOverlay(contextLabel: 'FAB');
+            },
           );
         },
-        child: const Icon(Icons.color_lens),
+        child: const Icon(Icons.chat_bubble_outline), // Changed icon to reflect chat/AI
       ),
     );
   }

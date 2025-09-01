@@ -39,7 +39,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
 
   Future<void> _share() async {
     final report = await DiagnosticsService.instance.buildReport();
-    await Share.share(report, subject: 'Diagnostics');
+    await SharePlus.instance.share(ShareParams(text: report, subject: 'Diagnostics'));
     AnalyticsService.instance.logEvent('diagnostics_shared');
   }
 

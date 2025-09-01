@@ -158,7 +158,6 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => VisualizerScreen(
-          projectId: widget.projectId,
           initialPalette: null,
         ),
       ),
@@ -1551,7 +1550,6 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => VisualizerScreen(
-                                  projectId: widget.projectId,
                                   storyId: widget.storyId,
                                 ),
                               ),

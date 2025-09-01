@@ -1022,7 +1022,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => VisualizerScreen(
-                                  projectId: widget.projectId,
                                 ),
                               ),
                             );
