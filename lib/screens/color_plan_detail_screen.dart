@@ -219,11 +219,10 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
   }
 
   String? _wallColorFor(String room) {
-    final item = _plan?.roomPlaybook
-        .firstWhere(
-            (r) => r.roomType.toLowerCase() == room.toLowerCase(),
-            orElse: () => null);
-    if (item == null) return null;
+    final matches = (_plan?.roomPlaybook ?? [])
+        .where((r) => r.roomType.toLowerCase() == room.toLowerCase());
+    if (matches.isEmpty) return null;
+    final item = matches.first;
     for (final p in item.placements) {
       if (p.area.toLowerCase() == 'walls') return p.colorId;
     }

@@ -65,6 +65,12 @@ class Paint {
     this.metadata,
   });
 
+  /// Optional list of similar paint IDs stored in metadata under 'similarIds'
+  List<String>? get similarIds => (metadata?['similarIds'] as List?)?.cast<String>();
+
+  /// Optional list of companion paint IDs stored in metadata under 'companionIds'
+  List<String>? get companionIds => (metadata?['companionIds'] as List?)?.cast<String>();
+
   factory Paint.fromJson(Map<String, dynamic> json, String id) {
     // Normalize and compute color metrics if missing. In some data sources
     // (assets or Firestore), LAB/LCH may be absent. Many algorithms rely on

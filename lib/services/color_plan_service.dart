@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/color_plan.dart';
-import '../models/lighting_profile.dart';
 import 'analytics_service.dart';
 import 'lighting_service.dart';
 import '../models/fixed_elements.dart';
@@ -74,11 +73,8 @@ class ColorPlanService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
-      await doc.set(plan.toJson());
-      await AnalyticsService.instance.logEvent('plan_generated', {
-        'project_id': projectId,
-        'plan_id': doc.id,
-      });
+  await doc.set(plan.toJson());
+  await AnalyticsService.instance.planGenerated(projectId, doc.id);
       return plan;
     } catch (e) {
       final fallback = ColorPlan(

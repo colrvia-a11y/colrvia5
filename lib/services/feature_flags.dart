@@ -12,7 +12,7 @@ class FeatureFlags {
   static const fixedElementAssist = 'fixed_element_assist';
   static const maskAssist = 'mask_assist';
 
-  final RemoteConfig _rc = FirebaseRemoteConfig.instance;
+  final FirebaseRemoteConfig _rc = FirebaseRemoteConfig.instance;
   final Map<String, bool> _cache = {};
 
   Future<void> init() async {

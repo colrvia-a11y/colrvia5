@@ -276,7 +276,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         break;
     }
     if (page != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
     }
   }
   // END REGION: CODEX-ADD resume-banner

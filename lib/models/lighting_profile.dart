@@ -1,5 +1,4 @@
 // lib/models/lighting_profile.dart
-import 'package:flutter/material.dart';
 
 /// Lighting profiles that influence color rendering.
 /// Defaults to [LightingProfile.mixed].
