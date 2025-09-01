@@ -71,4 +71,12 @@ class SyncQueueService {
       }
     }
   }
+
+  /// Returns pending operations for diagnostics.
+  Future<List<Map<String, dynamic>>> pendingOps() async {
+    await _ensureBox();
+    return _box!.values
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
 }

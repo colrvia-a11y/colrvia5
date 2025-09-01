@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../models/project.dart';
+import 'diagnostics_service.dart';
 
 /// A comprehensive analytics tracking service for Color Stories feature.
 ///
@@ -40,6 +41,7 @@ class AnalyticsService {
   Future<void> log(String name, [Map<String, dynamic>? params]) async {
     if (!_isEnabled) return;
     await _logEvent(name, params ?? {});
+    DiagnosticsService.instance.logBreadcrumb('analytics:$name');
   }
 
   // Convenience wrappers for core flows

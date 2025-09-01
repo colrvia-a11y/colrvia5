@@ -6,6 +6,8 @@ import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/admin_screen.dart';
 import 'package:color_canvas/screens/simple_firebase_test.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
+import 'package:color_canvas/screens/diagnostics_screen.dart';
+import 'package:color_canvas/services/referral_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -332,6 +334,12 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       );
     }
+  }
+
+  void _openDiagnostics() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+    );
   }
 
   @override
@@ -1390,12 +1398,39 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               child: Column(
                 children: [
-                  _buildInfoRow('Version', '1.0.0', Icons.tag_rounded),
+                  _buildInfoRow('Version', '1.0.0', Icons.tag_rounded,
+                      onLongPress: _openDiagnostics),
                   const SizedBox(height: 12),
                   _buildInfoRow(
                       'Built with', 'Flutter & Firebase', Icons.code_rounded),
                 ],
               ),
+            ),
+            const SizedBox(height: 20),
+            FutureBuilder<int>(
+              future: ReferralService.instance
+                  .getBonusRenders(FirebaseService.currentUser?.uid),
+              builder: (context, snap) {
+                final bonus = snap.data ?? 0;
+                return ListTile(
+                  leading: const Icon(Icons.card_giftcard, color: _forestGreen),
+                  title: const Text('Refer a Friend'),
+                  trailing: bonus > 0
+                      ? CircleAvatar(
+                          radius: 12,
+                          backgroundColor: _warmPeach,
+                          child: Text('$bonus',
+                              style: const TextStyle(
+                                  fontSize: 12, color: _creamWhite)))
+                      : null,
+                  onTap: () async {
+                    final uid = FirebaseService.currentUser?.uid;
+                    if (uid != null) {
+                      await ReferralService.instance.shareReferral(uid);
+                    }
+                  },
+                );
+              },
             ),
             const SizedBox(height: 20),
             Row(
@@ -1465,8 +1500,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon) {
-    return Row(
+  Widget _buildInfoRow(String label, String value, IconData icon,
+      {VoidCallback? onLongPress}) {
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Row(
       children: [
         Icon(
           icon,

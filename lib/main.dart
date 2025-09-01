@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:color_canvas/screens/compare_screen.dart';
 // REGION: CODEX-ADD compare-colors-import
 import 'package:color_canvas/screens/compare_colors_screen.dart';
@@ -50,26 +53,32 @@ void main() async {
     }
     Debug.info('App', 'main', 'Firebase project: \'${Firebase.app().options.projectId}\'');
     
-    // Initialize Firebase App Check for security
-    // Production reCAPTCHA site key for ColorCanvas app
-    const String recaptchaSiteKey = '6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4'; // PRODUCTION KEY
-    
-    await FirebaseAppCheck.instance.activate(
-      // For web: Using production reCAPTCHA v3 site key
-      webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
-      
-      // For Android: Use debug provider for development, Play Integrity for production
-      androidProvider: kDebugMode 
-          ? AndroidProvider.debug 
-          : AndroidProvider.playIntegrity,
-      
-      // For iOS: Use debug provider for development, DeviceCheck for production  
-      appleProvider: kDebugMode 
-          ? AppleProvider.debug 
-          : AppleProvider.deviceCheck,
-    );
-    
-    Debug.info('App', 'main', 'Firebase App Check activated with PRODUCTION reCAPTCHA key');
+    const enableAppCheck = bool.fromEnvironment('ENABLE_APP_CHECK', defaultValue: true);
+    if (enableAppCheck) {
+      // Initialize Firebase App Check for security
+      const String recaptchaSiteKey = '6LfLm7grAAAAALy7wXUidR9yilxtIggw4SJNfci4';
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
+        androidProvider:
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      );
+      Debug.info('App', 'main', 'Firebase App Check activated');
+    } else {
+      Debug.info('App', 'main', 'App Check disabled via flag');
+    }
+
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+    FirebaseAuth.instance.authStateChanges().listen((u) {
+      FirebaseCrashlytics.instance.setUserIdentifier(u?.uid ?? 'none');
+    });
     
     // Initialize the Gemini Developer API backend service
     // Create a `GenerativeModel` instance with a model that supports your use case

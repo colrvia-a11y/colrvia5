@@ -81,4 +81,26 @@ class NotificationsService {
           .log('viz_hq_push_opened', {'jobId': jobId});
     }
   }
+
+  // REGION: CODEX-ADD lifecycle-nudges
+  Future<void> scheduleInactivityNudge(
+      {required String projectId, required Duration delay}) async {
+    final when = DateTime.now().add(delay);
+    await _local.zonedSchedule(
+      projectId.hashCode,
+      'Come back to your project',
+      'You have updates waiting',
+      when,
+      const NotificationDetails(
+        android: AndroidNotificationDetails('nudge', 'Nudges'),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+    AnalyticsService.instance
+        .logEvent('lifecycle_nudge_sent', {'kind': 'resume_project'});
+  }
+  // END REGION: CODEX-ADD lifecycle-nudges
 }

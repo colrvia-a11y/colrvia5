@@ -93,6 +93,22 @@ service cloud.firestore {
       match /copiedPaints/{docId} {
         allow read, write: if isAuthenticated() && request.auth.uid == userId;
       }
+
+      // REGION: CODEX-ADD user-project-rules
+      match /projects/{projectId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow create: if isAuthenticated() &&
+                      request.auth.uid == userId &&
+                      request.resource.data.ownerId == userId &&
+                      request.resource.data.keys().hasAll(['ownerId', 'name', 'createdAt']);
+        allow update: if isAuthenticated() &&
+                      request.auth.uid == userId &&
+                      resource.data.ownerId == userId &&
+                      request.resource.data.ownerId == userId &&
+                      request.resource.data.keys().hasOnly(['ownerId', 'name', 'shareable', 'updatedAt']);
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+      // END REGION: CODEX-ADD user-project-rules
     }
 
     // ✅ User Palettes

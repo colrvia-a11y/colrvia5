@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import 'analytics_service.dart';
@@ -86,6 +87,10 @@ class DeepLinkService {
     if (segments.isEmpty) return;
     final type = segments.first;
     final id = segments.length > 1 ? segments[1] : null;
+    final ref = link.queryParameters['ref'];
+    if (ref != null) {
+      SharedPreferences.getInstance().then((p) => p.setString('referrer', ref));
+    }
     final navigator = MyApp.navigatorKey.currentState;
     switch (type) {
       case 'palette':

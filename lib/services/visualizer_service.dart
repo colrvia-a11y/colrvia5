@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/visualizer_mask.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sync_queue_service.dart';
+import 'diagnostics_service.dart';
 
 // The project sometimes doesn't include `firebase_functions` in pubspec for
 // certain build environments. To keep the analyzer and builds working when
@@ -221,6 +222,7 @@ class VisualizerService {
     });
     final job = VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
     await _storeJob(job);
+    DiagnosticsService.instance.logBreadcrumb('viz_hq_requested:${job.jobId}');
     return job;
   }
 
@@ -228,7 +230,15 @@ class VisualizerService {
     final callable = _functions.httpsCallable('getJob');
     while (true) {
       final resp = await callable.call({'jobId': jobId});
-      yield VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+      final job = VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+      yield job;
+      if (job.status == 'complete') {
+        DiagnosticsService.instance
+            .logBreadcrumb('viz_hq_completed:${job.jobId}');
+      }
+      if (job.status == 'complete' || job.status == 'error') {
+        await _removeJob(jobId);
+      }
       await Future.delayed(const Duration(seconds: 2));
     }
   }

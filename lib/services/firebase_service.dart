@@ -5,6 +5,7 @@ import 'dart:async';
 import '../models/color_story.dart' as model;
 import '../firestore/firestore_data_schema.dart';
 import '../data/sample_paints.dart';
+import 'referral_service.dart';
 
 class FirebaseService {
   static final _db = FirebaseFirestore.instance;
@@ -142,8 +143,11 @@ class FirebaseService {
       
       final result = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
-      
+
       debugPrint('🔐 FirebaseService: User creation successful for user: ${result.user?.uid}');
+      if (result.user != null) {
+        await ReferralService.instance.applyPendingReferral(result.user!.uid);
+      }
       return result;
     } catch (e) {
       debugPrint('🔐 FirebaseService: User creation failed with error: $e');

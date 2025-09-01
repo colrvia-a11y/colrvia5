@@ -3,6 +3,14 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
+const enforceAppCheck = process.env.ENFORCE_APPCHECK === 'true';
+
+function requireAppCheck(context) {
+  if (enforceAppCheck && !context.app) {
+    throw new functions.https.HttpsError('failed-precondition', 'AppCheck token required');
+  }
+}
+
 <<<<<<< HEAD
 // NOTE: Replace model invocation with your actual AI provider call.
 exports.generateColorPlanV2 = functions.https.onCall(async (data, context) => {
@@ -10,14 +18,18 @@ exports.generateColorPlanV2 = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('unauthenticated', 'Auth required');
 =======
 // REGION: CODEX-ADD color-plan-fn
-exports.generateColorPlanV2 = functions.https.onCall(async (data, context) => {
+exports.generateColorPlanV2 = functions.runWith({ maxInstances: 10 }).https.onCall(async (data, context) => {
+  requireAppCheck(context);
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
   }
 
   const { projectId, paletteColorIds, vibe, context: ctx } = data || {};
-  if (!projectId || !Array.isArray(paletteColorIds) || paletteColorIds.length === 0) {
-    throw new functions.https.HttpsError('invalid-argument', 'Missing inputs');
+  if (typeof projectId !== 'string' ||
+      !Array.isArray(paletteColorIds) ||
+      paletteColorIds.length === 0) {
+    functions.logger.warn('function_input_invalid', { name: 'generateColorPlanV2' });
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid inputs');
   }
 
   const placementMap = paletteColorIds.map((id, i) => ({
@@ -196,3 +208,28 @@ exports.viaReply = functions.https.onCall((data) => {
   }
   return { text };
 });
+
+// REGION: CODEX-ADD award-referral
+exports.awardReferral = functions.runWith({ maxInstances: 5 }).https.onCall(async (data, context) => {
+  requireAppCheck(context);
+  const { referrerId, referredId } = data || {};
+  if (typeof referrerId !== 'string' || typeof referredId !== 'string') {
+    functions.logger.warn('function_input_invalid', { name: 'awardReferral' });
+    throw new functions.https.HttpsError('invalid-argument', 'referrerId and referredId required');
+  }
+  if (referrerId === referredId) {
+    throw new functions.https.HttpsError('invalid-argument', 'self-referral not allowed');
+  }
+  const db = admin.firestore();
+  await db.runTransaction(async (t) => {
+    const refDoc = db.doc(`users/${referrerId}/meta/rewards`);
+    const newDoc = db.doc(`users/${referredId}/meta/rewards`);
+    const refData = (await t.get(refDoc)).data() || {};
+    const newData = (await t.get(newDoc)).data() || {};
+    t.set(refDoc, { hq_bonus: (refData.hq_bonus || 0) + 1 }, { merge: true });
+    t.set(newDoc, { hq_bonus: (newData.hq_bonus || 0) + 1 }, { merge: true });
+  });
+  functions.logger.log('reward_issued', { type: 'referral' });
+  return { ok: true };
+});
+// END REGION: CODEX-ADD award-referral
