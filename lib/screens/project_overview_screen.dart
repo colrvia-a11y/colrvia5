@@ -16,6 +16,7 @@ class ProjectOverviewScreen extends StatelessWidget {
   // Use the project's stored palette ids. If a ColorStory object is needed
   // later, it should be fetched separately; ProjectDoc only stores a colorStoryId.
   final List<String> paletteIds = project.paletteIds;
+  final bool hasPalette = paletteIds.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -26,17 +27,19 @@ class ProjectOverviewScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12.0),
             child: Row(children: [
               Expanded(child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/colorPlan', arguments: {
-                    'projectId': project.id, 
-                    'paletteColorIds': paletteIds
-                  });
-                  AnalyticsService.instance.logEvent(
-                    'cta_plan_clicked',
-                    {'source': 'project_overview', 'project_id': project.id},
-                  );
-                },
-                icon: const Icon(Icons.auto_awesome), 
+                onPressed: hasPalette
+                    ? () {
+                        Navigator.pushNamed(context, '/colorPlan', arguments: {
+                          'projectId': project.id,
+                          'paletteColorIds': paletteIds
+                        });
+                        AnalyticsService.instance.logEvent(
+                          'cta_plan_clicked',
+                          {'source': 'project_overview', 'project_id': project.id},
+                        );
+                      }
+                    : null,
+                icon: const Icon(Icons.auto_awesome),
                 label: const Text('Make a Color Plan'),
               )),
               const SizedBox(width: 8),
@@ -56,15 +59,18 @@ class ProjectOverviewScreen extends StatelessWidget {
               )),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/compareColors', arguments: {
-                    'paletteColorIds': paletteIds
-                  });
-                  AnalyticsService.instance.logEvent(
-                    'cta_compare_clicked',
-                    {'source': 'project_overview', 'project_id': project.id},
-                  );
-                }, 
+                onPressed: hasPalette
+                    ? () {
+                        Navigator.pushNamed(context, '/compareColors', arguments: {
+                          'projectId': project.id,
+                          'paletteColorIds': paletteIds
+                        });
+                        AnalyticsService.instance.logEvent(
+                          'cta_compare_clicked',
+                          {'source': 'project_overview', 'project_id': project.id},
+                        );
+                      }
+                    : null,
                 icon: const Icon(Icons.compare)
               ),
             ]),

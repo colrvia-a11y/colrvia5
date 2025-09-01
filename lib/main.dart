@@ -6,6 +6,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:color_canvas/screens/compare_screen.dart';
+// REGION: CODEX-ADD compare-colors-import
+import 'package:color_canvas/screens/compare_colors_screen.dart';
+// END REGION: CODEX-ADD compare-colors-import
 import 'package:color_canvas/widgets/more_menu_sheet.dart';
 import 'package:color_canvas/firebase_config.dart';
 import 'package:color_canvas/theme.dart';
@@ -139,11 +142,12 @@ class MyApp extends StatelessWidget {
             '/home': (context) => const HomeScreen(),
             '/login': (context) => const LoginScreen(),
             '/colorPlan': (context) {
-              final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+              final args =
+                  ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
               return ColorPlanScreen(
                 projectId: args['projectId'] as String,
-                paletteId: args['paletteId'] as String?,
-                remixStoryId: args['remixStoryId'] as String?
+                paletteColorIds:
+                    (args['paletteColorIds'] as List<dynamic>?)?.cast<String>(),
               );
             },
             '/visualize': (context) {
@@ -159,6 +163,15 @@ class MyApp extends StatelessWidget {
                 comparePalette: args?['palette']
               );
             },
+            // REGION: CODEX-ADD compare-colors-route
+            '/compareColors': (context) {
+              final args =
+                  ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+              final ids =
+                  (args['paletteColorIds'] as List<dynamic>? ?? []).cast<String>();
+              return CompareColorsScreen(paletteColorIds: ids);
+            },
+            // END REGION: CODEX-ADD compare-colors-route
             '/colorPlanDetail': (context) {
               final storyId =
                   ModalRoute.of(context)!.settings.arguments as String;

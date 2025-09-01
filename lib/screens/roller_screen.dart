@@ -14,6 +14,9 @@ import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/data/sample_paints.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'package:color_canvas/models/color_strip_history.dart';
+// REGION: CODEX-ADD analytics-service-import
+import 'package:color_canvas/services/analytics_service.dart';
+// END REGION: CODEX-ADD analytics-service-import
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -945,6 +948,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                 ),
               ],
             ),
+      bottomNavigationBar: _buildBottomCtas(context),
     );
   }
 
@@ -1003,6 +1007,74 @@ class _RollerScreenState extends RollerScreenStatePublic {
     final names = _currentPalette.map((p) => p.name).join(', ');
     debugPrint('Share palette: [$names]');
   }
+
+  // REGION: CODEX-ADD core-loop-cta-row
+  Widget _buildBottomCtas(BuildContext context) {
+    final paletteIds = _currentPalette.map((p) => p.id).toList();
+    final hasPalette = paletteIds.isNotEmpty;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: hasPalette && widget.projectId != null
+                    ? () {
+                        Navigator.pushNamed(context, '/colorPlan', arguments: {
+                          'projectId': widget.projectId!,
+                          'paletteColorIds': paletteIds,
+                        });
+                        AnalyticsService.instance.logEvent(
+                          'cta_plan_clicked',
+                          {'source': 'roller', 'project_id': widget.projectId},
+                        );
+                      }
+                    : null,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Make a Color Plan'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/visualizer', arguments: {
+                    'projectId': widget.projectId,
+                    'paletteColorIds': paletteIds,
+                  });
+                  AnalyticsService.instance.logEvent(
+                    'cta_visualize_clicked',
+                    {'source': 'roller', 'project_id': widget.projectId},
+                  );
+                },
+                icon: const Icon(Icons.image),
+                label: const Text('Visualize'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: hasPalette
+                  ? () {
+                      Navigator.pushNamed(context, '/compareColors', arguments: {
+                        'projectId': widget.projectId,
+                        'paletteColorIds': paletteIds,
+                      });
+                      AnalyticsService.instance.logEvent(
+                        'cta_compare_clicked',
+                        {'source': 'roller', 'project_id': widget.projectId},
+                      );
+                    }
+                  : null,
+              icon: const Icon(Icons.compare),
+              tooltip: 'Compare',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // END REGION: CODEX-ADD core-loop-cta-row
 
   // Helper method to compare palettes for equality
   bool _palettesEqual(List<Paint> a, List<Paint> b) {
