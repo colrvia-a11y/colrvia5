@@ -33,10 +33,7 @@ class ProjectOverviewScreen extends StatelessWidget {
                           'projectId': project.id,
                           'paletteColorIds': paletteIds
                         });
-                        AnalyticsService.instance.logEvent(
-                          'cta_plan_clicked',
-                          {'source': 'project_overview', 'project_id': project.id},
-                        );
+                        AnalyticsService.instance.ctaPlanClicked('project_overview');
                       }
                     : null,
                 icon: const Icon(Icons.auto_awesome),
@@ -46,15 +43,12 @@ class ProjectOverviewScreen extends StatelessWidget {
               Expanded(child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pushNamed(context, '/visualizer', arguments: {
-                    'projectId': project.id, 
+                    'projectId': project.id,
                     'paletteColorIds': paletteIds
                   });
-                  AnalyticsService.instance.logEvent(
-                    'cta_visualize_clicked',
-                    {'source': 'project_overview', 'project_id': project.id},
-                  );
+                  AnalyticsService.instance.ctaVisualizeClicked('project_overview');
                 },
-                icon: const Icon(Icons.image), 
+                icon: const Icon(Icons.image),
                 label: const Text('Visualize'),
               )),
               const SizedBox(width: 8),
@@ -65,10 +59,7 @@ class ProjectOverviewScreen extends StatelessWidget {
                           'projectId': project.id,
                           'paletteColorIds': paletteIds
                         });
-                        AnalyticsService.instance.logEvent(
-                          'cta_compare_clicked',
-                          {'source': 'project_overview', 'project_id': project.id},
-                        );
+                        AnalyticsService.instance.ctaCompareClicked('project_overview');
                       }
                     : null,
                 icon: const Icon(Icons.compare)

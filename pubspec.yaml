@@ -17,6 +17,8 @@ dependencies:
   cloud_functions: ^6.0.0
   firebase_storage: ^13.0.0
   firebase_ai: ^3.1.0
+  firebase_analytics: ^11.0.0
+  firebase_analytics_web: ^0.5.5
   connectivity_plus: ^6.0.3
   cached_network_image: ^3.4.1
   just_audio: ^0.10.4

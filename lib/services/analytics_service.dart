@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'package:firebase_analytics/firebase_analytics.dart';
 import '../models/project.dart';
 
 /// A comprehensive analytics tracking service for Color Stories feature.
@@ -14,11 +15,14 @@ class AnalyticsService {
 
   static AnalyticsService get instance => _instance;
 
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
   bool _isEnabled = true;
 
   /// Enable or disable analytics tracking
   void setAnalyticsCollectionEnabled(bool enabled) {
     _isEnabled = enabled;
+    _analytics.setAnalyticsCollectionEnabled(enabled);
   }
 
   /// Log a screen view event
@@ -29,9 +33,53 @@ class AnalyticsService {
 
   /// Log a generic event with parameters
   Future<void> logEvent(String name, [Map<String, dynamic>? parameters]) async {
-    if (!_isEnabled) return;
-    await _logEvent(name, parameters ?? {});
+    await log(name, parameters);
   }
+
+  /// Primary logging method used by wrappers
+  Future<void> log(String name, [Map<String, dynamic>? params]) async {
+    if (!_isEnabled) return;
+    await _logEvent(name, params ?? {});
+  }
+
+  // Convenience wrappers for core flows
+  Future<void> ctaPlanClicked(String source) =>
+      log('cta_plan_clicked', {'source': source});
+
+  Future<void> ctaVisualizeClicked(String source) =>
+      log('cta_visualize_clicked', {'source': source});
+
+  Future<void> ctaCompareClicked(String source) =>
+      log('cta_compare_clicked', {'source': source});
+
+  Future<void> planGenerated(int count, bool hasMap, bool hasPlaybook) =>
+      log('plan_generated', {
+        'count': count,
+        'has_map': hasMap,
+        'has_playbook': hasPlaybook,
+      });
+
+  Future<void> renderFastRequested() => log('render_fast_requested');
+
+  Future<void> renderHqRequested() => log('render_hq_requested');
+
+  Future<void> renderHqCompleted(int ms) =>
+      log('render_hq_completed', {'ms_elapsed': ms});
+
+  Future<void> compareOpened(int count) =>
+      log('compare_opened', {'count': count});
+
+  Future<void> painterPackExported(int pageCount, int colorCount) =>
+      log('painter_pack_exported', {
+        'page_count': pageCount,
+        'color_count': colorCount,
+      });
+
+  Future<void> viaActionClicked(String action) =>
+      log('via_action_clicked', {'action': action});
+
+  Future<void> lightingProfileSelected(String profile) =>
+      log('lighting_profile_selected', {'profile': profile});
 
   /// Track when a user opens/views a color story
   Future<void> trackColorStoryOpen({
@@ -562,20 +610,7 @@ class AnalyticsService {
   Future<void> _logEvent(
       String eventName, Map<String, dynamic> parameters) async {
     try {
-      // Mock implementation - log to console with structured format
-      final parametersStr =
-          parameters.entries.map((e) => '${e.key}: ${e.value}').join(', ');
-
-      developer.log(
-        'EVENT: $eventName | $parametersStr',
-        name: 'AnalyticsService',
-      );
-
-      // Future enhancement: When Firebase Analytics is added, replace with:
-      // await FirebaseAnalytics.instance.logEvent(
-      //   name: eventName,
-      //   parameters: parameters,
-      // );
+      await _analytics.logEvent(name: eventName, parameters: parameters);
     } catch (e) {
       developer.log('Failed to log analytics event $eventName: $e',
           name: 'AnalyticsService');
@@ -601,9 +636,7 @@ class AnalyticsService {
   /// Get analytics instance for direct access if needed
   /// Returns null in mock implementation
   dynamic get analyticsInstance {
-    // Future enhancement: When Firebase Analytics is added, return:
-    // return FirebaseAnalytics.instance;
-    return null;
+    return _analytics;
   }
 
   // Funnel Analytics Methods

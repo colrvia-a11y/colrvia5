@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/color_utils.dart';
+import '../services/analytics_service.dart';
 
 class CompareColorsScreen extends StatefulWidget {
   final List<String> paletteColorIds;
@@ -19,6 +20,7 @@ class _CompareColorsScreenState extends State<CompareColorsScreen> {
     super.initState();
     _paintsFuture = FirebaseService.getPaintsByIds(
         widget.paletteColorIds.take(4).toList());
+    AnalyticsService.instance.compareOpened(widget.paletteColorIds.length);
   }
 
   @override

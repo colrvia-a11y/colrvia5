@@ -1206,10 +1206,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                               'projectId': widget.projectId!,
                               'paletteColorIds': paletteIds,
                             });
-                            AnalyticsService.instance.logEvent(
-                              'cta_plan_clicked',
-                              {'source': 'roller', 'project_id': widget.projectId},
-                            );
+                            AnalyticsService.instance.ctaPlanClicked('roller');
                           }
                         : null,
                     icon: const Icon(Icons.auto_awesome),
@@ -1224,10 +1221,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                         'projectId': widget.projectId,
                         'paletteColorIds': paletteIds,
                       });
-                      AnalyticsService.instance.logEvent(
-                        'cta_visualize_clicked',
-                        {'source': 'roller', 'project_id': widget.projectId},
-                      );
+                      AnalyticsService.instance.ctaVisualizeClicked('roller');
                     },
                     icon: const Icon(Icons.image),
                     label: const Text('Visualize'),
@@ -1241,10 +1235,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                             'projectId': widget.projectId,
                             'paletteColorIds': paletteIds,
                           });
-                          AnalyticsService.instance.logEvent(
-                            'cta_compare_clicked',
-                            {'source': 'roller', 'project_id': widget.projectId},
-                          );
+                          AnalyticsService.instance.ctaCompareClicked('roller');
                         }
                       : null,
                   icon: const Icon(Icons.compare),

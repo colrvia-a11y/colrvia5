@@ -62,12 +62,11 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
       );
 
       // Telemetry
-      AnalyticsService.instance.logEvent('plan_generated', {
-        'project_id': widget.projectId,
-        'palette_color_count': plan.paletteColorIds.length,
-        'has_placement_map': plan.placementMap.isNotEmpty,
-        'has_playbook': plan.roomPlaybook.isNotEmpty,
-      });
+      AnalyticsService.instance.planGenerated(
+        plan.paletteColorIds.length,
+        plan.placementMap.isNotEmpty,
+        plan.roomPlaybook.isNotEmpty,
+      );
 
       setState(() => _plan = plan);
     } catch (e) {

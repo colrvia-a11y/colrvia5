@@ -664,12 +664,9 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                     final pdfBytes = await service.buildPdf(plan, skuMap);
                     await Printing.layoutPdf(
                         onLayout: (_) async => pdfBytes);
-                    await AnalyticsService.instance.logEvent(
-                      'painter_pack_exported',
-                      {
-                        'pageCount': service.lastPageCount,
-                        'colorCount': plan.paletteColorIds.length,
-                      },
+                    await AnalyticsService.instance.painterPackExported(
+                      service.lastPageCount,
+                      plan.paletteColorIds.length,
                     );
                   },
                 ),
