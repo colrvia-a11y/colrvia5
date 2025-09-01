@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../screens/visualizer_screen.dart';
 import 'analytics_service.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
 class NotificationsService {
   NotificationsService._();
@@ -16,8 +18,9 @@ class NotificationsService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    tz.initializeTimeZones();
     await _local.initialize(
-      const InitializationSettings(
+      InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(),
       ),
@@ -49,7 +52,7 @@ class NotificationsService {
       0,
       m.notification?.title ?? 'Update',
       m.notification?.body ?? '',
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails('default', 'Default'),
         iOS: DarwinNotificationDetails(),
       ),
@@ -85,15 +88,17 @@ class NotificationsService {
 
   Future<void> scheduleNudge(
       String kind, String title, String body, Duration delay) async {
-    await _local.schedule(
+    await _local.zonedSchedule(
       kind.hashCode,
       title,
       body,
-      DateTime.now().add(delay),
-      const NotificationDetails(
+      tz.TZDateTime.now(tz.getLocation('America/Detroit')).add(delay),
+      NotificationDetails(
         android: AndroidNotificationDetails('nudges', 'Nudges'),
         iOS: DarwinNotificationDetails(),
       ),
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
     AnalyticsService.instance
         .logEvent('lifecycle_nudge_sent', {'kind': kind});

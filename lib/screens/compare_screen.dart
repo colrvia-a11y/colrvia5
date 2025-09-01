@@ -6,9 +6,9 @@ class CompareScreen extends StatelessWidget {
   final UserPalette? comparePalette;
 
   const CompareScreen({
-    Key? key,
+    super.key,
     this.comparePalette,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +32,9 @@ class ColorPaletteView extends StatelessWidget {
   final UserPalette palette;
 
   const ColorPaletteView({
-    Key? key,
+    super.key,
     required this.palette,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +58,9 @@ class ColorTile extends StatelessWidget {
   final Color color;
 
   const ColorTile({
-    Key? key,
+    super.key,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

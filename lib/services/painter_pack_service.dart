@@ -12,7 +12,7 @@ class PainterPackService {
       ColorPlan plan, Map<String, schema.PaletteColor> skuMap) async {
     final doc = pw.Document();
 
-    PdfColor? _parseColor(String? hex) {
+    PdfColor? parseColor(String? hex) {
       if (hex == null || hex.isEmpty) return null;
       try {
         return PdfColor.fromHex(hex);
@@ -23,7 +23,7 @@ class PainterPackService {
 
     final swatchWidgets = plan.paletteColorIds.map((id) {
       final info = skuMap[id];
-      final color = _parseColor(info?.hex);
+      final color = parseColor(info?.hex);
       return pw.Container(
         width: 60,
         padding: const pw.EdgeInsets.all(4),

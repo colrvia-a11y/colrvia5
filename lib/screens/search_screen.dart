@@ -129,7 +129,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     try {
-      final cacheKey = 'search:' + query;
+      final cacheKey = 'search:$query';
       final results = await CatalogCacheService.instance
           .get<List<Paint>>(cacheKey,
               () => FirebaseService.searchPaints(query.trim()));

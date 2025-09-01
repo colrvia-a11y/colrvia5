@@ -140,7 +140,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _variants.addAll(
         widget.initialPalette!.colors.map((c) => c.hex),
       );
-      while (_variants.length > 5) _variants.removeLast();
+      while (_variants.length > 5) {
+        _variants.removeLast();
+      }
     } else {
       // Extract colors from initialGuide if available
       if (widget.initialGuide != null) {
@@ -698,7 +700,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Future<void> _onMaskAssist() async {
     if (_previewUrl == null ||
-        !FeatureFlags.instance.isEnabled(FeatureFlags.maskAssist)) return;
+        !FeatureFlags.instance.isEnabled(FeatureFlags.maskAssist)) {
+      return;
+    }
     AnalyticsService.instance
         .logEvent('mask_assist_requested', {'image': _previewUrl});
     final polygons = await _viz.maskAssist(_previewUrl!);

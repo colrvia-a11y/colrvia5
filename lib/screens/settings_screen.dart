@@ -8,7 +8,7 @@ import 'package:color_canvas/screens/simple_firebase_test.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'diagnostics_screen.dart';
-import '../services/referral_service.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   int _paintCount = 0;
   int _brandCount = 0;
   String _appVersion = '';
-  int _rewardCount = 0;
+  // int _rewardCount = 0;
 
   @override
   void initState() {
@@ -1248,18 +1248,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             const SizedBox(height: 20),
-            _buildBrandedButton(
-              onPressed: () =>
-                  ReferralService.instance.createAndShareLink(),
-              icon: Icons.group_add_rounded,
-              label: 'Refer a friend',
-              isSecondary: false,
-            ),
-            if (_rewardCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Chip(label: Text('Rewards $_rewardCount')),
-              ),
             const SizedBox(height: 20),
             _buildBrandedButton(
               onPressed: () {

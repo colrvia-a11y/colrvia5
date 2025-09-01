@@ -27,7 +27,7 @@ import 'services/feature_flags.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'services/sync_queue_service.dart';
 import 'services/notifications_service.dart';
-import 'services/deep_link_service.dart';
+
 
 // Global Firebase state
 bool isFirebaseInitialized = false;
@@ -101,13 +101,13 @@ void main() async {
   await FeatureFlags.instance.init();
 
   Connectivity().onConnectivityChanged.listen((status) {
-    if (status != ConnectivityResult.none) {
+    if (!status.contains(ConnectivityResult.none)) {
       SyncQueueService.instance.replay();
     }
   });
 
   await NotificationsService.instance.init();
-  await DeepLinkService.instance.init();
+  
 
     Debug.info('App', 'main', 'Running app');
     runApp(const MyApp());
