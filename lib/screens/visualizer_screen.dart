@@ -15,6 +15,8 @@ import '../firestore/firestore_data_schema.dart'; // for UserPalette
 import '../services/analytics_service.dart';
 import '../models/color_story.dart';
 import '../data/sample_rooms.dart';
+import '../widgets/via_overlay.dart';
+import 'color_plan_screen.dart';
 
 enum CompareMode { none, grid, split, slider }
 
@@ -381,10 +383,25 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     width: 52,
                     height: 52,
                     child: CircularProgressIndicator(strokeWidth: 4),
-                  ),
                 ),
               ),
             ),
+          ),
+          ViaOverlay(
+            contextLabel: 'visualizer',
+            onMakePlan: widget.projectId == null
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ColorPlanScreen(
+                          projectId: widget.projectId!,
+                          paletteColorIds: const [],
+                        ),
+                      ),
+                    );
+                  },
+          ),
         ],
       ),
     );

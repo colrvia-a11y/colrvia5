@@ -28,6 +28,7 @@ import 'color_plan_screen.dart';
 // REGION: CODEX-ADD color-plan-detail-screen-imports
 import '../services/color_plan_service.dart';
 // END REGION: CODEX-ADD color-plan-detail-screen-imports
+import '../widgets/via_overlay.dart';
 
 class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
@@ -941,7 +942,9 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                     )
                   : null,
             ),
-            body: SingleChildScrollView(
+            body: Stack(
+              children: [
+                SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
@@ -1436,6 +1439,23 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                   ),
                 ],
               ),
+            ),
+                ViaOverlay(
+                  contextLabel: 'color_plan_detail',
+                  onVisualize: widget.projectId == null
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => VisualizerScreen(
+                                projectId: widget.projectId,
+                                storyId: widget.storyId,
+                              ),
+                            ),
+                          );
+                        },
+                ),
+              ],
             ),
           );
         });
