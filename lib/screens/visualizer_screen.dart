@@ -32,6 +32,8 @@ import '../services/permissions_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 // END REGION: CODEX-ADD permissions-import
 import '../services/accessibility_service.dart';
+import 'package:share_plus/share_plus.dart';
+import '../services/deep_link_service.dart';
 
 enum CompareMode { none, grid, split, slider }
 
@@ -209,6 +211,19 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         _results = [];
       });
     }
+  }
+
+  Future<void> _shareVisualization() async {
+    if (widget.projectId == null) return;
+    final ok = await DeepLinkService.instance
+        .ensureProjectShareable(context, widget.projectId!);
+    if (!ok) return;
+    final uri = await DeepLinkService.instance.createLink(
+      'viz',
+      widget.jobId ?? 'latest',
+      params: {'projectId': widget.projectId!},
+    );
+    await SharePlus.instance.share(ShareParams(text: uri.toString()));
   }
 
   void _switchPalette(int index) {
@@ -396,6 +411,12 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         title: const Text('AI Visualizer'),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share_outlined),
+            onPressed: _shareVisualization,
+          ),
+        ],
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
