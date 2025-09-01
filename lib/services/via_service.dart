@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'diagnostics_service.dart';
 
 /// Service for interacting with the Via assistant cloud function.
 class ViaService {
@@ -10,6 +11,7 @@ class ViaService {
 
   /// Fetches a suggestion for the given [contextLabel] and [state].
   Future<String> reply(String contextLabel, Map<String, dynamic> state) async {
+    DiagnosticsService.instance.logBreadcrumb('via_used');
     final callable = _functions.httpsCallable('viaReply');
     final resp = await callable.call({'context': contextLabel, 'state': state});
     final data = Map<String, dynamic>.from(resp.data as Map);

@@ -42,6 +42,8 @@ class FeatureFlags {
 
   bool isEnabled(String key) => _cache[key] ?? kDebugMode;
 
+  Map<String, bool> get flagStates => Map.unmodifiable(_cache);
+
   void _updateCache() {
     for (final key in [viaMvp, lightingProfiles, fixedElementAssist, maskAssist]) {
       _cache[key] = _rc.getBool(key);

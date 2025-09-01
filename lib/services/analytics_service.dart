@@ -18,6 +18,7 @@ class AnalyticsService {
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   bool _isEnabled = true;
+  final List<Map<String, dynamic>> _recentEvents = [];
 
   /// Enable or disable analytics tracking
   void setAnalyticsCollectionEnabled(bool enabled) {
@@ -41,6 +42,9 @@ class AnalyticsService {
     if (!_isEnabled) return;
     await _logEvent(name, params ?? {});
   }
+
+  List<Map<String, dynamic>> get recentEvents =>
+      List.unmodifiable(_recentEvents);
 
   // Convenience wrappers for core flows
   Future<void> ctaPlanClicked(String source) =>
@@ -618,7 +622,14 @@ class AnalyticsService {
   Future<void> _logEvent(
       String eventName, Map<String, Object?> parameters) async {
     try {
-  await _analytics.logEvent(name: eventName, parameters: parameters as Map<String, Object>?);
+      _recentEvents.add({
+        'name': eventName,
+        'params': parameters,
+        'ts': DateTime.now().toIso8601String(),
+      });
+      if (_recentEvents.length > 50) _recentEvents.removeAt(0);
+      await _analytics.logEvent(
+          name: eventName, parameters: parameters as Map<String, Object>?);
     } catch (e) {
       developer.log('Failed to log analytics event $eventName: $e',
           name: 'AnalyticsService');

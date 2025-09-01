@@ -82,4 +82,20 @@ class NotificationsService {
           .log('viz_hq_push_opened', {'jobId': jobId});
     }
   }
+
+  Future<void> scheduleNudge(
+      String kind, String title, String body, Duration delay) async {
+    await _local.schedule(
+      kind.hashCode,
+      title,
+      body,
+      DateTime.now().add(delay),
+      const NotificationDetails(
+        android: AndroidNotificationDetails('nudges', 'Nudges'),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+    AnalyticsService.instance
+        .logEvent('lifecycle_nudge_sent', {'kind': kind});
+  }
 }

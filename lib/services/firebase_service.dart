@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'referral_service.dart';
+import 'deep_link_service.dart';
 import 'dart:async';
 import '../models/color_story.dart' as model;
 import '../firestore/firestore_data_schema.dart';
@@ -122,8 +125,10 @@ class FirebaseService {
       
       final result = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
-      
+
       debugPrint('🔐 FirebaseService: Sign in successful for user: ${result.user?.uid}');
+      FirebaseCrashlytics.instance
+          .setUserIdentifier(result.user?.uid ?? '');
       return result;
     } catch (e) {
       debugPrint('🔐 FirebaseService: Sign in failed with error: $e');
@@ -142,8 +147,15 @@ class FirebaseService {
       
       final result = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
-      
+
       debugPrint('🔐 FirebaseService: User creation successful for user: ${result.user?.uid}');
+      FirebaseCrashlytics.instance
+          .setUserIdentifier(result.user?.uid ?? '');
+      final ref = await DeepLinkService.instance.getReferrerId();
+      if (ref != null) {
+        await ReferralService.instance.awardReferral(ref);
+        AnalyticsService.instance.logEvent('ref_attributed');
+      }
       return result;
     } catch (e) {
       debugPrint('🔐 FirebaseService: User creation failed with error: $e');
