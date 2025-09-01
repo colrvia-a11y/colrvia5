@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/color_plan.dart';
+import '../models/lighting_profile.dart';
 import 'analytics_service.dart';
+import 'lighting_service.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -32,12 +34,17 @@ class ColorPlanService {
       throw Exception('Must be logged in to create a color plan');
     }
 
+    final profile = await LightingService().getProfile(projectId);
+
     final callable = _functions.httpsCallable('generateColorPlanV2');
     final resp = await callable.call({
       'projectId': projectId,
       'paletteColorIds': paletteColorIds,
       'vibe': vibe,
-      'context': context ?? {},
+      'context': {
+        'lightingProfile': profile.name,
+        ...?context,
+      },
     });
 
     final data = Map<String, dynamic>.from(resp.data as Map);
