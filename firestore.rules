@@ -77,6 +77,11 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
                     request.auth.uid == userId;
 
+      // Allow read/write access to the 'meta' subcollection for the user's own profile
+      match /meta/{document=**} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+
       function validateUserProfileUpdate() {
         let allowedFields = ['displayName', 'bio', 'avatarUrl', 'preferences', 'autoPlayStoryAudio', 'reduceMotion', 'wifiOnlyAssets', 'defaultStoryVisibility', 'ambientAudioMode', 'updatedAt'];
         let restrictedFields = ['id', 'email', 'createdAt', 'plan'];
@@ -155,7 +160,7 @@ service cloud.firestore {
 
     // ✅ Admin-only Collections
     match /admins/{userId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || request.auth.uid == userId;
       allow write: if isAdmin();
     }
 
@@ -167,6 +172,11 @@ service cloud.firestore {
     // ✅ Color Story Visuals - User-scoped subcollection
     match /colorStories/{storyId}/visuals/{doc} {
       allow read, write: if isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    // Allow read/write access to the _test collection for authenticated users.
+    match /_test/{document=**} {
+      allow read, write: if request.auth != null;
     }
 
     // ✅ Catch-all: Deny all other access

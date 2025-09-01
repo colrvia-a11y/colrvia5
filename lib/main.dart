@@ -89,32 +89,32 @@ void main() async {
     await FirebaseService.enableOfflineSupport();
     isFirebaseInitialized = true;
     Debug.info('App', 'main', 'Firebase initialized successfully');
-  } catch (e) {
-    // Handle Firebase initialization errors
-    isFirebaseInitialized = false;
-    Debug.error('App', 'main', 'Firebase initialization error: $e');
-  }
 
-  // Initialize NetworkGuard and clear session overrides
-  NetworkGuard.clearSessionOverrides();
-  Debug.info('App', 'main', 'NetworkGuard initialized');
+    // Initialize NetworkGuard and clear session overrides
+    NetworkGuard.clearSessionOverrides();
+    Debug.info('App', 'main', 'NetworkGuard initialized');
 
-  await FeatureFlags.instance.init();
+    await FeatureFlags.instance.init();
 
-  Connectivity().onConnectivityChanged.listen((status) {
-    if (!status.contains(ConnectivityResult.none)) {
-      SyncQueueService.instance.replay();
-    }
-  });
+    Connectivity().onConnectivityChanged.listen((status) {
+      if (!status.contains(ConnectivityResult.none)) {
+        SyncQueueService.instance.replay();
+      }
+    });
 
-  await NotificationsService.instance.init();
-  
+    await NotificationsService.instance.init();
 
     Debug.info('App', 'main', 'Running app');
     runApp(const MyApp());
-  }, (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  });
+  } catch (e, stack) {
+    // Handle Firebase initialization errors
+    isFirebaseInitialized = false;
+    Debug.error('App', 'main', 'Firebase initialization error: $e');
+    FirebaseCrashlytics.instance.recordError(e, stack, fatal: true);
+  }
+}, (error, stack) {
+  FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+});
 }
 
 class MyApp extends StatelessWidget {
