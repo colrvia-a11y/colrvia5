@@ -76,6 +76,19 @@ class AnalyticsService {
   Future<void> lightingProfileSelected(String profile) =>
       log('lighting_profile_selected', {'profile': profile});
 
+  Future<void> planFallbackCreated() => log('plan_fallback_created');
+
+  Future<void> visualizerHqFailed() => log('visualizer_hq_failed');
+
+  Future<void> visualizerHqRetryClicked() =>
+      log('visualizer_hq_retry_clicked');
+
+  Future<void> fallbackUsed(String source) =>
+      log('fallback_used', {'source': source});
+
+  Future<void> featureFlagState(String flag, bool enabled) =>
+      log('feature_flag_state', {'flag': flag, 'enabled': enabled});
+
   /// Track when a user opens/views a color story
   Future<void> trackColorStoryOpen({
     required String storyId,

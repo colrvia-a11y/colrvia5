@@ -1,10 +1,12 @@
 // lib/services/visualizer_service.dart
 import 'dart:async';
 import 'dart:ui';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/visualizer_mask.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // The project sometimes doesn't include `firebase_functions` in pubspec for
 // certain build environments. To keep the analyzer and builds working when
@@ -65,6 +67,7 @@ class VisualizerService {
   final _FirebaseFunctionsShim _functions = _firebaseFunctionsShimInstance;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static const _pendingJobsKey = 'viz_pending_jobs';
 
   CollectionReference<Map<String, dynamic>> _maskCollection(
           String uid, String projectId, String photoId) =>
@@ -179,7 +182,9 @@ class VisualizerService {
       if (lightingProfile != null) 'lightingProfile': lightingProfile,
       if (masks != null) 'masks': masks.map((m) => m.toJson()).toList(),
     });
-    return VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+    final job = VisualizerJob.fromMap(Map<String, dynamic>.from(resp.data as Map));
+    await _storeJob(job);
+    return job;
   }
 
   Stream<VisualizerJob> watchJob(String jobId) async* {
@@ -190,5 +195,35 @@ class VisualizerService {
       await Future.delayed(const Duration(seconds: 2));
     }
   }
+
+  Future<void> _storeJob(VisualizerJob job) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_pendingJobsKey) ?? [];
+    list.add(jsonEncode({'jobId': job.jobId}));
+    await prefs.setStringList(_pendingJobsKey, list);
+  }
+
+  Future<void> _removeJob(String jobId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_pendingJobsKey) ?? [];
+    list.removeWhere((s) => jsonDecode(s)['jobId'] == jobId);
+    await prefs.setStringList(_pendingJobsKey, list);
+  }
+
+  Future<void> resumePendingJobs(void Function(VisualizerJob) onUpdate) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_pendingJobsKey) ?? [];
+    for (final item in list) {
+      final id = jsonDecode(item)['jobId'] as String;
+      watchJob(id).listen((j) async {
+        onUpdate(j);
+        if (j.status == 'complete' || j.status == 'error') {
+          await _removeJob(id);
+        }
+      });
+    }
+  }
+
+  Future<void> clearJob(String jobId) => _removeJob(jobId);
 }
 

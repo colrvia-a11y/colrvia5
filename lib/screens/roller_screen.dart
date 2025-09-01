@@ -30,6 +30,7 @@ import 'package:color_canvas/widgets/fixed_elements_sheet.dart';
 import 'package:color_canvas/models/fixed_elements.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
 import 'package:color_canvas/services/fixed_element_service.dart';
+import '../services/feature_flags.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -996,34 +997,35 @@ class _RollerScreenState extends RollerScreenStatePublic {
                     panelBuilder: (tool) => _buildToolPanel(tool),
                   ),
                 ),
-                ViaOverlay(
-                  contextLabel: 'roller',
-                  onMakePlan: widget.projectId == null
-                      ? null
-                      : () {
-                          final ids =
-                              _currentPalette.map((p) => p.id).toList();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ColorPlanScreen(
-                                projectId: widget.projectId!,
-                                paletteColorIds: ids,
+                if (FeatureFlags.instance.isEnabled(FeatureFlags.viaMvp))
+                  ViaOverlay(
+                    contextLabel: 'roller',
+                    onMakePlan: widget.projectId == null
+                        ? null
+                        : () {
+                            final ids =
+                                _currentPalette.map((p) => p.id).toList();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ColorPlanScreen(
+                                  projectId: widget.projectId!,
+                                  paletteColorIds: ids,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                  onVisualize: widget.projectId == null
-                      ? null
-                      : () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => VisualizerScreen(
-                                projectId: widget.projectId,
+                            );
+                          },
+                    onVisualize: widget.projectId == null
+                        ? null
+                        : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => VisualizerScreen(
+                                  projectId: widget.projectId,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                ),
+                            );
+                          },
+                  ),
               ],
             ),
       bottomNavigationBar: _buildBottomCtas(context),
@@ -1260,11 +1262,13 @@ class _RollerScreenState extends RollerScreenStatePublic {
                   tooltip: 'Compare',
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  onPressed: widget.projectId == null ? null : _openFixedElements,
-                  icon: const Icon(Icons.layers_outlined),
-                  tooltip: 'Fixed Elements',
-                ),
+                if (FeatureFlags.instance.isEnabled(FeatureFlags.fixedElementAssist))
+                  IconButton(
+                    onPressed:
+                        widget.projectId == null ? null : _openFixedElements,
+                    icon: const Icon(Icons.layers_outlined),
+                    tooltip: 'Fixed Elements',
+                  ),
               ],
             ),
           ),

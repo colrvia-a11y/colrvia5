@@ -104,6 +104,7 @@ class ColorPlan {
   final List<RoomPlaybookItem> roomPlaybook;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isFallback;
 
   const ColorPlan({
     required this.id,
@@ -119,6 +120,7 @@ class ColorPlan {
     required this.roomPlaybook,
     required this.createdAt,
     required this.updatedAt,
+    this.isFallback = false,
   });
 
   factory ColorPlan.fromJson(String id, Map<String, dynamic> j) => ColorPlan(
@@ -143,6 +145,7 @@ class ColorPlan {
         .toList(),
     createdAt: (j['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     updatedAt: (j['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    isFallback: j['isFallback'] == true,
   );
 
   Map<String, dynamic> toJson() => {
@@ -158,6 +161,7 @@ class ColorPlan {
     'roomPlaybook': roomPlaybook.map((e) => e.toJson()).toList(),
     'createdAt': Timestamp.fromDate(createdAt),
     'updatedAt': Timestamp.fromDate(updatedAt),
+    if (isFallback) 'isFallback': true,
   };
 
   ColorPlan copyWith({
@@ -174,6 +178,7 @@ class ColorPlan {
     List<RoomPlaybookItem>? roomPlaybook,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isFallback,
   }) {
     return ColorPlan(
       id: id ?? this.id,
@@ -189,6 +194,7 @@ class ColorPlan {
       roomPlaybook: roomPlaybook ?? this.roomPlaybook,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isFallback: isFallback ?? this.isFallback,
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/visualizer_service.dart';
 import '../firestore/firestore_data_schema.dart'; // for UserPalette
@@ -21,6 +22,7 @@ import '../models/lighting_profile.dart';
 import '../services/lighting_service.dart';
 import 'photo_import_sheet.dart';
 import '../models/visualizer_mask.dart';
+import '../services/feature_flags.dart';
 // REGION: CODEX-ADD user-prefs-import
 import '../services/user_prefs_service.dart';
 // END REGION: CODEX-ADD user-prefs-import
@@ -55,7 +57,7 @@ class VisualizerScreen extends StatefulWidget {
 }
 
 class _VisualizerScreenState extends State<VisualizerScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final _picker = ImagePicker();
 
   // Source
@@ -75,6 +77,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   StreamSubscription<VisualizerJob>? _jobSub;
   String? _previewUrl;
   String? _hqStatus;
+  bool _hqError = false;
+  DateTime? _hqStart;
 
   LightingProfile _lightingProfile = LightingProfile.mixed;
 
@@ -96,6 +100,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     AccessibilityService.instance
         .addListener(() => mounted ? setState(() {}) : null);
@@ -104,13 +109,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     // Track visualizer screen view
     AnalyticsService.instance.screenView('visualizer');
 
+    _viz.resumePendingJobs(_handleHqJobUpdate);
+
     // Track funnel analytics if opened with projectId
     if (widget.projectId != null) {
       AnalyticsService.instance.logVisualizerOpenedFromStory(widget.projectId!);
       UserPrefsService.setLastProject(widget.projectId!, 'visualizer');
     }
 
-    if (widget.projectId != null) {
+    if (widget.projectId != null &&
+        FeatureFlags.instance.isEnabled(FeatureFlags.lightingProfiles)) {
       LightingService().getProfile(widget.projectId!).then((p) {
         if (mounted) {
           setState(() => _lightingProfile = p);
@@ -143,8 +151,16 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _jobSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _viz.resumePendingJobs(_handleHqJobUpdate);
+    }
   }
 
   // ─────────────────────────── Actions
@@ -163,7 +179,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _previewUrl = null;
       _results = [];
     });
-    if (widget.projectId != null) {
+    if (widget.projectId != null &&
+        FeatureFlags.instance.isEnabled(FeatureFlags.lightingProfiles)) {
       final selected = await showLightingProfilePicker(
         context,
         current: _lightingProfile,
@@ -215,8 +232,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       return;
     }
     AnalyticsService.instance.renderFastRequested();
+    final lp = FeatureFlags.instance.isEnabled(FeatureFlags.lightingProfiles)
+        ? _lightingProfile.name
+        : null;
     final job = await _viz.renderFast('sample', _variants,
-        lightingProfile: _lightingProfile.name);
+        lightingProfile: lp);
     setState(() {
       _previewUrl = job.previewUrl;
       _results = [
@@ -237,33 +257,18 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       return;
     }
     AnalyticsService.instance.renderHqRequested();
-    final start = DateTime.now();
+    _hqStart = DateTime.now();
+    final lp = FeatureFlags.instance.isEnabled(FeatureFlags.lightingProfiles)
+        ? _lightingProfile.name
+        : null;
     final job = await _viz.renderHq('sample', _variants,
-        lightingProfile: _lightingProfile.name);
+        lightingProfile: lp);
     setState(() {
       _hqStatus = job.status;
+      _hqError = false;
     });
     _jobSub?.cancel();
-    _jobSub = _viz.watchJob(job.jobId).listen((j) {
-      setState(() {
-        _hqStatus = j.status;
-        if (j.resultUrl != null) {
-          _previewUrl = j.resultUrl;
-          if (_results.isNotEmpty) {
-            _results[0]['downloadUrl'] = j.resultUrl;
-          } else {
-            _results = [
-              {'hex': _variants.isNotEmpty ? _variants.first : '#000000', 'downloadUrl': j.resultUrl}
-            ];
-          }
-        }
-      });
-      if (j.status == 'complete') {
-        final ms = DateTime.now().difference(start).inMilliseconds;
-        AnalyticsService.instance.renderHqCompleted(ms);
-        _jobSub?.cancel();
-      }
-    });
+    _jobSub = _viz.watchJob(job.jobId).listen(_handleHqJobUpdate);
   }
 
   Future<void> _runGeneration() async {
@@ -297,14 +302,20 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           surfaces: _surfaces,
           variants: _variants.length,
           storyId: widget.storyId,
-          lightingProfile: _lightingProfile.name,
+          lightingProfile: FeatureFlags.instance
+                  .isEnabled(FeatureFlags.lightingProfiles)
+              ? _lightingProfile.name
+              : null,
         );
       } else {
         out = await VisualizerService.generateMockup(
           roomType: _roomType,
           style: _style,
           variants: _variants.length,
-          lightingProfile: _lightingProfile.name,
+          lightingProfile: FeatureFlags.instance
+                  .isEnabled(FeatureFlags.lightingProfiles)
+              ? _lightingProfile.name
+              : null,
         );
       }
 
@@ -319,6 +330,50 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     } finally {
       setState(() => _busy = false);
     }
+  }
+
+  void _handleHqJobUpdate(VisualizerJob j) async {
+    setState(() {
+      _hqStatus = j.status;
+      if (j.resultUrl != null) {
+        _previewUrl = j.resultUrl;
+        if (_results.isNotEmpty) {
+          _results[0]['downloadUrl'] = j.resultUrl;
+        } else {
+          _results = [
+            {'hex': _variants.isNotEmpty ? _variants.first : '#000000', 'downloadUrl': j.resultUrl}
+          ];
+        }
+      }
+      if (j.status == 'error') {
+        _hqError = true;
+      }
+    });
+    if (j.status == 'complete') {
+      final ms = DateTime.now().difference(_hqStart ?? DateTime.now()).inMilliseconds;
+      await AnalyticsService.instance.renderHqCompleted(ms);
+      await _viz.clearJob(j.jobId);
+      _jobSub?.cancel();
+    } else if (j.status == 'error') {
+      await AnalyticsService.instance.visualizerHqFailed();
+      await _viz.clearJob(j.jobId);
+      _jobSub?.cancel();
+    }
+  }
+
+  void _onRetryHq() {
+    AnalyticsService.instance.visualizerHqRetryClicked();
+    _renderHq();
+  }
+
+  Future<void> _useSampleRoom() async {
+    AnalyticsService.instance.fallbackUsed('sampleRoom');
+    await _loadSample(SampleRooms.images.first);
+    setState(() => _hqError = false);
+  }
+
+  void _contactSupport() {
+    launchUrl(Uri.parse('mailto:support@example.com'));
   }
 
   void _toast(String msg) =>
@@ -346,6 +401,23 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       ),
       body: Stack(
         children: [
+          if (_hqError)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: MaterialBanner(
+                content: const Text('HQ render failed'),
+                actions: [
+                  TextButton(onPressed: _onRetryHq, child: const Text('Retry')),
+                  TextButton(
+                      onPressed: _useSampleRoom,
+                      child: const Text('Sample Room')),
+                  TextButton(
+                      onPressed: _contactSupport, child: const Text('Support')),
+                ],
+              ),
+            ),
           // Full-bleed preview canvas
           Positioned.fill(
             child: _buildPreviewCanvas(theme),
@@ -448,33 +520,33 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ),
             ),
 
-          // Lighting profile quick control
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 8,
-            child: _Frosted(
-              child: InkWell(
-                onTap: widget.projectId == null
-                    ? null
-                    : () async {
-                        final selected = await showLightingProfilePicker(
-                          context,
-                          current: _lightingProfile,
-                        );
-                        if (selected != null && widget.projectId != null) {
-                          setState(() => _lightingProfile = selected);
-                          await LightingService()
-                              .setProfile(widget.projectId!, selected);
-                        }
-                      },
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text('Light: ${_lightingProfile.label}'),
+          if (FeatureFlags.instance.isEnabled(FeatureFlags.lightingProfiles))
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 8,
+              child: _Frosted(
+                child: InkWell(
+                  onTap: widget.projectId == null
+                      ? null
+                      : () async {
+                          final selected = await showLightingProfilePicker(
+                            context,
+                            current: _lightingProfile,
+                          );
+                          if (selected != null && widget.projectId != null) {
+                            setState(() => _lightingProfile = selected);
+                            await LightingService()
+                                .setProfile(widget.projectId!, selected);
+                          }
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    child: Text('Light: ${_lightingProfile.label}'),
+                  ),
                 ),
               ),
             ),
-          ),
 
           // Busy overlay
           if (_busy)
@@ -490,21 +562,22 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ),
             ),
           ),
-          ViaOverlay(
-            contextLabel: 'visualizer',
-            onMakePlan: widget.projectId == null
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ColorPlanScreen(
-                          projectId: widget.projectId!,
-                          paletteColorIds: const [],
+          if (FeatureFlags.instance.isEnabled(FeatureFlags.viaMvp))
+            ViaOverlay(
+              contextLabel: 'visualizer',
+              onMakePlan: widget.projectId == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ColorPlanScreen(
+                            projectId: widget.projectId!,
+                            paletteColorIds: const [],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-          ),
+                      );
+                    },
+            ),
         ],
       ),
     );
@@ -579,12 +652,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                     setState(() {});
                   },
           ),
-          IconButton(
-            icon: const Icon(Icons.auto_fix_high),
-            tooltip: 'Mask assist',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: _onMaskAssist,
-          ),
+          if (FeatureFlags.instance.isEnabled(FeatureFlags.maskAssist))
+            IconButton(
+              icon: const Icon(Icons.auto_fix_high),
+              tooltip: 'Mask assist',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: _onMaskAssist,
+            ),
         ],
       ),
     );
@@ -592,7 +666,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   // END REGION: CODEX-ADD viz-masking-toolbar
 
   Future<void> _onMaskAssist() async {
-    if (_previewUrl == null) return;
+    if (_previewUrl == null ||
+        !FeatureFlags.instance.isEnabled(FeatureFlags.maskAssist)) return;
     AnalyticsService.instance
         .logEvent('mask_assist_requested', {'image': _previewUrl});
     final polygons = await _viz.maskAssist(_previewUrl!);

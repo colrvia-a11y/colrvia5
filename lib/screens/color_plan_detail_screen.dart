@@ -31,6 +31,7 @@ import '../services/color_plan_service.dart';
 import '../widgets/via_overlay.dart';
 import '../services/house_flow_service.dart';
 import '../services/color_metrics_service.dart';
+import '../services/feature_flags.dart';
 
 // Small helper used when rendering ColorPlan fallback views
 class _PlanSection extends StatelessWidget {
@@ -1541,21 +1542,22 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                 ],
               ),
             ),
-                ViaOverlay(
-                  contextLabel: 'color_plan_detail',
-                  onVisualize: widget.projectId == null
-                      ? null
-                      : () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => VisualizerScreen(
-                                projectId: widget.projectId,
-                                storyId: widget.storyId,
+                if (FeatureFlags.instance.isEnabled(FeatureFlags.viaMvp))
+                  ViaOverlay(
+                    contextLabel: 'color_plan_detail',
+                    onVisualize: widget.projectId == null
+                        ? null
+                        : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => VisualizerScreen(
+                                  projectId: widget.projectId,
+                                  storyId: widget.storyId,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                ),
+                            );
+                          },
+                  ),
               ],
             ),
           );

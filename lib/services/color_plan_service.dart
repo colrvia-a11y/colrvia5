@@ -7,6 +7,7 @@ import 'analytics_service.dart';
 import 'lighting_service.dart';
 import '../models/fixed_elements.dart';
 import 'fixed_element_service.dart';
+import '../services/feature_flags.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -37,41 +38,69 @@ class ColorPlanService {
       throw Exception('Must be logged in to create a color plan');
     }
 
-    final profile = await LightingService().getProfile(projectId);
-
-    final elements =
-        fixedElements ?? await FixedElementService().listElements(projectId);
-
-    final callable = _functions.httpsCallable('generateColorPlanV2');
-    final resp = await callable.call({
-      'projectId': projectId,
-      'paletteColorIds': paletteColorIds,
-      'vibe': vibe,
-      'context': {
-        'lightingProfile': profile.name,
-        if (elements.isNotEmpty)
-          'fixedElements': elements.map((e) => e.toJson()).toList(),
-        ...?context,
-      },
-    });
-
-    final data = Map<String, dynamic>.from(resp.data as Map);
     final doc = _plansCol(uid, projectId).doc();
     final now = DateTime.now();
-    final plan = ColorPlan.fromJson(doc.id, {
-      ...data,
-      'projectId': projectId,
-      'createdAt': Timestamp.fromDate(now),
-      'updatedAt': Timestamp.fromDate(now),
-    });
 
-    await doc.set(plan.toJson());
-    // Record plan generation via analytics
-    await AnalyticsService.instance.logEvent('plan_generated', {
-      'project_id': projectId,
-      'plan_id': doc.id,
-    });
-    return plan;
+    try {
+      final profile = FeatureFlags.instance
+              .isEnabled(FeatureFlags.lightingProfiles)
+          ? await LightingService().getProfile(projectId)
+          : null;
+
+      final elements = FeatureFlags.instance
+              .isEnabled(FeatureFlags.fixedElementAssist)
+          ? (fixedElements ??
+              await FixedElementService().listElements(projectId))
+          : <FixedElement>[];
+
+      final callable = _functions.httpsCallable('generateColorPlanV2');
+      final resp = await callable.call({
+        'projectId': projectId,
+        'paletteColorIds': paletteColorIds,
+        'vibe': vibe,
+        'context': {
+          if (profile != null) 'lightingProfile': profile.name,
+          if (elements.isNotEmpty)
+            'fixedElements': elements.map((e) => e.toJson()).toList(),
+          ...?context,
+        },
+      });
+
+      final data = Map<String, dynamic>.from(resp.data as Map);
+      final plan = ColorPlan.fromJson(doc.id, {
+        ...data,
+        'projectId': projectId,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      await doc.set(plan.toJson());
+      await AnalyticsService.instance.logEvent('plan_generated', {
+        'project_id': projectId,
+        'plan_id': doc.id,
+      });
+      return plan;
+    } catch (e) {
+      final fallback = ColorPlan(
+        id: doc.id,
+        projectId: projectId,
+        name: 'Quick Plan',
+        vibe: vibe ?? '',
+        paletteColorIds: paletteColorIds,
+        placementMap: const [],
+        cohesionTips: const [],
+        accentRules: const [],
+        doDont: const [],
+        sampleSequence: const [],
+        roomPlaybook: const [],
+        createdAt: now,
+        updatedAt: now,
+        isFallback: true,
+      );
+      await doc.set(fallback.toJson());
+      await AnalyticsService.instance.planFallbackCreated();
+      return fallback;
+    }
   }
 
   /// Lists all color plans for a project, ordered by creation date descending.
