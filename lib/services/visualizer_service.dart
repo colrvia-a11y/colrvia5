@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/visualizer_mask.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'sync_queue_service.dart';
 
 // The project sometimes doesn't include `firebase_functions` in pubspec for
 // certain build environments. To keep the analyzer and builds working when
@@ -68,6 +69,23 @@ class VisualizerService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static const _pendingJobsKey = 'viz_pending_jobs';
+
+  VisualizerService() {
+    SyncQueueService.instance.registerHandler('saveMask', (p) async {
+      await saveMask(
+          p['uid'] as String,
+          p['projectId'] as String,
+          p['photoId'] as String,
+          VisualizerMask.fromJson(Map<String, dynamic>.from(p['mask'] as Map)));
+    });
+    SyncQueueService.instance.registerHandler('deleteMask', (p) async {
+      await deleteMask(
+          p['uid'] as String,
+          p['projectId'] as String,
+          p['photoId'] as String,
+          p['maskId'] as String);
+    });
+  }
 
   CollectionReference<Map<String, dynamic>> _maskCollection(
           String uid, String projectId, String photoId) =>
@@ -138,14 +156,33 @@ class VisualizerService {
 
   Future<void> saveMask(String uid, String projectId, String photoId,
       VisualizerMask mask) async {
-    await _maskCollection(uid, projectId, photoId)
-        .doc(mask.id)
-        .set(mask.toJson());
+    try {
+      await _maskCollection(uid, projectId, photoId)
+          .doc(mask.id)
+          .set(mask.toJson());
+    } catch (e) {
+      await SyncQueueService.instance.enqueue('saveMask', {
+        'uid': uid,
+        'projectId': projectId,
+        'photoId': photoId,
+        'mask': mask.toJson(),
+      });
+    }
   }
 
   Future<void> deleteMask(
-          String uid, String projectId, String photoId, String maskId) async =>
-      _maskCollection(uid, projectId, photoId).doc(maskId).delete();
+      String uid, String projectId, String photoId, String maskId) async {
+    try {
+      await _maskCollection(uid, projectId, photoId).doc(maskId).delete();
+    } catch (e) {
+      await SyncQueueService.instance.enqueue('deleteMask', {
+        'uid': uid,
+        'projectId': projectId,
+        'photoId': photoId,
+        'maskId': maskId,
+      });
+    }
+  }
 
   Future<Map<String, List<List<Offset>>>> maskAssist(String imageUrl) async {
     final callable = _functions.httpsCallable('maskAssist');

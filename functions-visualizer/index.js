@@ -20,6 +20,14 @@ exports.renderHq = functions.https.onCall(async (data, context) => {
   // Simulate async completion
   setTimeout(() => {
     JOBS.set(jobId, { jobId, status: 'complete', previewUrl: null, resultUrl: 'https://picsum.photos/seed/' + Math.random().toString(36).slice(2) + '/1600/900' });
+    admin.messaging().send({
+      topic: `user_${context.auth.uid}`,
+      data: {
+        type: 'viz_hq_complete',
+        projectId: data.projectId || '',
+        jobId: jobId,
+      }
+    }).catch(console.error);
   }, 8000);
   return JOBS.get(jobId);
 });

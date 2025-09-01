@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/color_utils.dart';
+import '../services/catalog_cache_service.dart';
 
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/screens/compare_colors_screen.dart';
@@ -32,6 +33,10 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _showSearchResults = false;
   bool _showClearButton = false;
   final Set<String> _selectedForCompare = {};
+  final ScrollController _scrollController = ScrollController();
+  int _page = 0;
+  static const int _pageSize = 20;
+  List<Paint> _cachedResults = [];
 
   // Debouncing variables
   Timer? _debounceTimer;
@@ -42,6 +47,7 @@ class _SearchScreenState extends State<SearchScreen> {
     Debug.info('SearchScreen', 'initState', 'Component initializing');
     _generatePlaceholderPalettes();
     _searchController.addListener(_onSearchTextChanged);
+    _scrollController.addListener(_onScroll);
   }
 
   void _onSearchTextChanged() {
@@ -60,6 +66,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchController.removeListener(_onSearchTextChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -122,14 +129,20 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     try {
-      final results = await FirebaseService.searchPaints(query.trim());
-      Debug.info(
-          'SearchScreen', '_performSearch', 'Found ${results.length} results');
+      final cacheKey = 'search:' + query;
+      final results = await CatalogCacheService.instance
+          .get<List<Paint>>(cacheKey,
+              () => FirebaseService.searchPaints(query.trim()));
+      _cachedResults = results;
+      _page = 0;
+      Debug.info('SearchScreen', '_performSearch',
+          'Found ${results.length} results');
       if (mounted) {
         Debug.setState('SearchScreen', '_performSearch',
             details: 'Setting search results');
         setState(() {
-          _searchResults = results;
+          _searchResults =
+              _cachedResults.take(_pageSize).toList();
           _isSearching = false;
         });
       }
@@ -144,6 +157,22 @@ class _SearchScreenState extends State<SearchScreen> {
         );
       }
     }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    if ((_page + 1) * _pageSize >= _cachedResults.length) return;
+    setState(() {
+      _page++;
+      _searchResults
+          .addAll(_cachedResults.skip(_page * _pageSize).take(_pageSize));
+    });
   }
 
   void _selectPaint(Paint paint) {
@@ -450,6 +479,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {

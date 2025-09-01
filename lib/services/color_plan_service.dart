@@ -8,6 +8,7 @@ import 'lighting_service.dart';
 import '../models/fixed_elements.dart';
 import 'fixed_element_service.dart';
 import '../services/feature_flags.dart';
+import 'sync_queue_service.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -18,7 +19,16 @@ class ColorPlanService {
   final _auth = FirebaseAuth.instance;
   final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
-  ColorPlanService._();
+  ColorPlanService._() {
+    SyncQueueService.instance.registerHandler('createPlan', (payload) async {
+      await createPlan(
+        projectId: payload['projectId'] as String,
+        paletteColorIds: List<String>.from(payload['paletteColorIds'] as List),
+        vibe: payload['vibe'] as String?,
+        context: payload['context'] as Map<String, dynamic>?,
+      );
+    });
+  }
 
   CollectionReference<Map<String, dynamic>> _plansCol(String uid, String projectId) =>
       _db.collection('users').doc(uid).collection('projects').doc(projectId).collection('colorPlans');
@@ -81,6 +91,12 @@ class ColorPlanService {
       });
       return plan;
     } catch (e) {
+      await SyncQueueService.instance.enqueue('createPlan', {
+        'projectId': projectId,
+        'paletteColorIds': paletteColorIds,
+        'vibe': vibe,
+        'context': context,
+      });
       final fallback = ColorPlan(
         id: doc.id,
         projectId: projectId,

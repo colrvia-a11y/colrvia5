@@ -23,6 +23,9 @@ import 'package:color_canvas/services/network_utils.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'package:color_canvas/models/user_palette.dart';
 import 'services/feature_flags.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'services/sync_queue_service.dart';
+import 'services/notifications_service.dart';
 
 // Global Firebase state
 bool isFirebaseInitialized = false;
@@ -87,6 +90,14 @@ void main() async {
   Debug.info('App', 'main', 'NetworkGuard initialized');
 
   await FeatureFlags.instance.init();
+
+  Connectivity().onConnectivityChanged.listen((status) {
+    if (status != ConnectivityResult.none) {
+      SyncQueueService.instance.replay();
+    }
+  });
+
+  await NotificationsService.instance.init();
 
   Debug.info('App', 'main', 'Running app');
   runApp(const MyApp());
