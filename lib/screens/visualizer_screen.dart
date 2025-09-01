@@ -144,6 +144,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       if (selected != null) {
         setState(() => _lightingProfile = selected);
         await LightingService().setProfile(widget.projectId!, selected);
+        AnalyticsService.instance.lightingProfileSelected(selected.name);
       }
     }
   }
@@ -186,7 +187,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _toast('Upload or pick a photo.');
       return;
     }
-    AnalyticsService.instance.logEvent('render_fast_requested');
+    AnalyticsService.instance.renderFastRequested();
     final job = await _viz.renderFast('sample', _variants,
         lightingProfile: _lightingProfile.name);
     setState(() {
@@ -208,7 +209,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       _toast('Upload or pick a photo.');
       return;
     }
-    AnalyticsService.instance.logEvent('render_hq_requested');
+    AnalyticsService.instance.renderHqRequested();
     final start = DateTime.now();
     final job = await _viz.renderHq('sample', _variants,
         lightingProfile: _lightingProfile.name);
@@ -232,7 +233,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       });
       if (j.status == 'complete') {
         final ms = DateTime.now().difference(start).inMilliseconds;
-        AnalyticsService.instance.logEvent('render_hq_completed', {'ms_elapsed': ms});
+        AnalyticsService.instance.renderHqCompleted(ms);
         _jobSub?.cancel();
       }
     });

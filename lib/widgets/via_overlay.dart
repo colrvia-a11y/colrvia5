@@ -34,12 +34,16 @@ class _ViaOverlayState extends State<ViaOverlay> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text)),
     );
-    await AnalyticsService.instance
-        .logEvent('via_action_clicked', {'action': action});
+    await AnalyticsService.instance.viaActionClicked(action);
   }
 
   void _handleNav(String action, VoidCallback? callback) {
-    AnalyticsService.instance.logEvent('via_action_clicked', {'action': action});
+    AnalyticsService.instance.viaActionClicked(action);
+    if (action == 'Make Plan') {
+      AnalyticsService.instance.ctaPlanClicked('via');
+    } else if (action == 'Visualize') {
+      AnalyticsService.instance.ctaVisualizeClicked('via');
+    }
     callback?.call();
   }
 
