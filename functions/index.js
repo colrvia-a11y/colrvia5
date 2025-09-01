@@ -1,8 +1,45 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { generateColorPlanV2 } = require('./color-plan-v2');
 
 admin.initializeApp();
+
+// REGION: CODEX-ADD color-plan-fn
+exports.generateColorPlanV2 = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const { projectId, paletteColorIds, vibe, context: ctx } = data || {};
+  if (!projectId || !Array.isArray(paletteColorIds) || paletteColorIds.length === 0) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing inputs');
+  }
+
+  const placementMap = paletteColorIds.map((id, i) => ({
+    area: ['walls', 'trim', 'ceiling'][i] || 'walls',
+    colorId: id,
+    sheen: ['eggshell', 'semi-gloss', 'matte'][i] || 'eggshell',
+  }));
+
+  return {
+    name: vibe || 'Color Plan',
+    vibe: vibe || '',
+    paletteColorIds,
+    placementMap,
+    cohesionTips: ['Repeat trim color for unity.', 'Limit palette to three main hues.'],
+    accentRules: [
+      { context: 'north-facing room', guidance: 'Favor warm undertones.' },
+      { context: 'small space', guidance: 'Use lighter colors to expand feel.' },
+    ],
+    doDont: [
+      { do: 'Prime before painting.', dont: "Don't skip surface prep." },
+    ],
+    sampleSequence: ['Order samples', 'Test in different light', 'Confirm selection'],
+    roomPlaybook: [
+      { roomType: 'living', placements: placementMap, notes: 'Adjust accents as needed.' },
+    ],
+  };
+});
+// END REGION: CODEX-ADD color-plan-fn
 
 exports.generateColorPlanV1 = functions.https.onCall(async (data, context) => {
   try {
