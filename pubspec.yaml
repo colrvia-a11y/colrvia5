@@ -21,6 +21,9 @@ dependencies:
   firebase_analytics_web: ^0.6.0
   connectivity_plus: ^6.0.3
   cached_network_image: ^3.4.1
+  hive: ^2.2.3
+  firebase_messaging: ^15.0.0
+  flutter_local_notifications: ^17.1.0
   just_audio: ^0.10.4
   share_plus: ^11.1.0
   collection: ^1.18.0

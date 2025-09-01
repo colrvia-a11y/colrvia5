@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../firestore/firestore_data_schema.dart' show Paint;
+import '../services/analytics_service.dart';
+import 'async_compute.dart';
 
 // Core color utility functions
 double _lin(double c) =>
@@ -207,6 +209,49 @@ class ColorUtils {
     }).toList();
 
     return nearestByDeltaE(targetLab, filteredPaints);
+  }
+
+  // Batch utilities using isolate offload when payload is large
+  static Future<List<double>> batchComputeLrv(List<String> hexes,
+      {int threshold = 25}) async {
+    if (hexes.length <= threshold) {
+      return _computeLrvList(hexes);
+    }
+    final sw = Stopwatch()..start();
+    final result = await AsyncCompute.run(_computeLrvList, hexes);
+    sw.stop();
+    AnalyticsService.instance
+        .log('perf_isolate_used', {'task': 'batch_lrv', 'ms': sw.elapsedMilliseconds});
+    return result;
+  }
+
+  static List<double> _computeLrvList(List<String> hexes) =>
+      [for (final h in hexes) computeLrv(h)];
+
+  static Future<List<double>> batchContrast(List<Color> a, List<Color> b,
+      {int threshold = 25}) async {
+    final count = min(a.length, b.length);
+    final flat = <int>[];
+    for (var i = 0; i < count; i++) {
+      flat..add(a[i].value)..add(b[i].value);
+    }
+    if (count <= threshold) {
+      return _contrastList(flat);
+    }
+    final sw = Stopwatch()..start();
+    final result = await AsyncCompute.run(_contrastList, flat);
+    sw.stop();
+    AnalyticsService.instance.log(
+        'perf_isolate_used', {'task': 'batch_contrast', 'ms': sw.elapsedMilliseconds});
+    return result;
+  }
+
+  static List<double> _contrastList(List<int> flat) {
+    final out = <double>[];
+    for (var i = 0; i < flat.length; i += 2) {
+      out.add(contrastRatio(Color(flat[i]), Color(flat[i + 1])));
+    }
+    return out;
   }
 
   static Color processColor(Color color) {

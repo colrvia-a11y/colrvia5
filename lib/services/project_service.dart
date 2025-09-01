@@ -4,12 +4,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/project.dart';
 import '../services/analytics_service.dart';
+import 'sync_queue_service.dart';
 
 class ProjectService {
   static final _db = FirebaseFirestore.instance;
   static final _auth = FirebaseAuth.instance;
   static String? get _uid => _auth.currentUser?.uid;
   static CollectionReference get _col => _db.collection('projects');
+  static final SyncQueueService _queue = SyncQueueService.instance
+    ..registerHandler('createProject', (p) async {
+      await create(
+        title: p['title'] as String,
+        paletteId: p['paletteId'] as String?,
+        roomType: p['roomType'] as String?,
+        styleTag: p['styleTag'] as String?,
+        vibeWords: List<String>.from(p['vibeWords'] as List? ?? []),
+      );
+    });
 
   static Stream<List<ProjectDoc>> myProjectsStream({int limit = 50}) {
     final uid = _uid;
@@ -57,6 +68,13 @@ class ProjectService {
       final snap = await ref.get();
       return ProjectDoc.fromSnap(snap);
     } catch (e) {
+      await _queue.enqueue('createProject', {
+        'title': title,
+        'paletteId': paletteId,
+        'roomType': roomType,
+        'styleTag': styleTag,
+        'vibeWords': vibeWords,
+      });
       throw Exception('Failed to create project: $e');
     }
   }

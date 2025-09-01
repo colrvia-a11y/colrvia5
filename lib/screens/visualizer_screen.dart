@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../services/visualizer_service.dart';
 import '../firestore/firestore_data_schema.dart'; // for UserPalette
@@ -41,15 +42,17 @@ class VisualizerScreen extends StatefulWidget {
   final Map<String, String>? initialAssignments;
   final List<ColorUsageItem>? initialGuide;
   final UserPalette? initialPalette;
+  final String? jobId;
   
   const VisualizerScreen({
-    super.key, 
+    super.key,
     this.projectId,
     this.storyId,
     this.assignmentsParam,
-    this.initialAssignments, 
+    this.initialAssignments,
     this.initialGuide,
     this.initialPalette,
+    this.jobId,
   });
 
   @override
@@ -110,6 +113,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     AnalyticsService.instance.screenView('visualizer');
 
     _viz.resumePendingJobs(_handleHqJobUpdate);
+
+    if (widget.jobId != null) {
+      _jobSub = _viz.watchJob(widget.jobId!).listen(_handleHqJobUpdate);
+    }
 
     // Track funnel analytics if opened with projectId
     if (widget.projectId != null) {
@@ -732,7 +739,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                 onTap: () => _loadSample(url),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(url, fit: BoxFit.cover),
+                  child: CachedNetworkImage(imageUrl: url, fit: BoxFit.cover),
                 ),
               );
             },
