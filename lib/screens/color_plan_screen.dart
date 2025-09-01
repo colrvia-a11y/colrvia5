@@ -1,7 +1,25 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import '../models/color_plan.dart';
 import '../services/color_plan_service.dart';
 import '../services/analytics_service.dart';
+=======
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:color_canvas/firestore/firestore_data_schema.dart';
+import 'package:color_canvas/models/color_story.dart' as model;
+import 'package:color_canvas/services/firebase_service.dart';
+import 'package:color_canvas/services/project_service.dart';
+import 'package:color_canvas/services/ai_service.dart';
+import 'package:color_canvas/services/analytics_service.dart';
+// ...existing code...
+import 'color_plan_detail_screen.dart';
+import 'package:color_canvas/screens/settings_screen.dart';
+import 'package:color_canvas/utils/color_utils.dart';
+// REGION: CODEX-ADD color-plan-screen-imports
+import 'package:color_canvas/models/color_plan.dart';
+// END REGION: CODEX-ADD color-plan-screen-imports
+>>>>>>> 23841be2546629ccb041fa44367169f7b1649397
 
 class ColorPlanScreen extends StatefulWidget {
   final String projectId;
@@ -119,6 +137,7 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
       ),
     );
   }
+<<<<<<< HEAD
 }
 
 class _Section extends StatelessWidget {
@@ -136,8 +155,87 @@ class _Section extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           child,
+=======
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (_currentStep > 0)
+            TextButton(
+              onPressed: _previousStep,
+              child: const Text('Back'),
+            ),
+          const Spacer(),
+          if (_currentStep < 3)
+            FilledButton(
+              onPressed: _canGenerate() ? _nextStep : null,
+              child: const Text('Next'),
+            )
+          else
+            FilledButton(
+              onPressed: _canGenerate() ? _generateColorStory : null,
+              child: _isGenerating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Generate Story'),
+            ),
+>>>>>>> 23841be2546629ccb041fa44367169f7b1649397
         ],
       ),
     );
   }
+<<<<<<< HEAD
+=======
+
+// REGION: CODEX-ADD color-plan-screen
+  Widget _buildPlanPreview(ColorPlan plan) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (plan.placementMap.isNotEmpty)
+          Text('Placements: ' +
+              plan.placementMap
+                  .map((p) => '${p.area}-${p.colorId}')
+                  .join(', ')),
+        if (plan.cohesionTips.isNotEmpty)
+          Text('Cohesion: ' + plan.cohesionTips.join('; ')),
+        if (plan.accentRules.isNotEmpty)
+          Text('Accent: ' +
+              plan.accentRules
+                  .map((a) => '${a.context}: ${a.guidance}')
+                  .join('; ')),
+        if (plan.doDont.isNotEmpty)
+          Text(
+              'Do: ${plan.doDont.first.doText}\nDon\'t: ${plan.doDont.first.dontText}'),
+        if (plan.sampleSequence.isNotEmpty)
+          Text('Sequence: ' + plan.sampleSequence.join(' -> ')),
+        if (plan.roomPlaybook.isNotEmpty)
+          Text('Rooms: ' +
+              plan.roomPlaybook.map((r) => r.roomType).join(', ')),
+      ],
+    );
+  }
+// END REGION: CODEX-ADD color-plan-screen
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+>>>>>>> 23841be2546629ccb041fa44367169f7b1649397
 }

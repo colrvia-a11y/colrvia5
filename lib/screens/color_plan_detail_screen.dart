@@ -25,10 +25,16 @@ import '../widgets/gradient_fallback_hero.dart';
 import '../utils/gradient_hero_utils.dart';
 import '../screens/visualizer_screen.dart';
 import 'color_plan_screen.dart';
+// REGION: CODEX-ADD color-plan-detail-screen-imports
+import '../services/color_plan_service.dart';
+// END REGION: CODEX-ADD color-plan-detail-screen-imports
 
 class ColorPlanDetailScreen extends StatefulWidget {
   final String storyId;
-  const ColorPlanDetailScreen({super.key, required this.storyId});
+  // REGION: CODEX-ADD color-plan-detail-screen
+  final String? projectId;
+  const ColorPlanDetailScreen({super.key, required this.storyId, this.projectId});
+  // END REGION: CODEX-ADD color-plan-detail-screen
   @override
   State<ColorPlanDetailScreen> createState() => _ColorPlanDetailScreenState();
 }
@@ -42,6 +48,9 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
   bool _showTranscript = false;
   bool _wifiOnlyAssets = false;
   bool _processingTimedOut = false;
+  // REGION: CODEX-ADD color-plan-detail-screen-state
+  ColorPlan? _plan;
+  // END REGION: CODEX-ADD color-plan-detail-screen-state
 
   // Ambient audio
   final _ambientController = AmbientLoopController();
@@ -76,6 +85,13 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
     super.initState();
     _checkLikeStatus();
     _loadUserPreferences();
+    // REGION: CODEX-ADD color-plan-detail-screen-init
+    if (widget.projectId != null) {
+      ColorPlanService().getPlan(widget.projectId!, widget.storyId).then((p) {
+        if (mounted) setState(() => _plan = p);
+      });
+    }
+    // END REGION: CODEX-ADD color-plan-detail-screen-init
 
     // Check for processing timeout after 2 minutes
     Future.delayed(const Duration(minutes: 2), () {
@@ -1182,7 +1198,16 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                         ],
                       ),
                     ),
-
+                  // REGION: CODEX-ADD color-plan-detail-screen
+                  if (_plan != null) ...[
+                    _buildPlacementMapSection(_plan!),
+                    _buildCohesionTipsSection(_plan!),
+                    _buildAccentRulesSection(_plan!),
+                    _buildDoDontSection(_plan!),
+                    _buildSampleSequenceSection(_plan!),
+                    _buildRoomPlaybookSection(_plan!),
+                  ],
+                  // END REGION: CODEX-ADD color-plan-detail-screen
                   // Contrast Coaching section
                   if (story.status == 'complete' && story.usageGuide.isNotEmpty)
                     Container(
@@ -1398,6 +1423,105 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
           );
         });
   }
+
+  // REGION: CODEX-ADD color-plan-detail-screen-methods
+  Widget _section(String title, List<Widget> children) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color:
+              Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlacementMapSection(ColorPlan plan) {
+    if (plan.placementMap.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Placement Map',
+      plan.placementMap
+          .map((p) => Text('${p.area}: ${p.colorId} (${p.sheen})'))
+          .toList(),
+    );
+  }
+
+  Widget _buildCohesionTipsSection(ColorPlan plan) {
+    if (plan.cohesionTips.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Cohesion Tips',
+      plan.cohesionTips.map((t) => Text('• $t')).toList(),
+    );
+  }
+
+  Widget _buildAccentRulesSection(ColorPlan plan) {
+    if (plan.accentRules.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Accent Rules',
+      plan.accentRules
+          .map((a) => Text('${a.context}: ${a.guidance}'))
+          .toList(),
+    );
+  }
+
+  Widget _buildDoDontSection(ColorPlan plan) {
+    if (plan.doDont.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Do & Don\'t',
+      plan.doDont
+          .map((d) =>
+              Text('Do: ${d.doText}\nDon\'t: ${d.dontText}'))
+          .toList(),
+    );
+  }
+
+  Widget _buildSampleSequenceSection(ColorPlan plan) {
+    if (plan.sampleSequence.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Sample Sequence',
+      plan.sampleSequence.map((s) => Text('• $s')).toList(),
+    );
+  }
+
+  Widget _buildRoomPlaybookSection(ColorPlan plan) {
+    if (plan.roomPlaybook.isEmpty) return const SizedBox.shrink();
+    return _section(
+      'Room Playbook',
+      plan.roomPlaybook
+          .map(
+            (r) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(r.roomType,
+                    style: Theme.of(context).textTheme.titleMedium),
+                ...r.placements.map(
+                    (p) => Text(' - ${p.area}: ${p.colorId} (${p.sheen})')),
+                if (r.notes.isNotEmpty) Text(r.notes),
+              ],
+            ),
+          )
+          .toList(),
+    );
+  }
+  // END REGION: CODEX-ADD color-plan-detail-screen-methods
 
   Widget _buildVariantCard(ColorStory variant, int index) {
     return Container(
