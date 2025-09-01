@@ -92,9 +92,14 @@ class _CreateScreenState extends State<CreateScreen> with TickerProviderStateMix
   // Stretchy hero state
   double _elasticExtra = 0.0; // current stretched amount
   double _pullExtent = 0.0; // accumulated overscroll
-  late final AnimationController _snap = AnimationController(vsync: this, duration: _kAnim)
-    ..addListener(() => setState(() => _elasticExtra = _snap.value * 0));
-  late Animation<double> _snapAnim;
+  late final AnimationController _snap =
+      AnimationController(vsync: this, duration: _kAnim)
+        ..addListener(() => setState(() {
+              _elasticExtra = _snapAnim.value;
+              _pullExtent = _pullAnim.value;
+            }));
+  late Animation<double> _snapAnim = const AlwaysStoppedAnimation(0);
+  late Animation<double> _pullAnim = const AlwaysStoppedAnimation(0);
 
   final ScrollController _scroll = ScrollController();
 
@@ -149,15 +154,15 @@ class _CreateScreenState extends State<CreateScreen> with TickerProviderStateMix
   }
 
   void _snapBack() {
-    _snapAnim = Tween<double>(begin: _elasticExtra, end: 0).animate(
-      CurvedAnimation(parent: _snap, curve: _reduceMotion ? Curves.linear : Curves.easeOutBack),
-    );
+    final curve = CurvedAnimation(
+        parent: _snap,
+        curve: _reduceMotion ? Curves.linear : Curves.easeOutBack);
+    _snapAnim = Tween<double>(begin: _elasticExtra, end: 0).animate(curve);
+    _pullAnim = Tween<double>(begin: _pullExtent, end: 0).animate(curve);
     _snap
       ..reset()
       ..forward();
-    _pullExtent = 0.0;
     if (!_reduceMotion) HapticFeedback.selectionClick();
-    setState(() => _elasticExtra = 0);
   }
 
   bool _onScroll(ScrollNotification n) {
@@ -181,20 +186,23 @@ class _CreateScreenState extends State<CreateScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     final heroBase = (height * 0.38).clamp(320.0, 520.0);
-    final heroH = heroBase + _elasticExtra;
+    final heroH = heroBase + _elasticExtra + _pullExtent;
 
     const modes = [_Mode.interview, _Mode.roller, _Mode.visualizer, _Mode.learn];
 
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.black,
         body: CustomScrollView(
           controller: _scroll,
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           slivers: [
             SliverToBoxAdapter(
-              child: _HeroHeader(height: heroH, text: _greetingText),
+              child: Transform.translate(
+                offset: Offset(0, -_pullExtent),
+                child: _HeroHeader(height: heroH, text: _greetingText),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(bottom: 24),
@@ -203,18 +211,15 @@ class _CreateScreenState extends State<CreateScreen> with TickerProviderStateMix
                 itemBuilder: (context, i) {
                   final m = modes[i];
                   return Transform.translate(
-                    offset: Offset(0, i == 0 ? 0 : -_kOverlap),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _SlabCard(
-                        key: ValueKey(m),
-                        mode: m,
-                        expanded: _expanded.contains(m),
-                        onToggle: () => _toggle(m),
-                        onLaunch: () => _launch(m),
-                        isFirst: i == 0,
-                        isLast: i == modes.length - 1,
-                      ),
+                    offset: const Offset(0, -_kOverlap),
+                    child: _SlabCard(
+                      key: ValueKey(m),
+                      mode: m,
+                      expanded: _expanded.contains(m),
+                      onToggle: () => _toggle(m),
+                      onLaunch: () => _launch(m),
+                      isFirst: i == 0,
+                      isLast: i == modes.length - 1,
                     ),
                   );
                 },
@@ -338,8 +343,9 @@ class _SlabCard extends StatelessWidget {
 
     // Shadow must match the rounded shape and be fully clipped so no color stripes appear.
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-      // Card with shadow + clipped gradient background
+        // Card with shadow + clipped gradient background
         Material(
           elevation: 10,
           shadowColor: Colors.black.withAlpha(28),
