@@ -23,6 +23,10 @@ import 'photo_import_sheet.dart';
 // REGION: CODEX-ADD user-prefs-import
 import '../services/user_prefs_service.dart';
 // END REGION: CODEX-ADD user-prefs-import
+// REGION: CODEX-ADD permissions-import
+import '../services/permissions_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+// END REGION: CODEX-ADD permissions-import
 
 enum CompareMode { none, grid, split, slider }
 
@@ -131,6 +135,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   // ─────────────────────────── Actions
   Future<void> _pickImage() async {
+    final granted = await PermissionsService.confirmAndRequest(
+      context,
+      Permission.photos,
+    );
+    if (!granted) return;
     final file =
         await _picker.pickImage(source: ImageSource.gallery, imageQuality: 95);
     if (file == null) return;

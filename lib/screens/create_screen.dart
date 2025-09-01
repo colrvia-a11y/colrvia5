@@ -2,10 +2,40 @@ import 'package:flutter/material.dart';
 import 'color_plan_screen.dart';
 import 'roller_screen.dart';
 import 'visualizer_screen.dart';
+// REGION: CODEX-ADD onboarding-imports
+import '../services/user_prefs_service.dart';
+import 'onboarding_screen.dart';
+// END REGION: CODEX-ADD onboarding-imports
 
 /// Entry hub for starting new workflows.
-class CreateScreen extends StatelessWidget {
+class CreateScreen extends StatefulWidget {
   const CreateScreen({super.key});
+
+  @override
+  State<CreateScreen> createState() => _CreateScreenState();
+}
+
+class _CreateScreenState extends State<CreateScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    // REGION: CODEX-ADD onboarding-gate
+    final prefs = await UserPrefsService.fetch();
+    if (!prefs.firstRunCompleted && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const OnboardingScreen(),
+        ),
+      );
+    }
+    // END REGION: CODEX-ADD onboarding-gate
+  }
 
   @override
   Widget build(BuildContext context) {

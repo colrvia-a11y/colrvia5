@@ -52,5 +52,13 @@ class UserPrefsService {
       }, SetOptions(merge: true));
     }
   }
+
+  /// Mark onboarding as completed without updating project info.
+  static Future<void> markFirstRunCompleted() async {
+    final doc = _doc;
+    if (doc != null) {
+      await doc.set({'firstRunCompleted': true}, SetOptions(merge: true));
+    }
+  }
 }
 
