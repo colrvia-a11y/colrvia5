@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/project_service.dart';
 import '../firestore/firestore_data_schema.dart';
+import '../services/user_prefs_service.dart';
 import 'create_screen.dart';
 import 'projects_screen.dart';
 import 'search_screen.dart';
@@ -45,12 +45,12 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _determineLanding() async {
-    final list = await ProjectService.myProjectsStream(limit: 1).first;
-    if (list.isNotEmpty) {
-      setState(() {
-        _currentIndex = 1;
-      });
+    // REGION: CODEX-ADD adaptive-landing
+    final prefs = await UserPrefsService.fetch();
+    if (prefs.firstRunCompleted) {
+      setState(() => _currentIndex = 1);
     }
+    // END REGION: CODEX-ADD adaptive-landing
   }
 
   void _onItemTapped(int index) {

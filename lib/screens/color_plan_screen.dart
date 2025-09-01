@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/color_plan.dart';
 import '../services/color_plan_service.dart';
 import '../services/analytics_service.dart';
+import '../services/user_prefs_service.dart';
 
 class ColorPlanScreen extends StatefulWidget {
   final String projectId;
@@ -31,6 +32,7 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
   @override
   void initState() {
     super.initState();
+    UserPrefsService.setLastProject(widget.projectId, 'plan');
     _generate();
   }
 

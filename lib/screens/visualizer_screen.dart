@@ -20,6 +20,9 @@ import 'color_plan_screen.dart';
 import '../models/lighting_profile.dart';
 import '../services/lighting_service.dart';
 import 'photo_import_sheet.dart';
+// REGION: CODEX-ADD user-prefs-import
+import '../services/user_prefs_service.dart';
+// END REGION: CODEX-ADD user-prefs-import
 
 enum CompareMode { none, grid, split, slider }
 
@@ -82,10 +85,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     
     // Track visualizer screen view
     AnalyticsService.instance.screenView('visualizer');
-    
+
     // Track funnel analytics if opened with projectId
     if (widget.projectId != null) {
       AnalyticsService.instance.logVisualizerOpenedFromStory(widget.projectId!);
+      UserPrefsService.setLastProject(widget.projectId!, 'visualizer');
     }
 
     if (widget.projectId != null) {
