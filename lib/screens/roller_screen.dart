@@ -28,6 +28,7 @@ import 'package:color_canvas/screens/color_plan_screen.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
 import 'package:color_canvas/widgets/fixed_elements_sheet.dart';
 import 'package:color_canvas/models/fixed_elements.dart';
+import 'package:color_canvas/services/accessibility_service.dart';
 import 'package:color_canvas/services/fixed_element_service.dart';
 
 // Custom intents for keyboard navigation
@@ -181,7 +182,10 @@ class _RollerScreenState extends RollerScreenStatePublic {
   @override
   void initState() {
     super.initState();
-    
+    AccessibilityService.instance
+        .addListener(() => mounted ? setState(() {}) : null);
+    AccessibilityService.instance.load();
+
     Debug.info('RollerScreen', 'initState', 'Component initializing');
     Debug.info('RollerScreen', 'initState', 'About to load paints');
 
@@ -1107,6 +1111,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
       case 'cooler':
         newIds = transforms.cooler(ids, labOf, nearestId);
         break;
+      case 'cbFriendly':
+        newIds = transforms.cbFriendlyVariant(ids, labOf, nearestId);
+        break;
       case 'softer':
       default:
         newIds = transforms.softer(ids, labOf, nearestId);
@@ -1145,9 +1152,27 @@ class _RollerScreenState extends RollerScreenStatePublic {
 
     AnalyticsService.instance
         .logEvent('palette_variant_applied', {'kind': kind, 'size': newPalette.length});
+    if (kind == 'cbFriendly') {
+      AnalyticsService.instance
+          .logEvent('cb_variant_applied', {'size': newPalette.length});
+    }
     if (widget.projectId != null) {
       ProjectService.addPaletteHistory(widget.projectId!, kind, newIds);
     }
+  }
+
+  Widget _variantChip(String label, String kind) {
+    return Semantics(
+      label: '$label palette',
+      button: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: ActionChip(
+          label: Text(label),
+          onPressed: () => _applyVariant(kind),
+        ),
+      ),
+    );
   }
   
   void _shareCurrentPalette() {
@@ -1170,30 +1195,19 @@ class _RollerScreenState extends RollerScreenStatePublic {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  ActionChip(
-                    label: const Text('Softer'),
-                    onPressed: () => _applyVariant('softer'),
-                  ),
+                  _variantChip('Softer', 'softer'),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    label: const Text('Brighter'),
-                    onPressed: () => _applyVariant('brighter'),
-                  ),
+                  _variantChip('Brighter', 'brighter'),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    label: const Text('Moodier'),
-                    onPressed: () => _applyVariant('moodier'),
-                  ),
+                  _variantChip('Moodier', 'moodier'),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    label: const Text('Warmer'),
-                    onPressed: () => _applyVariant('warmer'),
-                  ),
+                  _variantChip('Warmer', 'warmer'),
                   const SizedBox(width: 8),
-                  ActionChip(
-                    label: const Text('Cooler'),
-                    onPressed: () => _applyVariant('cooler'),
-                  ),
+                  _variantChip('Cooler', 'cooler'),
+                  if (AccessibilityService.instance.cbFriendlyEnabled) ...[
+                    const SizedBox(width: 8),
+                    _variantChip('CB-Friendly', 'cbFriendly'),
+                  ],
                 ],
               ),
             ),
@@ -1590,12 +1604,13 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    final reduce = AccessibilityService.instance.reduceMotion;
     _dockController = AnimationController(
-      duration: const Duration(milliseconds: 220),
+      duration: Duration(milliseconds: reduce ? 0 : 220),
       vsync: this,
     );
     _panelController = AnimationController(
-      duration: const Duration(milliseconds: 220),
+      duration: Duration(milliseconds: reduce ? 0 : 220),
       vsync: this,
     );
     _panelProgress = CurvedAnimation(

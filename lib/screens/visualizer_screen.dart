@@ -28,6 +28,7 @@ import '../services/user_prefs_service.dart';
 import '../services/permissions_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 // END REGION: CODEX-ADD permissions-import
+import '../services/accessibility_service.dart';
 
 enum CompareMode { none, grid, split, slider }
 
@@ -95,6 +96,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   @override
   void initState() {
     super.initState();
+
+    AccessibilityService.instance
+        .addListener(() => mounted ? setState(() {}) : null);
+    AccessibilityService.instance.load();
     
     // Track visualizer screen view
     AnalyticsService.instance.screenView('visualizer');
@@ -351,6 +356,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             left: 12,
             child: IconButton(
               icon: Icon(_showMaskTools ? Icons.close : Icons.brush),
+              tooltip:
+                  _showMaskTools ? 'Close mask tools' : 'Open mask tools',
+              constraints:
+                  const BoxConstraints(minWidth: 44, minHeight: 44),
               onPressed: () =>
                   setState(() => _showMaskTools = !_showMaskTools),
             ),
@@ -508,7 +517,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     final hasResults = _results.isNotEmpty;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
+      duration: Duration(
+          milliseconds:
+              AccessibilityService.instance.reduceMotion ? 0 : 280),
       child: hasResults
           ? _buildResults()
           : _buildSourcePreview(theme),
@@ -529,6 +540,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         children: [
           IconButton(
             icon: Icon(_eraseMode ? Icons.crop_square : Icons.brush),
+            tooltip: _eraseMode ? 'Draw mask' : 'Erase mask',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: () => setState(() => _eraseMode = !_eraseMode),
           ),
           Slider(
@@ -540,6 +553,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           IconButton(
             icon: const Icon(Icons.undo),
+            tooltip: 'Undo mask',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: _undoStack.isEmpty
                 ? null
                 : () {
@@ -552,6 +567,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           IconButton(
             icon: const Icon(Icons.redo),
+            tooltip: 'Redo mask',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: _redoStack.isEmpty
                 ? null
                 : () {
@@ -564,6 +581,8 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           IconButton(
             icon: const Icon(Icons.auto_fix_high),
+            tooltip: 'Mask assist',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: _onMaskAssist,
           ),
         ],
@@ -772,7 +791,9 @@ class _ControlDock extends StatelessWidget {
             ),
             const Spacer(),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
+              duration: Duration(
+                  milliseconds:
+                      AccessibilityService.instance.reduceMotion ? 0 : 200),
               child: mode == 'photo'
                   ? TextButton.icon(
                       key: const ValueKey('upload_button'),
@@ -798,7 +819,9 @@ class _ControlDock extends StatelessWidget {
               onChanged: (v) => onRoomTypeChanged(v!),
             ),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
+              duration: Duration(
+                  milliseconds:
+                      AccessibilityService.instance.reduceMotion ? 0 : 200),
               child: onStyleChanged != null
                   ? _Dropdown(
                       key: const ValueKey('style_dropdown'),
@@ -919,7 +942,10 @@ class _Segmented extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: Duration(
+                    milliseconds: AccessibilityService.instance.reduceMotion
+                        ? 0
+                        : 200),
                 child: ChoiceChip(
                   label: Text(options[i]),
                   selected: i == selectedIndex,
@@ -1322,7 +1348,11 @@ class _VariantToolbarState extends State<VariantToolbar> {
                     final hex = r['hex'] ?? '#000000';
                     final chosen = (i == widget.selectedA) || (i == widget.selectedB);
                     return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: Duration(
+                          milliseconds:
+                              AccessibilityService.instance.reduceMotion
+                                  ? 0
+                                  : 200),
                       child: GestureDetector(
                         onTap: () => widget.onSelectA(i),
                         onLongPress: () => widget.onSelectB(i),

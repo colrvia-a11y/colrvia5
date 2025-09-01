@@ -5,6 +5,7 @@ import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/screens/login_screen.dart';
 import 'package:color_canvas/screens/admin_screen.dart';
 import 'package:color_canvas/screens/simple_firebase_test.dart';
+import 'package:color_canvas/services/accessibility_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Color Story preferences
   bool _autoPlayStoryAudio = false;
   bool _reduceMotion = false;
+  bool _cbFriendlyVariant = false;
   bool _wifiOnlyForStoryAssets = false;
   String _defaultStoryVisibility = 'private';
   String _ambientAudioMode = 'off';
@@ -154,12 +156,22 @@ class _SettingsScreenState extends State<SettingsScreen>
       final doc = await FirebaseService.getUserDocument(user.uid);
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
+        await AccessibilityService.instance.load();
         setState(() {
           _autoPlayStoryAudio = data['autoPlayStoryAudio'] ?? false;
-          _reduceMotion = data['reduceMotion'] ?? false;
+          _reduceMotion = AccessibilityService.instance.reduceMotion;
+          _cbFriendlyVariant =
+              AccessibilityService.instance.cbFriendlyEnabled;
           _wifiOnlyForStoryAssets = data['wifiOnlyAssets'] ?? false;
           _defaultStoryVisibility = data['defaultStoryVisibility'] ?? 'private';
           _ambientAudioMode = data['ambientAudioMode'] ?? 'off';
+        });
+      } else {
+        await AccessibilityService.instance.load();
+        setState(() {
+          _reduceMotion = AccessibilityService.instance.reduceMotion;
+          _cbFriendlyVariant =
+              AccessibilityService.instance.cbFriendlyEnabled;
         });
       }
     } catch (e) {
@@ -983,7 +995,18 @@ class _SettingsScreenState extends State<SettingsScreen>
               value: _reduceMotion,
               onChanged: (value) {
                 setState(() => _reduceMotion = value);
-                _saveColorStoryPreferences();
+                AccessibilityService.instance.setReduceMotion(value);
+                HapticFeedback.selectionClick();
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildBrandedSwitch(
+              title: 'Color-blind Friendly Variant',
+              subtitle: 'Adds a CB-safe palette option in Roller',
+              value: _cbFriendlyVariant,
+              onChanged: (value) {
+                setState(() => _cbFriendlyVariant = value);
+                AccessibilityService.instance.setCbFriendly(value);
                 HapticFeedback.selectionClick();
               },
             ),

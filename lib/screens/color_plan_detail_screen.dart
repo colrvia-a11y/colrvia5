@@ -29,6 +29,8 @@ import 'color_plan_screen.dart';
 import '../services/color_plan_service.dart';
 // END REGION: CODEX-ADD color-plan-detail-screen-imports
 import '../widgets/via_overlay.dart';
+import '../services/house_flow_service.dart';
+import '../services/color_metrics_service.dart';
 
 // Small helper used when rendering ColorPlan fallback views
 class _PlanSection extends StatelessWidget {
@@ -74,6 +76,7 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
   // REGION: CODEX-ADD color-plan-detail-screen-state
   ColorPlan? _plan;
   // END REGION: CODEX-ADD color-plan-detail-screen-state
+  List<String> _flowWarnings = [];
 
   // Ambient audio
   final _ambientController = AmbientLoopController();
@@ -111,7 +114,10 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
     // REGION: CODEX-ADD color-plan-detail-screen-init
     if (widget.projectId != null) {
       ColorPlanService().getPlan(widget.projectId!, widget.storyId).then((p) {
-        if (mounted) setState(() => _plan = p);
+        if (mounted) {
+          setState(() => _plan = p);
+          _computeFlowHealth();
+        }
       });
     }
     // END REGION: CODEX-ADD color-plan-detail-screen-init
@@ -183,6 +189,44 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
         // Use defaults if loading fails
       }
     }
+  }
+
+  Future<void> _computeFlowHealth() async {
+    if (widget.projectId == null || _plan == null) return;
+    final flow = await HouseFlowService().getFlow(widget.projectId!);
+    if (flow == null) return;
+    final metrics = ColorMetricsService();
+    final warnings = <String>[];
+    for (final edge in flow.edges) {
+      final a = _wallColorFor(edge.from);
+      final b = _wallColorFor(edge.to);
+      if (a == null || b == null) continue;
+      final delta = await metrics.deltaLrv(a, b);
+      if (delta < 5) {
+        warnings.add('${edge.from} ↔ ${edge.to}: low LRV difference');
+      }
+      final conflict = await metrics.undertoneConflict(a, b);
+      if (conflict) {
+        warnings.add('${edge.from} ↔ ${edge.to}: undertone conflict');
+      }
+    }
+    AnalyticsService.instance.logEvent('flow_health_computed', {
+      'edges': flow.edges.length,
+      'warnings': warnings.length,
+    });
+    if (mounted) setState(() => _flowWarnings = warnings);
+  }
+
+  String? _wallColorFor(String room) {
+    final item = _plan?.roomPlaybook
+        .firstWhere(
+            (r) => r.roomType.toLowerCase() == room.toLowerCase(),
+            orElse: () => null);
+    if (item == null) return null;
+    for (final p in item.placements) {
+      if (p.area.toLowerCase() == 'walls') return p.colorId;
+    }
+    return null;
   }
 
   @override
@@ -680,6 +724,8 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.picture_as_pdf),
                   tooltip: 'Export Painter Pack',
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
                   onPressed: () async {
                     final plan = _plan ??
                         ColorPlan(
@@ -730,6 +776,8 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                       : 'Enable color-blind sim',
                   icon: Icon(
                       _colorBlindOn ? Icons.visibility_off : Icons.visibility),
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
                   onPressed: () =>
                       setState(() => _colorBlindOn = !_colorBlindOn),
                 ),
@@ -742,6 +790,8 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : Icon(_isLiked ? Icons.favorite : Icons.favorite_border,
                           color: _isLiked ? Colors.red : null),
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
                   onPressed: _isLikeLoading ? null : _handleLike,
                 ),
                 PopupMenuButton<String>(
@@ -1275,6 +1325,7 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
                     _buildAccentRulesSection(_plan!),
                     _buildDoDontSection(_plan!),
                     _buildSampleSequenceSection(_plan!),
+                    _buildFlowHealthSection(),
                     _buildRoomPlaybookSection(_plan!),
                   ],
                   // END REGION: CODEX-ADD color-plan-detail-screen
@@ -1585,6 +1636,18 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
     return _section(
       'Sample Sequence',
       plan.sampleSequence.map((s) => Text('• $s')).toList(),
+    );
+  }
+
+  Widget _buildFlowHealthSection() {
+    if (widget.projectId == null) return const SizedBox.shrink();
+    if (_flowWarnings.isEmpty) {
+      return _section('Flow Health',
+          [const Text('No adjacency issues detected.')]);
+    }
+    return _section(
+      'Flow Health',
+      _flowWarnings.map((w) => Text('• $w')).toList(),
     );
   }
 
