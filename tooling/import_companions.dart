@@ -17,10 +17,7 @@ Future<void> main(List<String> args) async {
   }
   final data = jsonDecode(await file.readAsString()) as List;
   int updated = 0;
-  for (final row in data) {
-    final id = row['id'];
-    final similar = List<String>.from(row['similarIds'] ?? []);
-    final companions = List<String>.from(row['companionIds'] ?? []);
+  for (final _ in data) {
     // TODO: Update Firestore or local catalog here
     updated++;
   }

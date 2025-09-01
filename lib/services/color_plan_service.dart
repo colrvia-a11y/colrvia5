@@ -160,12 +160,3 @@ class ColorPlanService {
   }
   // END REGION: CODEX-ADD color-plan-service
 }
-
-extension _ColorPlanAnalytics on AnalyticsService {
-  Future<void> planGenerated(String projectId, String planId) async {
-    await logEvent('plan_generated', {
-      'project_id': projectId,
-      'plan_id': planId,
-    });
-  }
-}
