@@ -174,3 +174,23 @@ exports.generateColorPlanV1 = functions.https.onCall(async (data, context) => {
     roomPlaybook,
   };
 });
+
+exports.viaReply = functions.https.onCall((data) => {
+  const { context, state } = data || {};
+  const action = (state && state.action) || '';
+  let text;
+  switch (action.toLowerCase()) {
+    case 'explain':
+      text = `Explanation for ${context}`;
+      break;
+    case 'simplify':
+      text = `Simplified ${context}`;
+      break;
+    case 'budget':
+      text = `Budget advice for ${context}`;
+      break;
+    default:
+      text = `No suggestion for ${context}`;
+  }
+  return { text };
+});

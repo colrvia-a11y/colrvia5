@@ -20,6 +20,9 @@ import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/utils/palette_transforms.dart' as transforms;
 import 'package:color_canvas/utils/lab.dart';
 import 'package:color_canvas/services/project_service.dart';
+import 'package:color_canvas/widgets/via_overlay.dart';
+import 'package:color_canvas/screens/color_plan_screen.dart';
+import 'package:color_canvas/screens/visualizer_screen.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -954,6 +957,34 @@ class _RollerScreenState extends RollerScreenStatePublic {
                     ],
                     panelBuilder: (tool) => _buildToolPanel(tool),
                   ),
+                ),
+                ViaOverlay(
+                  contextLabel: 'roller',
+                  onMakePlan: widget.projectId == null
+                      ? null
+                      : () {
+                          final ids =
+                              _currentPalette.map((p) => p.id).toList();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ColorPlanScreen(
+                                projectId: widget.projectId!,
+                                paletteColorIds: ids,
+                              ),
+                            ),
+                          );
+                        },
+                  onVisualize: widget.projectId == null
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => VisualizerScreen(
+                                projectId: widget.projectId,
+                              ),
+                            ),
+                          );
+                        },
                 ),
               ],
             ),
