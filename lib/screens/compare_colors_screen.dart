@@ -1,49 +1,146 @@
-// lib/screens/compare_colors_screen.dart
 import 'package:flutter/material.dart';
+import 'package:color_canvas/firestore/firestore_data_schema.dart';
+import 'package:color_canvas/services/firebase_service.dart';
+import 'package:color_canvas/utils/color_utils.dart';
 
-class CompareColorsScreen extends StatelessWidget {
+class CompareColorsScreen extends StatefulWidget {
   final List<String> paletteColorIds;
   const CompareColorsScreen({super.key, required this.paletteColorIds});
 
   @override
+  State<CompareColorsScreen> createState() => _CompareColorsScreenState();
+}
+
+class _CompareColorsScreenState extends State<CompareColorsScreen> {
+  late Future<List<Paint>> _paintsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _paintsFuture = FirebaseService.getPaintsByIds(
+        widget.paletteColorIds.take(4).toList());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ids = paletteColorIds.take(4).toList();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Compare Colors')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return FutureBuilder<List<Paint>>(
+      future: _paintsFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            appBar: AppBar(title: Text('Compare Colors')),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final paints = snapshot.data!;
+        return Scaffold(
+          appBar: AppBar(title: const Text('Compare Colors')),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
+                children: paints
+                    .map((p) => Expanded(child: _SwatchCard(paint: p)))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              _ContrastTable(paints: paints),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SwatchCard extends StatelessWidget {
+  final Paint paint;
+  const _SwatchCard({required this.paint});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ColorUtils.getPaintColor(paint.hex);
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(children: ids.map((id) => Expanded(child: _SwatchCard(id: id))).toList()),
-          const SizedBox(height: 16),
-          _ContrastTable(ids: ids),
+          Expanded(child: Container(color: color)),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(paint.name,
+                    style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 4),
+                Text('LRV ${paint.computedLrv.toStringAsFixed(1)}',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SwatchCard extends StatelessWidget {
-  final String id; const _SwatchCard({required this.id});
-  @override Widget build(BuildContext context) {
-    return Card(child: SizedBox(height: 120, child: Center(child: Text(id))));
+class _ContrastTable extends StatelessWidget {
+  final List<Paint> paints;
+  const _ContrastTable({required this.paints});
+
+  @override
+  Widget build(BuildContext context) {
+    return Table(
+      border: TableBorder.all(color: Colors.black12),
+      children: [
+        TableRow(children: [
+          const SizedBox(),
+          for (final p in paints)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(p.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+        ]),
+        for (final a in paints)
+          TableRow(children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(a.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            for (final b in paints)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: a.id == b.id
+                    ? const Text('—')
+                    : _ContrastCell(a: a, b: b),
+              ),
+          ]),
+      ],
+    );
   }
 }
 
-class _ContrastTable extends StatelessWidget {
-  final List<String> ids; const _ContrastTable({required this.ids});
-  @override Widget build(BuildContext context) {
-    return Table(border: TableBorder.all(color: Colors.black12), children: [
-      TableRow(children: [const SizedBox(), for (final j in ids) Padding(padding: const EdgeInsets.all(8), child: Text(j, style: const TextStyle(fontWeight: FontWeight.bold)))]),
-      for (final i in ids) TableRow(children: [
-        Padding(padding: const EdgeInsets.all(8), child: Text(i, style: const TextStyle(fontWeight: FontWeight.bold))),
-        for (final j in ids)
-          Padding(padding: const EdgeInsets.all(8), child: Text(i == j ? '—' : _contrast(i, j).toStringAsFixed(2))),
-      ]),
-    ]);
-  }
+class _ContrastCell extends StatelessWidget {
+  final Paint a;
+  final Paint b;
+  const _ContrastCell({required this.a, required this.b});
 
-  double _contrast(String a, String b) {
-    // TODO: replace with real LRV lookup and contrast formula
-    return (a.hashCode % 100 - b.hashCode % 100).abs() / 100.0 * 10.0;
+  @override
+  Widget build(BuildContext context) {
+    final colorA = ColorUtils.getPaintColor(a.hex);
+    final colorB = ColorUtils.getPaintColor(b.hex);
+    final contrast = ColorUtils.contrastRatio(colorA, colorB);
+    final lrvDiff = (a.computedLrv - b.computedLrv).abs();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('ΔLRV ${lrvDiff.toStringAsFixed(1)}',
+            style: Theme.of(context).textTheme.bodySmall),
+        Text('${contrast.toStringAsFixed(2)}:1',
+            style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
   }
 }

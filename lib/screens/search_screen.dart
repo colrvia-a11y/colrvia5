@@ -8,6 +8,7 @@ import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/screens/compare_colors_screen.dart';
 import 'package:color_canvas/utils/debug_logger.dart';
 import 'dart:async';
+import 'package:color_canvas/services/analytics_service.dart';
 // ...existing code...
 
 class SearchScreen extends StatefulWidget {
@@ -297,6 +298,9 @@ class _SearchScreenState extends State<SearchScreen> {
       floatingActionButton: _selectedForCompare.length >= 2
           ? FloatingActionButton.extended(
               onPressed: () {
+                AnalyticsService.instance.logEvent('compare_opened', {
+                  'count': _selectedForCompare.length,
+                });
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => CompareColorsScreen(
