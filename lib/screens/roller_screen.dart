@@ -31,7 +31,7 @@ import 'package:color_canvas/models/fixed_elements.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
 import 'package:color_canvas/services/fixed_element_service.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/deep_link_service.dart';
+
 import '../services/feature_flags.dart';
 
 // Custom intents for keyboard navigation
@@ -1180,18 +1180,14 @@ class _RollerScreenState extends RollerScreenStatePublic {
   }
   
   Future<void> _shareCurrentPalette() async {
-    if (widget.projectId == null) return;
-    final ok = await DeepLinkService.instance
-        .ensureProjectShareable(context, widget.projectId!);
-    if (!ok) return;
-    final ids = _currentPalette.map((p) => p.id).toList();
-    final uri = await DeepLinkService.instance.createLink(
-      'palette',
-      widget.projectId!,
-      params: {'colors': ids.join(',')},
-    );
+    if (_currentPalette.isEmpty) return;
+
+    final text = _currentPalette
+        .map((p) => '${p.brandName} ${p.name} (${p.hex})')
+        .join('\n');
+
     await SharePlus.instance.share(
-      ShareParams(text: uri.toString()),
+      ShareParams(text: 'My Color Palette:\n$text', subject: 'My Color Palette'),
     );
   }
 

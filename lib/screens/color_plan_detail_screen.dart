@@ -16,7 +16,7 @@ import '../services/network_utils.dart';
 import '../services/ambient_audio_controller.dart';
 import '../services/accessibility_service.dart';
 import '../services/analytics_service.dart';
-import '../services/deep_link_service.dart';
+
 import '../services/painter_pack_service.dart';
 import '../widgets/usage_guide_card.dart';
 import '../widgets/motion_aware_parallax.dart';
@@ -2000,11 +2000,6 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
   /// Share the color story
   Future<void> _shareStory(ColorStory story) async {
     try {
-      if (widget.projectId != null) {
-        final ok = await DeepLinkService.instance
-            .ensureProjectShareable(context, widget.projectId!);
-        if (!ok) return;
-      }
       String excerpt = '';
       String contextInfo = '';
       String colors = '';
@@ -2047,16 +2042,8 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
         contextInfo =
             '\n\n${story.style.toUpperCase()} ${story.room.toUpperCase()}';
       }
-      Uri? link;
-      if (widget.projectId != null) {
-        link = await DeepLinkService.instance.createLink(
-          'plan',
-          story.id,
-          params: {'projectId': widget.projectId!},
-        );
-      }
       final shareText =
-          '$shareTitle$contextInfo\n\n$excerpt\n\n🎨 View this color story: ${link ?? ''}';
+          '$shareTitle$contextInfo\n\n$excerpt';
 
       // Share the story
       await SharePlus.instance.share(
