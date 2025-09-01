@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/color_plan.dart';
+import 'analytics_service.dart';
 
 /// Service for managing color plans in Firestore and generating new ones via Cloud Functions.
 class ColorPlanService {
@@ -17,6 +18,7 @@ class ColorPlanService {
   CollectionReference<Map<String, dynamic>> _plansCol(String uid, String projectId) =>
       _db.collection('users').doc(uid).collection('projects').doc(projectId).collection('colorPlans');
 
+  // REGION: CODEX-ADD color-plan-service
   /// Creates a new color plan by invoking the generateColorPlanV2 cloud function
   /// and storing the result in Firestore.
   Future<ColorPlan> createPlan({
@@ -49,6 +51,7 @@ class ColorPlanService {
     });
 
     await doc.set(plan.toJson());
+    await AnalyticsService().planGenerated(projectId, doc.id);
     return plan;
   }
 
@@ -94,5 +97,15 @@ class ColorPlanService {
     }
 
     await _plansCol(uid, projectId).doc(planId).delete();
+  }
+  // END REGION: CODEX-ADD color-plan-service
+}
+
+extension _ColorPlanAnalytics on AnalyticsService {
+  Future<void> planGenerated(String projectId, String planId) async {
+    await logEvent('plan_generated', {
+      'project_id': projectId,
+      'plan_id': planId,
+    });
   }
 }
