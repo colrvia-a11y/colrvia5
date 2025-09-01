@@ -152,6 +152,11 @@ ThemeData get lightTheme => ThemeData(
           fontWeight: FontWeight.normal,
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: LightModeColors.lightPrimary,
+        ),
+      ),
     );
 
 ThemeData get darkTheme => ThemeData(
@@ -245,6 +250,11 @@ ThemeData get darkTheme => ThemeData(
         bodySmall: GoogleFonts.inter(
           fontSize: FontSizes.bodySmall,
           fontWeight: FontWeight.normal,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: DarkModeColors.darkPrimary,
         ),
       ),
     );

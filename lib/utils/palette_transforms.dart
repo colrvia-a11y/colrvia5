@@ -113,3 +113,23 @@ List<ColorId> cooler(
       })
       .toList(growable: false);
 }
+
+/// Generate a color-blind-friendly variant by increasing luminance contrast
+/// and reducing red/green components.
+List<ColorId> cbFriendlyVariant(
+  List<ColorId> ids,
+  LabLookup labOf,
+  NearestId nearestId,
+) {
+  return ids
+      .map((id) {
+        final lab = labOf(id);
+        final l = lab.l < 50.0
+            ? math.min(100.0, lab.l + 15.0)
+            : math.max(0.0, lab.l - 15.0);
+        final adjusted = Lab(l, lab.a * 0.5, lab.b);
+        final nearest = nearestId(adjusted);
+        return nearest ?? id;
+      })
+      .toList(growable: false);
+}
