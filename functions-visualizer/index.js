@@ -30,3 +30,20 @@ exports.getJob = functions.https.onCall(async (data, context) => {
   return JOBS.get(jobId) || { jobId, status: 'unknown' };
 });
 
+exports.maskAssist = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Auth required');
+  const { imageUrl } = data;
+  if (!imageUrl) throw new functions.https.HttpsError('invalid-argument', 'imageUrl required');
+  // Stubbed response: simple rectangle mask for walls
+  return {
+    walls: [
+      [
+        { x: 0.1, y: 0.1 },
+        { x: 0.9, y: 0.1 },
+        { x: 0.9, y: 0.9 },
+        { x: 0.1, y: 0.9 }
+      ]
+    ]
+  };
+});
+

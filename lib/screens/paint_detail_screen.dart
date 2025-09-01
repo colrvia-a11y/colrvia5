@@ -4,6 +4,7 @@ import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 
 class PaintDetailScreen extends StatefulWidget {
   final Paint paint;
@@ -291,6 +292,8 @@ class _PaintDetailScreenState extends State<PaintDetailScreen>
                     // Analysis
                     _buildAnalysisSection(),
 
+                    const SizedBox(height: 32),
+                    _buildRelatedSection(),
                     const SizedBox(height: 100), // Bottom padding
                   ],
                 ),
@@ -626,6 +629,68 @@ class _PaintDetailScreenState extends State<PaintDetailScreen>
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildRelatedSection() {
+    final companions = widget.paint.companionIds ?? [];
+    final similar = widget.paint.similarIds ?? [];
+    if (companions.isEmpty && similar.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (companions.isNotEmpty) ...[
+          Text('Companions',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: companions
+                .map((id) => ActionChip(
+                      label: Text(id),
+                      onPressed: () async {
+                        AnalyticsService.instance
+                            .logEvent('companion_chip_tapped', {'colorId': id});
+                        final p = await FirebaseService.getPaintById(id);
+                        if (p != null && mounted) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => PaintDetailScreen(paint: p)));
+                        }
+                      },
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 24),
+        ],
+        if (similar.isNotEmpty) ...[
+          Text('Similar',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: similar
+                .map((id) => ActionChip(
+                      label: Text(id),
+                      onPressed: () async {
+                        AnalyticsService.instance
+                            .logEvent('similar_chip_tapped', {'colorId': id});
+                        final p = await FirebaseService.getPaintById(id);
+                        if (p != null && mounted) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => PaintDetailScreen(paint: p)));
+                        }
+                      },
+                    ))
+                .toList(),
+          ),
+        ],
       ],
     );
   }
