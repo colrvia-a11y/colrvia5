@@ -1,130 +1,209 @@
 import 'package:flutter/material.dart';
-import '../utils/color_utils.dart';
-import '../firestore/firestore_data_schema.dart';
+import 'package:flutter/services.dart';
+import 'package:color_canvas/firestore/firestore_data_schema.dart';
+import 'package:color_canvas/utils/color_utils.dart';
 
-typedef PaintTap = void Function(Paint paint);
-
-class PaintSwatchCard extends StatelessWidget {
+class PaintSwatchCard extends StatefulWidget {
   final Paint paint;
+  final bool compact;
+  final bool selected;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  final bool selected;
-  final bool showMeta;
 
-  /// NEW: compact layout for rails
-  final bool compact;
+  // new
+  final bool showQuickRoller;
+  final VoidCallback? onQuickRoller;
+  final bool hoverable;
+  final bool useHero;
 
   const PaintSwatchCard({
     super.key,
     required this.paint,
+    this.compact = false,
+    this.selected = false,
     this.onTap,
     this.onLongPress,
-    this.selected = false,
-    this.showMeta = true,
-    this.compact = false, // <-- default false; rails will pass true
+    this.showQuickRoller = false,
+    this.onQuickRoller,
+    this.hoverable = true,
+    this.useHero = true,
   });
 
   @override
+  State<PaintSwatchCard> createState() => _PaintSwatchCardState();
+}
+
+class _PaintSwatchCardState extends State<PaintSwatchCard> {
+  bool _hovering = false;
+  bool _pressed = false;
+
+  void _setHover(bool v) => setState(() => _hovering = v);
+  void _setPressed(bool v) => setState(() => _pressed = v);
+
+  @override
   Widget build(BuildContext context) {
-    final color = ColorUtils.getPaintColor(paint.hex);
-    final lrv = paint.computedLrv;
     final theme = Theme.of(context);
+    final p = widget.paint;
+    final color = ColorUtils.getPaintColor(p.hex);
 
-    final double swatchHeight = compact ? 96 : 110;
+    final scale = _pressed ? 0.985 : (_hovering ? 1.015 : 1.0);
+    final shadowOpacity = _pressed ? 0.06 : (_hovering ? 0.16 : 0.10);
 
-    return Stack(
-      children: [
-        Card(
-          margin: EdgeInsets.zero, // avoid extra outer margin
-          elevation: selected ? 4 : 1.5,
-          shadowColor: Colors.black.withOpacity(0.10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    Widget swatch = Container(
+      height: widget.compact ? 120 : 140,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.20)),
+      ),
+    );
+
+    if (widget.useHero) {
+      swatch = Hero(tag: 'swatch_${p.id}', flightShuttleBuilder: _flight, child: swatch);
+    }
+
+    Widget card = AnimatedScale(
+      scale: scale,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOutCubic,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: shadowOpacity),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Material(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: onTap,
-            onLongPress: onLongPress,
-            borderRadius: BorderRadius.circular(16),
+            onTap: widget.onTap,
+            onLongPress: () {
+              HapticFeedback.selectionClick();
+              widget.onLongPress?.call();
+            },
+            onHighlightChanged: _setPressed,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Swatch
-                Container(
-                  height: swatchHeight,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    border: Border.all(
-                      color: theme.colorScheme.outline.withOpacity(0.18),
-                    ),
+                // swatch + overlays
+                Stack(
+                  children: [
+                    swatch,
+                    if (widget.showQuickRoller && widget.onQuickRoller != null)
+                      Positioned(
+                        top: 8, right: 8,
+                        child: Material(
+                          color: theme.colorScheme.surface.withValues(alpha: 0.92),
+                          elevation: 3,
+                          borderRadius: BorderRadius.circular(999),
+                          child: InkWell(
+                            onTap: widget.onQuickRoller,
+                            borderRadius: BorderRadius.circular(999),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(Icons.color_lens, size: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (widget.selected)
+                      Positioned(
+                        top: 8, left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: .90),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.check, size: 14, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text('Selected', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                // meta
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text('${p.brandName} • ${p.code}',
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: p.hex.toUpperCase()));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Copied ${p.hex.toUpperCase()}')),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(p.hex.toUpperCase(),
+                                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                if (showMeta)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(12, compact ? 8 : 10, 12, compact ? 8 : 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          paint.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${paint.brandName} • ${paint.code}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.62),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Wrap avoids right overflow; will use 2 lines if needed
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            _pill(context, paint.hex.toUpperCase(), isMonospace: true, compact: compact),
-                            _pill(context, 'LRV ${lrv.toStringAsFixed(0)}', compact: compact),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
         ),
-        if (selected)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Icon(Icons.check_circle, color: theme.colorScheme.primary),
-          ),
-      ],
+      ),
     );
+
+    if (widget.hoverable) {
+      card = SizedBox.expand(
+        child: MouseRegion(
+          onEnter: (_) => _setHover(true),
+          onExit: (_) => _setHover(false),
+          child: card,
+        ),
+      );
+    }
+
+    return card;
   }
 
-  Widget _pill(BuildContext context, String text, {bool isMonospace = false, bool compact = false}) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: compact ? 2 : 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.60),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: theme.textTheme.bodySmall?.copyWith(
-          fontSize: compact ? 10 : 11,
-          fontFamily: isMonospace ? 'monospace' : null,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+  // slightly smoother hero flight
+  Widget _flight(BuildContext _, Animation<double> anim, HeroFlightDirection dir, BuildContext from, BuildContext to) {
+    return ScaleTransition(scale: Tween(begin: 1.0, end: dir == HeroFlightDirection.push ? 1.03 : 0.98).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+      child: FadeTransition(opacity: CurvedAnimation(parent: anim, curve: Curves.easeInOutCubic), child: to.widget));
   }
 }

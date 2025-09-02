@@ -71,6 +71,40 @@ class Paint {
   /// Optional list of companion paint IDs stored in metadata under 'companionIds'
   List<String>? get companionIds => (metadata?['companionIds'] as List?)?.cast<String>();
 
+  /// Computed temperature based on color
+  String? get temperature => ColorUtils.getColorTemperature(ColorUtils.getPaintColor(hex));
+
+  /// Computed undertone based on RGB values
+  String? get undertone {
+    final rgb = this.rgb;
+    final r = rgb[0];
+    final g = rgb[1];
+    final b = rgb[2];
+
+    // Simple undertone analysis based on RGB values
+    final total = r + g + b;
+    final rPercent = r / total;
+    final gPercent = g / total;
+    final bPercent = b / total;
+
+    List<String> undertones = [];
+
+    if (rPercent > 0.4) undertones.add('Warm/Red');
+    if (gPercent > 0.4) undertones.add('Green');
+    if (bPercent > 0.4) undertones.add('Cool/Blue');
+
+    // Additional analysis
+    if (r > g && r > b) undertones.add('Red-based');
+    if (g > r && g > b) undertones.add('Green-based');
+    if (b > r && b > g) undertones.add('Blue-based');
+
+    if ((r + g) > (b * 1.5)) undertones.add('Yellow undertone');
+    if ((r + b) > (g * 1.5)) undertones.add('Purple undertone');
+    if ((g + b) > (r * 1.5)) undertones.add('Cool undertone');
+
+    return undertones.isNotEmpty ? undertones.join(', ') : 'Neutral';
+  }
+
   factory Paint.fromJson(Map<String, dynamic> json, String id) {
     // Normalize and compute color metrics if missing. In some data sources
     // (assets or Firestore), LAB/LCH may be absent. Many algorithms rely on

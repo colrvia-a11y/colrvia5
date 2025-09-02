@@ -43,7 +43,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 Text('Filters', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton(
-                  onPressed: () { setState(() { filters.clear(); }); },
+                  onPressed: () { setState(() => filters = filters.clear()); },
                   child: const Text('Clear all'),
                 )
               ],

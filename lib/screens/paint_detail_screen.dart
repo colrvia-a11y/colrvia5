@@ -2,705 +2,391 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
-import 'package:color_canvas/services/firebase_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:color_canvas/services/analytics_service.dart';
+import 'package:color_canvas/utils/color_math.dart';
+
+enum LightingMode { d65, incandescent, north }
+enum CbMode { none, deuter, protan, tritan }
 
 class PaintDetailScreen extends StatefulWidget {
   final Paint paint;
-
-  const PaintDetailScreen({
-    super.key,
-    required this.paint,
-  });
+  const PaintDetailScreen({super.key, required this.paint});
 
   @override
   State<PaintDetailScreen> createState() => _PaintDetailScreenState();
 }
 
-class _PaintDetailScreenState extends State<PaintDetailScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  bool _isFavorite = false;
-  bool _isCheckingFavorite = false;
+class _PaintDetailScreenState extends State<PaintDetailScreen> {
+  LightingMode lighting = LightingMode.d65;
+  CbMode cb = CbMode.none;
 
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
-
-    _fadeController.forward();
-    _checkIfFavorite();
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _checkIfFavorite() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null && !_isCheckingFavorite) {
-      setState(() => _isCheckingFavorite = true);
-      try {
-        final isFav =
-            await FirebaseService.isPaintFavorited(widget.paint.id, user.uid);
-        if (mounted) {
-          setState(() {
-            _isFavorite = isFav;
-            _isCheckingFavorite = false;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isCheckingFavorite = false);
-        }
-      }
+  Color get _base => ColorUtils.getPaintColor(widget.paint.hex);
+  Color get _display {
+    var c = _base;
+    // order: color-blind simulation -> lighting tint
+    switch (cb) {
+      case CbMode.deuter: c = ColorMath.simulateCB(c, 'deuter'); break;
+      case CbMode.protan: c = ColorMath.simulateCB(c, 'protan'); break;
+      case CbMode.tritan: c = ColorMath.simulateCB(c, 'tritan'); break;
+      case CbMode.none: break;
     }
-  }
-
-  Future<void> _toggleFavorite() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to save favorites')),
-      );
-      return;
+    switch (lighting) {
+      case LightingMode.d65: c = ColorMath.simulateLighting(c, 'd65'); break;
+      case LightingMode.incandescent: c = ColorMath.simulateLighting(c, 'incandescent'); break;
+      case LightingMode.north: c = ColorMath.simulateLighting(c, 'north'); break;
     }
-
-    try {
-      if (_isFavorite) {
-        await FirebaseService.removeFavoritePaint(widget.paint.id);
-      } else {
-        await FirebaseService.addFavoritePaintWithData(user.uid, widget.paint);
-      }
-
-      setState(() => _isFavorite = !_isFavorite);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                _isFavorite ? 'Added to favorites' : 'Removed from favorites'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-  }
-
-  void _copyToClipboard(String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Color get _paintColor => ColorUtils.getPaintColor(widget.paint.hex);
-
-  bool get _isLightColor => ColorUtils.calculateLuminance(_paintColor) > 0.5;
-
-  String _formatRgb() {
-    return 'rgb(${widget.paint.rgb.join(', ')})';
-  }
-
-  String _formatLab() {
-    return 'lab(${widget.paint.lab.map((v) => v.toStringAsFixed(1)).join(', ')})';
-  }
-
-  String _formatLch() {
-    return 'lch(${widget.paint.lch.map((v) => v.toStringAsFixed(1)).join(', ')})';
-  }
-
-  List<Color> _generateTones() {
-    // Generate tones by adjusting lightness
-    final baseColor = _paintColor;
-    final tones = <Color>[];
-
-    // Lighter tones
-    for (double factor in [0.9, 0.8, 0.7, 0.6, 0.5]) {
-      tones.add(ColorUtils.lighten(baseColor, factor));
-    }
-
-    // Base color
-    tones.add(baseColor);
-
-    // Darker tones
-    for (double factor in [0.1, 0.2, 0.3, 0.4, 0.5]) {
-      tones.add(ColorUtils.darken(baseColor, factor));
-    }
-
-    return tones;
-  }
-
-  String _analyzeUndertones() {
-    final rgb = widget.paint.rgb;
-    final r = rgb[0];
-    final g = rgb[1];
-    final b = rgb[2];
-
-    // Simple undertone analysis based on RGB values
-    final total = r + g + b;
-    final rPercent = r / total;
-    final gPercent = g / total;
-    final bPercent = b / total;
-
-    List<String> undertones = [];
-
-    if (rPercent > 0.4) undertones.add('Warm/Red');
-    if (gPercent > 0.4) undertones.add('Green');
-    if (bPercent > 0.4) undertones.add('Cool/Blue');
-
-    // Additional analysis
-    if (r > g && r > b) undertones.add('Red-based');
-    if (g > r && g > b) undertones.add('Green-based');
-    if (b > r && b > g) undertones.add('Blue-based');
-
-    if ((r + g) > (b * 1.5)) undertones.add('Yellow undertone');
-    if ((r + b) > (g * 1.5)) undertones.add('Purple undertone');
-    if ((g + b) > (r * 1.5)) undertones.add('Cool undertone');
-
-    return undertones.isNotEmpty ? undertones.join(', ') : 'Neutral';
+    return c;
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = ThemeData.estimateBrightnessForColor(_display) == Brightness.dark ? Colors.white : Colors.black;
+
+    final delta = ColorMath.deltaE76(_base, _display);
+    final deltaLabel = delta.toStringAsFixed(1);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         slivers: [
-          // Hero App Bar
           SliverAppBar(
-            expandedHeight: 300,
             pinned: true,
-            elevation: 0,
-            backgroundColor: _paintColor,
-            foregroundColor: _isLightColor ? Colors.black87 : Colors.white,
+            expandedHeight: 260,
+            backgroundColor: _display,
+            foregroundColor: fg,
+            title: Text(widget.paint.name, maxLines: 1, overflow: TextOverflow.ellipsis),
             flexibleSpace: FlexibleSpaceBar(
-              background: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        _paintColor,
-                        ColorUtils.darken(_paintColor, 0.1),
-                      ],
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Color swatch
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: _paintColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _isLightColor
-                                  ? Colors.black26
-                                  : Colors.white24,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          widget.paint.hex.toUpperCase(),
-                          style: TextStyle(
-                            color:
-                                _isLightColor ? Colors.black87 : Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
+              background: Stack(fit: StackFit.expand, children: [
+                Hero(
+                  tag: 'swatch_${widget.paint.id}',
+                  child: Container(color: _display),
+                ),
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent, Colors.black.withValues(alpha: 0.08)],
+                        stops: const [0, .45, 1],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ]),
             ),
-            actions: [
-              IconButton(
-                onPressed: _toggleFavorite,
-                icon: _isCheckingFavorite
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: _isLightColor ? Colors.black87 : Colors.white,
-                      ),
-              ),
-              const SizedBox(width: 8),
-            ],
           ),
 
-          // Content
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Paint Info
-                    _buildInfoSection(),
-                    const SizedBox(height: 32),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            sliver: SliverList.list(children: [
+              _MetaRow(paint: widget.paint),
 
-                    // Color Values
-                    _buildColorValuesSection(),
-                    const SizedBox(height: 32),
-
-                    // Tones
-                    _buildTonesSection(),
-                    const SizedBox(height: 32),
-
-                    // Analysis
-                    _buildAnalysisSection(),
-
-                    const SizedBox(height: 32),
-                    _buildRelatedSection(),
-                    const SizedBox(height: 100), // Bottom padding
-                  ],
-                ),
+              const SizedBox(height: 14),
+              _ViewModes(
+                lighting: lighting,
+                cb: cb,
+                onLighting: (m) => setState(() => lighting = m),
+                onCb: (m) => setState(() => cb = m),
+                deltaE: deltaLabel,
               ),
-            ),
+
+              const SizedBox(height: 16),
+              _AnalyticsStrip(paint: widget.paint),
+
+              const SizedBox(height: 20),
+              _SectionTitle('Pairings we love'),
+              _PairingRow(ids: widget.paint.companionIds ?? const []),
+
+              const SizedBox(height: 14),
+              _SectionTitle('Similar shades'),
+              _SimilarRow(ids: widget.paint.similarIds ?? const []),
+
+              const SizedBox(height: 30),
+              _ActionBar(paint: widget.paint),
+            ]),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildInfoSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.paint.name,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.paint.brandName} • ${widget.paint.code}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-            ),
-            if (widget.paint.collection != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Collection: ${widget.paint.collection}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-              ),
-            ],
-            if (widget.paint.finish != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Finish: ${widget.paint.finish}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+class _ViewModes extends StatelessWidget {
+  final LightingMode lighting;
+  final CbMode cb;
+  final ValueChanged<LightingMode> onLighting;
+  final ValueChanged<CbMode> onCb;
+  final String deltaE;
 
-  Widget _buildColorValuesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Color Values',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildColorValueRow('HEX', widget.paint.hex.toUpperCase()),
-                const Divider(),
-                _buildColorValueRow('RGB', _formatRgb()),
-                const Divider(),
-                _buildColorValueRow('LAB', _formatLab()),
-                const Divider(),
-                _buildColorValueRow('LCH', _formatLch()),
-                const Divider(),
-                _buildColorValueRow(
-                    'LRV', widget.paint.computedLrv.toStringAsFixed(1)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  const _ViewModes({
+    required this.lighting,
+    required this.cb,
+    required this.onLighting,
+    required this.onCb,
+    required this.deltaE,
+  });
 
-  Widget _buildColorValueRow(String label, String value) {
-    return InkWell(
-      onTap: () => _copyToClipboard(value, label),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            Row(
-              children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontFamily: 'monospace',
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.copy,
-                  size: 16,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTonesSection() {
-    final tones = _generateTones();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Color Tones',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Tone gradient bar
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: tones.asMap().entries.map((entry) {
-                      final isBase =
-                          entry.key == 5; // Base color is in the middle
-                      return Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: entry.value,
-                            border: isBase
-                                ? Border.all(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    width: 3,
-                                  )
-                                : null,
-                            borderRadius: entry.key == 0
-                                ? const BorderRadius.only(
-                                    topLeft: Radius.circular(7),
-                                    bottomLeft: Radius.circular(7),
-                                  )
-                                : entry.key == tones.length - 1
-                                    ? const BorderRadius.only(
-                                        topRight: Radius.circular(7),
-                                        bottomRight: Radius.circular(7),
-                                      )
-                                    : null,
-                          ),
-                          child: isBase
-                              ? Center(
-                                  child: Icon(
-                                    Icons.circle,
-                                    color: _isLightColor
-                                        ? Colors.black54
-                                        : Colors.white54,
-                                    size: 12,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Lighter',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                    ),
-                    Text(
-                      'Base',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    Text(
-                      'Darker',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnalysisSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Color Analysis',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAnalysisRow(
-                  'Undertones',
-                  _analyzeUndertones(),
-                  Icons.palette_outlined,
-                ),
-                const SizedBox(height: 16),
-                _buildAnalysisRow(
-                  'Brightness',
-                  _isLightColor ? 'Light' : 'Dark',
-                  _isLightColor ? Icons.wb_sunny : Icons.nights_stay,
-                ),
-                const SizedBox(height: 16),
-                _buildAnalysisRow(
-                  'Temperature',
-                  ColorUtils.getColorTemperature(_paintColor),
-                  Icons.thermostat,
-                ),
-                const SizedBox(height: 16),
-                _buildAnalysisRow(
-                  'LRV',
-                  '${widget.paint.computedLrv.toStringAsFixed(1)}% - ${_getLrvDescription()}',
-                  Icons.visibility,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnalysisRow(String label, String value, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRelatedSection() {
-    final companions = widget.paint.companionIds ?? [];
-    final similar = widget.paint.similarIds ?? [];
-    if (companions.isEmpty && similar.isEmpty) {
-      return const SizedBox.shrink();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    chip<T>(String label, T value, T group, ValueChanged<T> on) {
+      final sel = value == group;
+      return ChoiceChip(
+        label: Text(label),
+        selected: sel,
+        onSelected: (_) => on(value),
+        selectedColor: t.colorScheme.primary.withValues(alpha: .14),
+        labelStyle: TextStyle(color: sel ? t.colorScheme.primary : t.colorScheme.onSurface),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      );
     }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: t.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: t.colorScheme.outline.withValues(alpha: 0.12)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(
+          children: [
+            Text('View modes', style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+            const Spacer(),
+            Tooltip(
+              message: 'Approximate color difference from base (CIE76)',
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: t.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: t.colorScheme.outline.withValues(alpha: .15)),
+                ),
+                child: Text('ΔE $deltaE', style: t.textTheme.labelMedium),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text('Lighting', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withValues(alpha: .65))),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          chip('D65', LightingMode.d65, lighting, onLighting),
+          chip('Incandescent', LightingMode.incandescent, lighting, onLighting),
+          chip('North', LightingMode.north, lighting, onLighting),
+        ]),
+        const SizedBox(height: 12),
+        Text('Color-blind simulation', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withValues(alpha: .65))),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          chip('None', CbMode.none, cb, onCb),
+          chip('Deuter', CbMode.deuter, cb, onCb),
+          chip('Protan', CbMode.protan, cb, onCb),
+          chip('Tritan', CbMode.tritan, cb, onCb),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  final Paint paint;
+  const _MetaRow({required this.paint});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chipStyle = theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (companions.isNotEmpty) ...[
-          Text('Companions',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: companions
-                .map((id) => ActionChip(
-                      label: Text(id),
-                      onPressed: () async {
-                        AnalyticsService.instance
-                            .logEvent('companion_chip_tapped', {'colorId': id});
-                        final p = await FirebaseService.getPaintById(id);
-                        if (p != null && mounted) {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => PaintDetailScreen(paint: p)));
-                        }
-                      },
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-        ],
-        if (similar.isNotEmpty) ...[
-          Text('Similar',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: similar
-                .map((id) => ActionChip(
-                      label: Text(id),
-                      onPressed: () async {
-                        AnalyticsService.instance
-                            .logEvent('similar_chip_tapped', {'colorId': id});
-                        final p = await FirebaseService.getPaintById(id);
-                        if (p != null && mounted) {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => PaintDetailScreen(paint: p)));
-                        }
-                      },
-                    ))
-                .toList(),
-          ),
-        ],
+        Text('${paint.brandName} • ${paint.code}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8, runSpacing: 8,
+          children: [
+            _copyChip(context, paint.hex.toUpperCase(), icon: Icons.tag, semantics: 'hex'),
+            _plainChip('LRV ${paint.computedLrv.toStringAsFixed(0)}', style: chipStyle),
+          ],
+        ),
       ],
     );
   }
 
-  String _getLrvDescription() {
-    final lrv = widget.paint.computedLrv;
-    if (lrv >= 70) return 'Very Light';
-    if (lrv >= 50) return 'Light';
-    if (lrv >= 30) return 'Medium';
-    if (lrv >= 15) return 'Dark';
-    return 'Very Dark';
+  Widget _copyChip(BuildContext context, String text, {IconData icon = Icons.copy, String semantics = 'value'}) {
+    final theme = Theme.of(context);
+    return ActionChip(
+      avatar: Icon(icon, size: 16),
+      label: Text(text),
+      onPressed: () async {
+        await Clipboard.setData(ClipboardData(text: text));
+        AnalyticsService.instance.logEvent('detail_copy_$semantics', {'value': text});
+        // tiny toast
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Copied $semantics: $text'),
+            duration: const Duration(milliseconds: 900),
+          ),
+        );
+      },
+      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+    );
+  }
+
+  Widget _plainChip(String text, {TextStyle? style}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
+      ),
+      child: Text(text, style: style),
+    );
+  }
+}
+
+class _AnalyticsStrip extends StatelessWidget {
+  final Paint paint;
+  const _AnalyticsStrip({required this.paint});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lrv = paint.computedLrv.clamp(0, 100).toDouble();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Quick analytics', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _metric(
+                  context,
+                  label: 'Temperature',
+                  value: paint.temperature ?? '—',
+                ),
+              ),
+              Expanded(
+                child: _metric(
+                  context,
+                  label: 'Undertone',
+                  value: paint.undertone ?? '—',
+                ),
+              ),
+              Expanded(
+                child: _metric(
+                  context,
+                  label: 'LRV',
+                  value: lrv.toStringAsFixed(0),
+                  trailing: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(trackHeight: 4, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6)),
+                    child: Slider(
+                      value: lrv,
+                      min: 0, max: 100,
+                      onChanged: null, // purely indicative for now
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metric(BuildContext context, {required String label, required String value, Widget? trailing}) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        const SizedBox(height: 4),
+        Text(value, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        if (trailing != null) const SizedBox(height: 6),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800));
+  }
+}
+
+class _PairingRow extends StatelessWidget {
+  final List<String> ids;
+  const _PairingRow({required this.ids});
+
+  @override
+  Widget build(BuildContext context) {
+    if (ids.isEmpty) return Text('We’re curating pairings for this shade…',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))
+    );
+
+    // TODO: swap for real fetch if needed; for now just show stub chips by id.
+    return Wrap(
+      spacing: 8, runSpacing: 8,
+      children: ids.take(6).map((id) {
+        return InputChip(label: Text(id), onPressed: () {});
+      }).toList(),
+    );
+  }
+}
+
+class _SimilarRow extends StatelessWidget {
+  final List<String> ids;
+  const _SimilarRow({required this.ids});
+
+  @override
+  Widget build(BuildContext context) {
+    if (ids.isEmpty) return Text('Similar shades coming soon',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))
+    );
+
+    return SizedBox(
+      height: 100,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: ids.length.clamp(0, 20),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => Chip(label: Text(ids[i])),
+      ),
+    );
+  }
+}
+
+class _ActionBar extends StatelessWidget {
+  final Paint paint;
+  const _ActionBar({required this.paint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10, runSpacing: 10,
+      children: [
+        FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.bookmark_add_outlined), label: const Text('Save to Library')),
+        OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.color_lens), label: const Text('Load in Roller')),
+        OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.visibility_outlined), label: const Text('Visualize')),
+        OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.compare_arrows_rounded), label: const Text('Compare')),
+      ],
+    );
   }
 }
