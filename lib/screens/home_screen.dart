@@ -336,7 +336,7 @@ class _NavSquareButton extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withAlpha(230),
             fontSize: 11,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             letterSpacing: 0.2,
