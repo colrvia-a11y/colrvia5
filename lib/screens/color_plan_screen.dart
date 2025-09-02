@@ -4,6 +4,12 @@ import '../services/color_plan_service.dart';
 import '../services/analytics_service.dart';
 import '../services/user_prefs_service.dart';
 import '../services/journey/journey_service.dart';
+import 'package:meta/meta.dart';
+
+typedef SetLastProjectFn = Future<void> Function(String projectId, String screen);
+
+@visibleForTesting
+SetLastProjectFn setLastProjectFn = UserPrefsService.setLastProject;
 
 class ColorPlanScreen extends StatefulWidget {
   final String projectId;
@@ -11,6 +17,7 @@ class ColorPlanScreen extends StatefulWidget {
   // Optional compatibility params used by other screens
   final String? remixStoryId;
   final String? paletteId;
+  final ColorPlanService? svc;
 
   const ColorPlanScreen({
     super.key,
@@ -18,6 +25,7 @@ class ColorPlanScreen extends StatefulWidget {
     this.paletteColorIds,
     this.remixStoryId,
     this.paletteId,
+    this.svc,
   });
 
   @override
@@ -25,7 +33,7 @@ class ColorPlanScreen extends StatefulWidget {
 }
 
 class _ColorPlanScreenState extends State<ColorPlanScreen> {
-  final _svc = ColorPlanService();
+  late final ColorPlanService _svc;
   ColorPlan? _plan;
   bool _loading = false;
   String? _error;
@@ -34,10 +42,11 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
   @override
   void initState() {
     super.initState();
+    _svc = widget.svc ?? ColorPlanService();
     AnalyticsService.instance.log('journey_step_view', {
       'step_id': JourneyService.instance.state.value?.currentStepId ?? 'plan.create',
     });
-    UserPrefsService.setLastProject(widget.projectId, 'plan');
+    setLastProjectFn(widget.projectId, 'plan');
     _generate();
   }
 

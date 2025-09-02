@@ -104,6 +104,46 @@ flutter run
 
 For more troubleshooting, see [FIREBASE_PERMANENT_SETUP.md](FIREBASE_PERMANENT_SETUP.md).
 
+## Runbook
+
+### Setup
+
+```bash
+flutter pub get
+# copy credentials if not using permanent setup
+cp firebase.env.example firebase.env
+```
+
+### Emulators
+
+```bash
+firebase emulators:start
+```
+
+### Functions deploy (exportColorStory)
+
+```bash
+cd functions
+firebase deploy --only functions:exportColorStory
+cd ..
+```
+
+### Rules & Indexes deploy
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+### Running the app
+
+```bash
+flutter run --dart-define-from-file=firebase.env
+```
+
+### CI
+
+Runs `flutter analyze` and `flutter test` via GitHub Actions on each push.
+
 ## AI Architecture & Models
 
 We use Firebase AI Logic (client SDK) to call Gemini models directly from the app via Firebase’s secure proxy and App Check.

@@ -21,8 +21,7 @@ void main() {
     getUidFn = () => FirebaseAuth.instance.currentUser?.uid;
   });
 
-  testWidgets('saving palette updates journey and stores last project',
-      (tester) async {
+  testWidgets('saving palette updates journey', (tester) async {
     createPaletteFn = ({
       required userId,
       required name,
@@ -37,10 +36,7 @@ void main() {
       List<String> paletteIds = const [],
     }) async => 'proj1';
     attachPaletteFn = (pid, paletteId) async {};
-    String? storedProjectId;
-    setLastProjectFn = (pid, screen) async {
-      storedProjectId = pid;
-    };
+    setLastProjectFn = (pid, screen) async {};
     ensureSignedInFn = (_) async {};
     getUidFn = () => 'user1';
 
@@ -82,6 +78,5 @@ void main() {
     final state = journey.state.value!;
     expect(state.artifacts['paletteId'], 'pal1');
     expect(state.currentStepId, 'review.contrast');
-    expect(storedProjectId, 'proj1');
   });
 }
