@@ -1,342 +1,203 @@
-import 'package:color_canvas/screens/home_screen.dart';
+// lib/screens/search_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:color_canvas/utils/color_utils.dart';
+import 'package:color_canvas/utils/debug_logger.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
-import 'package:color_canvas/utils/color_utils.dart';
-import '../services/catalog_cache_service.dart';
-
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/screens/compare_colors_screen.dart';
-import 'package:color_canvas/utils/debug_logger.dart';
-import 'dart:async';
-import 'package:color_canvas/services/analytics_service.dart';
-// ...existing code...
+import 'package:color_canvas/screens/home_screen.dart';
+import '../models/color_filters.dart';
+import '../services/paint_query_service.dart';
+import '../widgets/filter_sheet.dart';
+import '../widgets/paint_swatch_card.dart';
+import '../widgets/explore_rail.dart';
 
 class SearchScreen extends StatefulWidget {
   final Function(Paint)? onPaintSelectedForRoller;
-
-  const SearchScreen({
-    super.key,
-    this.onPaintSelectedForRoller,
-  });
+  const SearchScreen({super.key, this.onPaintSelectedForRoller});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  List<Paint> _searchResults = [];
-  List<ColorPalette> _placeholderPalettes = [];
-  bool _isSearching = false;
-  bool _showSearchResults = false;
-  bool _showClearButton = false;
-  final Set<String> _selectedForCompare = {};
   final ScrollController _scrollController = ScrollController();
-  int _page = 0;
-  static const int _pageSize = 20;
-  List<Paint> _cachedResults = [];
 
-  // Debouncing variables
   Timer? _debounceTimer;
+  bool _showClearButton = false;
+  bool _showSearchResults = false;
+  bool _isSearching = false;
+  int _page = 0;
+  static const int _pageSize = 40;
+  List<Paint> _cached = [];
+  List<Paint> _visible = [];
+
+  // Compare selection
+  final Set<String> _selectedForCompare = {};
+
+  // Tabs
+  int _tabIndex = 0; // 0 Explore, 1 All Colors, 2 Rooms&Combos, 3 Brands
+
+  // Filters (for All Colors)
+  ColorFilters filters = ColorFilters();
+  PaintSort sort = PaintSort.relevance;
 
   @override
   void initState() {
     super.initState();
-    Debug.info('SearchScreen', 'initState', 'Component initializing');
-    _generatePlaceholderPalettes();
-    _searchController.addListener(_onSearchTextChanged);
+    _searchController.addListener(_onSearchChanged);
     _scrollController.addListener(_onScroll);
-  }
-
-  void _onSearchTextChanged() {
-    Debug.info('SearchScreen', '_onSearchTextChanged',
-        'Text changed: "${_searchController.text}"');
-    if (mounted) {
-      setState(() {
-        _showClearButton = _searchController.text.isNotEmpty;
-      });
-    }
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _searchController.removeListener(_onSearchTextChanged);
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _generatePlaceholderPalettes() {
-    Debug.info('SearchScreen', '_generatePlaceholderPalettes',
-        'Generating placeholder palettes (disabled)');
-    // Temporarily disable palette generation to test infinite loop
-    _placeholderPalettes = [];
-
-    // // Generate placeholder palettes for the grid - reduced count to prevent infinite loops
-    // final random = Random();
-    // _placeholderPalettes = List.generate(20, (index) {
-    //   final colors = List.generate(5, (_) {
-    //     return Color.fromRGBO(
-    //       random.nextInt(256),
-    //       random.nextInt(256),
-    //       random.nextInt(256),
-    //       1.0,
-    //     );
-    //   });
-    //
-    //   final paletteNames = [
-    //     'Autumn Vibes', 'Ocean Breeze', 'Desert Sunset', 'Forest Dream',
-    //     'Urban Chic', 'Pastel Spring', 'Bold Statement', 'Minimalist',
-    //     'Retro Wave', 'Earth Tones', 'Neon Nights', 'Cozy Cabin',
-    //     'Modern Art', 'Vintage Soul', 'Fresh Morning', 'Twilight Hour'
-    //   ];
-    //
-    //   return ColorPalette(
-    //     id: 'placeholder_$index',
-    //     name: '${paletteNames[random.nextInt(paletteNames.length)]} ${index + 1}',
-    //     colors: colors,
-    //   );
-    // });
-  }
-
-  Future<void> _performSearch(String query) async {
-    Debug.info('SearchScreen', '_performSearch', 'Searching for: "$query"');
-    if (!mounted) return;
-
-    if (query.trim().isEmpty) {
-      if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch',
-            details: 'Clearing search results');
-        setState(() {
-          _searchResults = [];
-          _showSearchResults = false;
-        });
-      }
-      return;
-    }
-
-    if (mounted) {
-      Debug.setState('SearchScreen', '_performSearch',
-          details: 'Starting search');
-      setState(() {
-        _isSearching = true;
-        _showSearchResults = true;
-      });
-    }
-
-    try {
-      final cacheKey = 'search:$query';
-      final results = await CatalogCacheService.instance
-          .get<List<Paint>>(cacheKey,
-              () => FirebaseService.searchPaints(query.trim()));
-      _cachedResults = results;
-      _page = 0;
-      Debug.info('SearchScreen', '_performSearch',
-          'Found ${results.length} results');
-      if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch',
-            details: 'Setting search results');
-        setState(() {
-          _searchResults =
-              _cachedResults.take(_pageSize).toList();
-          _isSearching = false;
-        });
-      }
-    } catch (e) {
-      Debug.error('SearchScreen', '_performSearch', 'Search failed: $e');
-      if (mounted) {
-        Debug.setState('SearchScreen', '_performSearch',
-            details: 'Search error occurred');
-        setState(() => _isSearching = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Search error: $e')),
-        );
-      }
-    }
+  void _onSearchChanged() {
+    setState(() => _showClearButton = _searchController.text.isNotEmpty);
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 200) {
       _loadMore();
     }
   }
 
   void _loadMore() {
-    if ((_page + 1) * _pageSize >= _cachedResults.length) return;
+    if ((_page + 1) * _pageSize >= _cached.length) return;
     setState(() {
       _page++;
-      _searchResults
-          .addAll(_cachedResults.skip(_page * _pageSize).take(_pageSize));
+      _visible.addAll(_cached.skip(_page * _pageSize).take(_pageSize));
     });
   }
 
+  Future<void> _performSearch(String query) async {
+    if (!mounted) return;
+    if (query.trim().isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _showSearchResults = false;
+        _visible = [];
+        _cached = [];
+        _page = 0;
+      });
+      return;
+    }
+    setState(() {
+      _isSearching = true;
+      _showSearchResults = true;
+    });
+    try {
+      final results = await PaintQueryService.instance.textSearch(query, limit: 200);
+      _cached = results;
+      _page = 0;
+      _visible = _cached.take(_pageSize).toList();
+      setState(() => _isSearching = false);
+      AnalyticsService.instance.logEvent('search_performed', {'q': query, 'count': results.length});
+    } catch (e) {
+      setState(() => _isSearching = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Search error: $e')));
+    }
+  }
+
   void _selectPaint(Paint paint) {
-    // Show options: View Details or Load into Roller
     showModalBottomSheet(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+      showDragHandle: true,
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: ColorUtils.getPaintColor(paint.hex),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey[400]!),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: ColorUtils.getPaintColor(paint.hex),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.25)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(paint.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                          Text(paint.brandName, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        paint.name,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
-                      Text(
-                        paint.brandName,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () { Navigator.pop(context); _loadPaintIntoRoller(paint); },
+                  icon: const Icon(Icons.color_lens),
+                  label: const Text('Load into Roller'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaintDetailScreen(paint: paint)));
+                  },
+                  icon: const Icon(Icons.info_outline),
+                  label: const Text('View details'),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                _loadPaintIntoRoller(paint);
-              },
-              icon: const Icon(Icons.color_lens),
-              label: const Text('Load into Roller'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PaintDetailScreen(paint: paint),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.info_outline),
-              label: const Text('View Details'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }
     );
   }
 
   void _loadPaintIntoRoller(Paint paint) {
-    Debug.info('SearchScreen', '_loadPaintIntoRoller',
-        'Attempting to load paint: ${paint.name}');
-
-    // First try using the direct callback if available
     if (widget.onPaintSelectedForRoller != null) {
-      Debug.info(
-          'SearchScreen', '_loadPaintIntoRoller', 'Using direct callback');
       widget.onPaintSelectedForRoller!(paint);
       return;
     }
-
-    // Fallback: Find the HomeScreen state in the widget tree
-  final homeScreenState = context.findAncestorStateOfType<HomeScreenState>();
-
-    if (homeScreenState != null) {
-      Debug.info('SearchScreen', '_loadPaintIntoRoller',
-          'Found HomeScreenState, calling onPaintSelectedFromSearch');
-      homeScreenState.onPaintSelectedFromSearch(paint);
+    final home = context.findAncestorStateOfType<HomeScreenState>();
+    if (home != null) {
+      home.onPaintSelectedFromSearch(paint);
     } else {
-      Debug.error('SearchScreen', '_loadPaintIntoRoller',
-          'HomeScreenState not found in widget tree and no callback provided');
-
-      // Fallback: show snackbar with error information
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not load ${paint.name} into Roller.'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: Colors.white,
-            onPressed: () {
-              _loadPaintIntoRoller(paint);
-            },
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load ${paint.name} into Roller.')));
     }
   }
 
-  void _toggleCompareSelection(Paint paint) {
+  void _toggleCompare(Paint p) {
     setState(() {
-      if (_selectedForCompare.contains(paint.id)) {
-        _selectedForCompare.remove(paint.id);
-      } else if (_selectedForCompare.length < 4) {
-        _selectedForCompare.add(paint.id);
-      }
+      if (_selectedForCompare.contains(p.id)) _selectedForCompare.remove(p.id);
+      else if (_selectedForCompare.length < 4) _selectedForCompare.add(p.id);
     });
-  }
-
-  void _loadPaletteIntoRoller(ColorPalette palette) {
-    // For now, show a snackbar. Later this can load the palette into the roller
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Loading "${palette.name}" into Roller...'),
-        action: SnackBarAction(
-          label: 'View',
-          onPressed: () {
-            // Navigate to roller tab
-            // This would need to be implemented with proper palette loading
-          },
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    Debug.build('SearchScreen', 'build',
-        details:
-            'showSearchResults: $_showSearchResults, searchResults: ${_searchResults.length}, placeholderPalettes: ${_placeholderPalettes.length}');
-
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       floatingActionButton: _selectedForCompare.length >= 2
           ? FloatingActionButton.extended(
               onPressed: () {
-                AnalyticsService.instance.logEvent('compare_opened', {
-                  'count': _selectedForCompare.length,
-                });
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => CompareColorsScreen(
-                      paletteColorIds: _selectedForCompare.toList(),
-                    ),
-                  ),
-                );
+                AnalyticsService.instance.logEvent('compare_opened', {'count': _selectedForCompare.length});
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => CompareColorsScreen(paletteColorIds: _selectedForCompare.toList())));
               },
               icon: const Icon(Icons.compare),
               label: Text('Compare (${_selectedForCompare.length})'),
@@ -345,83 +206,10 @@ class _SearchScreenState extends State<SearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  bottom: BorderSide(
-                    color:
-                        Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                decoration: InputDecoration(
-                  hintText: 'Search by name, brand, code, or hex...',
-                  hintStyle: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                  suffixIcon: _showClearButton
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            if (mounted) {
-                              setState(() {
-                                _searchResults = [];
-                                _showSearchResults = false;
-                              });
-                            }
-                            _searchFocusNode.unfocus();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onChanged: (value) {
-                  // Cancel previous timer
-                  _debounceTimer?.cancel();
-
-                  // Start new timer for debounced search
-                  _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-                    _performSearch(value);
-                  });
-                },
-                onTap: () {
-                  // Show search suggestions or recent searches here if needed
-                },
-              ),
-            ),
-
-            // Content Area
+            _buildHeader(theme),
+            _buildSegmentedControl(theme),
             Expanded(
-              child: _showSearchResults
-                  ? _buildSearchResults()
-                  : _buildPaletteGrid(),
+              child: _showSearchResults ? _buildSearchResults() : _buildBodyForTab(),
             ),
           ],
         ),
@@ -429,397 +217,361 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildSearchResults() {
-    if (_isSearching) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Searching...'),
-          ],
-        ),
-      );
-    }
-
-    if (_searchResults.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No results found',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try different keywords',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final paint = _searchResults[index];
-        return _buildPaintSearchCard(paint);
-      },
-    );
-  }
-
-  Widget _buildPaintSearchCard(Paint paint) {
-    final color = ColorUtils.getPaintColor(paint.hex);
-    final selected = _selectedForCompare.contains(paint.id);
-
+  Widget _buildHeader(ThemeData theme) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Stack(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12))),
+      ),
+      child: Column(
         children: [
-          Card(
-            child: InkWell(
-              onTap: () => _selectPaint(paint),
-              onLongPress: () => _toggleCompareSelection(paint),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Color swatch
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 16),
-
-                    // Paint info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            paint.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${paint.brandName} • ${paint.code}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                      .withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  paint.hex.toUpperCase(),
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    fontFamily: 'monospace',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'LRV ${paint.computedLrv.toStringAsFixed(0)}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          _buildCompanionChips(paint),
-                        ],
-                      ),
-                    ),
-
-                    // Tap indicator
-                    Icon(
-                      Icons.touch_app,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
+          TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: 'Search by name, brand, code, or hex…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _showClearButton
+                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchController.clear(); setState(() { _showSearchResults = false; _visible.clear(); _cached.clear(); }); _searchFocusNode.unfocus(); })
+                  : null,
+              filled: true,
+              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
+            onChanged: (value) {
+              _debounceTimer?.cancel();
+              _debounceTimer = Timer(const Duration(milliseconds: 400), () => _performSearch(value));
+            },
           ),
-
-          // Selection indicator
-          if (selected)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Icon(
-                Icons.check_circle,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+          const SizedBox(height: 10),
+          _activeFiltersChips(theme),
         ],
       ),
     );
   }
 
-  Widget _buildCompanionChips(Paint paint) {
-    final companions = paint.companionIds ?? [];
-    final similar = paint.similarIds ?? [];
-    if (companions.isEmpty && similar.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _activeFiltersChips(ThemeData theme) {
     final chips = <Widget>[];
-    for (final id in companions) {
-      chips.add(ActionChip(
-        label: Text(id),
-        onPressed: () {
-          AnalyticsService.instance
-              .logEvent('companion_chip_tapped', {'colorId': id});
-          _selectedForCompare.add(id);
-          setState(() {});
-        },
-      ));
-    }
-    for (final id in similar) {
-      chips.add(ActionChip(
-        label: Text(id),
-        onPressed: () {
-          AnalyticsService.instance
-              .logEvent('similar_chip_tapped', {'colorId': id});
-          _selectedForCompare.add(id);
-          setState(() {});
-        },
-      ));
-    }
-    return Wrap(spacing: 4, children: chips);
+    if (filters.colorFamily != null) chips.add(_chip(theme, filters.colorFamily!, () => setState(() => filters = filters.copyWith(colorFamily: null))));
+    if (filters.undertone != null) chips.add(_chip(theme, 'undertone: ${filters.undertone}', () => setState(() => filters = filters.copyWith(undertone: null))));
+    if (filters.temperature != null) chips.add(_chip(theme, filters.temperature!, () => setState(() => filters = filters.copyWith(temperature: null))));
+    if (filters.lrvRange != null) chips.add(_chip(theme, 'LRV ${filters.lrvRange!.start.round()}–${filters.lrvRange!.end.round()}', () => setState(() => filters = filters.copyWith(lrvRange: null))));
+    if (filters.brandName != null) chips.add(_chip(theme, filters.brandName!, () => setState(() => filters = filters.copyWith(brandName: null))));
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Align(alignment: Alignment.centerLeft, child: Wrap(spacing: 6, runSpacing: 6, children: chips));
   }
 
-  Widget _buildPaletteGrid() {
-    if (_placeholderPalettes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.palette_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No palettes available',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Palettes temporarily disabled',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-            ),
-          ],
+  Widget _chip(ThemeData theme, String label, VoidCallback onDeleted) {
+    return InputChip(
+      label: Text(label),
+      onDeleted: onDeleted,
+      deleteIcon: const Icon(Icons.close, size: 18),
+    );
+  }
+
+  Widget _buildSegmentedControl(ThemeData theme) {
+    final tabs = ['Explore','All Colors','Rooms & Combos','Brands'];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: SegmentedButton<int>(
+        segments: tabs.asMap().entries.map((e) => ButtonSegment(value: e.key, label: Text(e.value))).toList(),
+        selected: <int>{_tabIndex},
+        onSelectionChanged: (s) => setState(() => _tabIndex = s.first),
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildBodyForTab() {
+    switch (_tabIndex) {
+      case 0: return _buildExplore();
+      case 1: return _buildAllColors();
+      case 2: return _buildRoomsCombos();
+      case 3: return _buildBrands();
+      default: return const SizedBox.shrink();
     }
+  }
 
-    return CustomScrollView(
-      slivers: [
-        // Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Discover Palettes',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
+  // ---------- Explore ----------
+  Widget _buildExplore() {
+    return ListView(
+      children: [
+        const SizedBox(height: 6),
+        ExploreRail(
+          title: 'Warm Reds',
+          colorFamily: 'Red',
+          temperature: 'Warm',
+          onSelect: _selectPaint,
+          onLongPress: _toggleCompare,
         ),
-
-        // Grid of palettes
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.9, // Adjusted for fixed height containers
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final palette = _placeholderPalettes[index];
-                return _buildPaletteCard(palette);
-              },
-              childCount: _placeholderPalettes.length,
-            ),
-          ),
+        ExploreRail(
+          title: 'Light Blues (LRV 70–85)',
+          colorFamily: 'Blue',
+          lrvRange: const RangeValues(70, 85),
+          onSelect: _selectPaint,
+          onLongPress: _toggleCompare,
         ),
-
-        // Bottom padding
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 80),
+        ExploreRail(
+          title: 'Balanced Greiges',
+          colorFamily: 'Neutral',
+          undertone: 'green', // greiges often lean green/green-yellow
+          onSelect: _selectPaint,
+          onLongPress: _toggleCompare,
         ),
+        ExploreRail(
+          title: 'Cool Charcoals',
+          colorFamily: 'Neutral',
+          temperature: 'Cool',
+          lrvRange: const RangeValues(5, 22),
+          onSelect: _selectPaint,
+          onLongPress: _toggleCompare,
+        ),
+        ExploreRail(
+          title: 'Bedrooms we love',
+          onSelect: _selectPaint,
+          onLongPress: _toggleCompare,
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
 
-  Widget _buildPaletteCard(ColorPalette palette) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _loadPaletteIntoRoller(palette),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  // ---------- All Colors (grid + filters) ----------
+  Widget _buildAllColors() {
+    return FutureBuilder<List<Paint>>(
+      future: PaintQueryService.instance.getAllPaints(hardLimit: 1600),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var list = snapshot.data!;
+        list = PaintQueryService.instance.applyFilters(
+          list,
+          colorFamily: filters.colorFamily,
+          undertone: filters.undertone,
+          temperature: filters.temperature,
+          lrvRange: filters.lrvRange,
+          brandName: filters.brandName,
+        );
+        list = PaintQueryService.instance.sortList(list, sort);
+        return Column(
           children: [
-            // Color swatches - using fixed dimensions to prevent layout loops
-            SizedBox(
-              height: 120,
-              child: Row(
-                children: palette.colors.asMap().entries.map((entry) {
-                  return Flexible(
-                    child: Container(
-                      color: entry.value,
-                      width: double.infinity,
-                    ),
+            _filterSortBar(),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.78),
+                itemCount: list.length,
+                itemBuilder: (_, i) {
+                  final p = list[i];
+                  final selected = _selectedForCompare.contains(p.id);
+                  return PaintSwatchCard(
+                    paint: p,
+                    selected: selected,
+                    onTap: () => _selectPaint(p),
+                    onLongPress: () => _toggleCompare(p),
                   );
-                }).toList(),
+                },
               ),
             ),
+          ],
+        );
+      },
+    );
+  }
 
-            // Palette info - fixed height to prevent layout loops
-            Container(
-              height: 80,
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    palette.name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+  Widget _filterSortBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12))),
+      ),
+      child: Row(
+        children: [
+          FilledButton.tonalIcon(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => DraggableScrollableSheet(
+                  expand: false,
+                  initialChildSize: 0.6,
+                  minChildSize: 0.4,
+                  maxChildSize: 0.95,
+                  builder: (context, controller) => SingleChildScrollView(
+                    controller: controller,
+                    child: FilterSheet(
+                      initial: filters,
+                      onApply: (f) => setState(() => filters = f),
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.palette,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${palette.colors.length} colors',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.tune),
+            label: const Text('Filters'),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton<PaintSort>(
+            onSelected: (s) => setState(() => sort = s),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: PaintSort.relevance, child: Text('Sort: Relevance')),
+              PopupMenuItem(value: PaintSort.hue, child: Text('Sort: Hue')),
+              PopupMenuItem(value: PaintSort.lrvAsc, child: Text('Sort: LRV ↑')),
+              PopupMenuItem(value: PaintSort.lrvDesc, child: Text('Sort: LRV ↓')),
+            ],
+            child: OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.sort),
+              label: Text(_sortLabel(sort)),
+            ),
+          ),
+          const Spacer(),
+          if (_selectedForCompare.isNotEmpty) Text('${_selectedForCompare.length} selected'),
+        ],
+      ),
+    );
+  }
+
+  String _sortLabel(PaintSort s) {
+    switch (s) {
+      case PaintSort.hue: return 'Hue';
+      case PaintSort.lrvAsc: return 'LRV ↑';
+      case PaintSort.lrvDesc: return 'LRV ↓';
+      case PaintSort.newest: return 'Newest';
+      case PaintSort.mostSaved: return 'Most saved';
+      default: return 'Relevance';
+    }
+  }
+
+  // ---------- Rooms & Combos (placeholder v1) ----------
+  Widget _buildRoomsCombos() {
+    final cards = [
+      _roomCard('Bedroom Starter Packs', Icons.bed, 'Warm Bedroom Neutrals', 'High-Contrast Retreat', 'Calming Blue-Greens'),
+      _roomCard('Kitchen Combinations', Icons.kitchen, 'Classic White + Soft Black', 'Greige + Brass Friendly', 'Fresh Coastal'),
+      _roomCard('Exterior Winners', Icons.house, 'Light + Charcoal Trim', 'Moody Modern', 'Warm Cream + Slate'),
+    ];
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemBuilder: (_, i) => cards[i],
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemCount: cards.length,
+    );
+  }
+
+  Widget _roomCard(String title, IconData icon, String a, String b, String c) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [Icon(icon), const SizedBox(width: 8), Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))]),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12, runSpacing: 12,
+              children: [
+                _miniPalette('• $a'),
+                _miniPalette('• $b'),
+                _miniPalette('• $c'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(onPressed: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon: curated combos'))); }, icon: const Icon(Icons.chevron_right), label: const Text('Explore')),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-// Helper class for placeholder palettes
-class ColorPalette {
-  final String id;
-  final String name;
-  final List<Color> colors;
+  Widget _miniPalette(String label) {
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          _toneBox(Colors.black12),
+          _toneBox(Colors.black26),
+          _toneBox(Colors.black38),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label, maxLines: 2)),
+        ],
+      ),
+    );
+  }
 
-  ColorPalette({
-    required this.id,
-    required this.name,
-    required this.colors,
-  });
+  Widget _toneBox(Color c) => Container(
+    width: 20, height: 20, margin: const EdgeInsets.only(right: 4),
+    decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(4)),
+  );
+
+  // ---------- Brands (placeholder) ----------
+  Widget _buildBrands() {
+    final brands = ['Sherwin-Williams','Benjamin Moore','Behr'];
+    return ListView.builder(
+      itemCount: brands.length,
+      itemBuilder: (_, i) => ListTile(
+        leading: const Icon(Icons.factory_outlined),
+        title: Text(brands[i]),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          setState(() { filters = filters.copyWith(brandName: brands[i]); _tabIndex = 1; });
+        },
+      ),
+    );
+  }
+
+  // ---------- Search Results ----------
+  Widget _buildSearchResults() {
+    if (_isSearching) {
+      return const Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [CircularProgressIndicator(), SizedBox(height: 10), Text('Searching…')],
+      ));
+    }
+    if (_visible.isEmpty) {
+      return Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
+          const SizedBox(height: 8),
+          Text('No results', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('Try different keywords', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65))),
+        ],
+      ));
+    }
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: _visible.length,
+      itemBuilder: (_, i) {
+        final p = _visible[i];
+        final selected = _selectedForCompare.contains(p.id);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: PaintSwatchCard(
+            paint: p,
+            selected: selected,
+            onTap: () => _selectPaint(p),
+            onLongPress: () => _toggleCompare(p),
+          ),
+        );
+      },
+    );
+  }
 }
