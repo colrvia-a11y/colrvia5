@@ -60,10 +60,10 @@ class JourneyService {
       state.value = current;
     } catch (e) {
       debugPrint('JourneyService load failed: $e');
-      // Fallback to a local default state; do NOT persist
+      // Fallback to a local default state tied to the project; do NOT persist
       state.value = JourneyState(
         journeyId: defaultColorStoryJourneyId,
-        projectId: null, // unknown/unavailable
+        projectId: projectId,
         currentStepId: firstStep.id,
         completedStepIds: const [],
         artifacts: const {},
@@ -77,10 +77,14 @@ class JourneyService {
       state.value = s;
       return;
     }
-    await FirebaseFirestore.instance
-        .collection('projects')
-        .doc(s.projectId)
-        .set({'journey': s.toJson()}, SetOptions(merge: true));
+    try {
+      await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(s.projectId)
+          .set({'journey': s.toJson()}, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('JourneyService persist failed: $e');
+    }
     state.value = s;
   }
 
@@ -194,12 +198,14 @@ class JourneyService {
   }
 
   FunnelStage? _deriveFunnelStage(String stepId) {
-    if (stepId.startsWith('roller.')) return FunnelStage.build;
-    if (stepId.startsWith('plan.')) return FunnelStage.story;
+    if (stepId.startsWith('roller.') || stepId.startsWith('build.') || stepId.startsWith('interview.')) {
+      return FunnelStage.build;
+    }
+    if (stepId.startsWith('review.') || stepId.startsWith('plan.')) {
+      return FunnelStage.story;
+    }
     if (stepId.startsWith('visualizer.')) return FunnelStage.visualize;
     if (stepId.startsWith('guide.')) return FunnelStage.share;
-    if (stepId.startsWith('interview.')) return FunnelStage.build;
-    if (stepId.startsWith('review.')) return FunnelStage.build;
     return null;
   }
 }

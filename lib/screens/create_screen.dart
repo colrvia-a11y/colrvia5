@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:color_canvas/services/journey/journey_service.dart';
+import 'package:color_canvas/services/journey/default_color_story_v1.dart';
 import 'package:color_canvas/widgets/journey_timeline.dart';
 
 import 'interview_screen.dart';
@@ -44,7 +45,7 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
       // If journey fails, initialize a safe default state
       final first = _journey.firstStep;
       _journey.state.value = JourneyState(
-        journeyId: 'default_color_story_v1',
+        journeyId: defaultColorStoryJourneyId,
         projectId: null,
         currentStepId: first.id,
         completedStepIds: const [],
