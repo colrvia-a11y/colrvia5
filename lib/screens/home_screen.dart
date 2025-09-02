@@ -207,7 +207,7 @@ class _GlassDockNavBarState extends State<GlassDockNavBar> {
                         builder: (_, createProgress, __) {
                           final isCreate = index == 0;
                           final progress = isCreate ? createProgress : 0.0;
-                          return _NavCircleButton(
+                          return _NavSquareButton(
                             icon: _icons[iconIndex],
                             label: _labels[iconIndex],
                             selected: selected,
@@ -257,8 +257,8 @@ class _GlassDockNavBarState extends State<GlassDockNavBar> {
   }
 }
 
-class _NavCircleButton extends StatelessWidget {
-  const _NavCircleButton({
+class _NavSquareButton extends StatelessWidget {
+  const _NavSquareButton({
     required this.icon,
     required this.label,
     required this.selected,
@@ -272,17 +272,18 @@ class _NavCircleButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onPressed;
   final bool showLabel;
-  final double progress; // 0..1 progress tick along top edge
+  final double progress; // 0..1 top-edge progress bar
 
   @override
   Widget build(BuildContext context) {
-    const double diameter = 56;
-    final Color circleBg = Colors.black.withAlpha((255 * 0.20).round());
-    final Color iconColor = selected ? kPeach : Colors.white.withAlpha((255 * 0.90).round());
+    const double size = 56;
+    final Color bgColor = Colors.black.withOpacity(0.20);
+    final Color iconColor = selected ? kPeach : Colors.white.withOpacity(0.90);
     final Color borderColor = selected ? kPeach : Colors.transparent;
 
     final button = SizedBox(
-      width: diameter,
+      width: size,
+      height: size,
       child: Semantics(
         selected: selected,
         label: label,
@@ -291,37 +292,33 @@ class _NavCircleButton extends StatelessWidget {
           type: MaterialType.transparency,
           child: InkWell(
             onTap: onPressed,
-            customBorder: const CircleBorder(),
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                width: diameter,
-                height: diameter,
-                decoration: BoxDecoration(
-                  color: circleBg,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                      color: Colors.black.withValues(alpha: 0.10),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(icon, color: iconColor, size: 26),
-                    if (selected && progress > 0)
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: _TopTickPainter(progress: progress, color: kPeach),
-                        ),
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderColor, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.10),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(icon, color: iconColor, size: 26),
+                  if (selected && progress > 0)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _TopTickPainter(progress: progress, color: kPeach),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -339,7 +336,7 @@ class _NavCircleButton extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.9),
+            color: Colors.white.withOpacity(0.9),
             fontSize: 11,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             letterSpacing: 0.2,
@@ -354,22 +351,27 @@ class _TopTickPainter extends CustomPainter {
   _TopTickPainter({required this.progress, required this.color});
   final double progress; // 0..1
   final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
+    // Draw a rounded 3px bar along the top edge, inset a bit from the sides
+    final double insetX = 8.0;
+    final double barHeight = 3.0;
+    final double maxWidth = size.width - insetX * 2;
+    final double w = (maxWidth * progress.clamp(0.0, 1.0));
+
+    if (w <= 0) return;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(insetX, 6.0, w, barHeight),
+      const Radius.circular(1.5),
+    );
+
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..style = PaintingStyle.fill;
 
-    final radius = size.width / 2;
-    final sweep = (progress.clamp(0.0, 1.0)) * 3.14159; // up to 180° across the top
-    const startAngle = -3.14159; // leftmost top
-
-    final path = Path()
-      ..addArc(Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: radius - 1.5),
-          startAngle, sweep);
-    canvas.drawPath(path, paint);
+    canvas.drawRRect(rect, paint);
   }
 
   @override
