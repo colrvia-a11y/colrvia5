@@ -13,6 +13,16 @@
         "flutter\\": true,
         "github.copilot.chat.useWorkspaceContext": true
     },
+
+    "mcp": {
+        "servers": {
+            "firebase": {
+                "type": "stdio",
+                "command": "npx",
+                "args": ["-y", "firebase-tools@latest", "experimental:mcp"]
+            }
+        }
+    },
     "github.copilot.codex.enable": {
         "Codex": true,
         "fullAccess": true,
@@ -21,5 +31,6 @@
         "flutter": true,
         "C:\\Users\\corey\\OneDrive\\Desktop\\colrvia5\\flutter\\": true,
         "flutter\\": true
-    }
+    },
+    "copilot.vision.provider": "Gemini"
 }
