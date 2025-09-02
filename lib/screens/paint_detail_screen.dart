@@ -77,8 +77,30 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> {
             ),
           ),
 
+          // Rounded sheet-cap where the color meets the info
+          SliverToBoxAdapter(
+            child: Container(
+              height: 14, // small cap height; tweak 12–18 if you like
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  // soft lift so the sheet reads like a card coming up from the color area
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverList.list(children: [
               _MetaRow(paint: widget.paint),
 

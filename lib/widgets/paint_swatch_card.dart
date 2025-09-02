@@ -59,7 +59,7 @@ class _PaintSwatchCardState extends State<PaintSwatchCard> {
     );
 
     if (widget.useHero) {
-      swatch = Hero(tag: 'swatch_${p.id}', flightShuttleBuilder: _flight, child: swatch);
+      swatch = Hero(tag: 'paint:${p.id}', flightShuttleBuilder: _flight, child: swatch);
     }
 
     Widget card = AnimatedScale(
