@@ -1,4 +1,5 @@
 // lib/screens/create_screen.dart
+import 'package:color_canvas/services/journey/journey_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -33,8 +34,24 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
   }
 
   Future<void> _bootstrap() async {
-    await _journey.loadForLastProject();
-    setState(() => _loaded = true);
+    // Show UI immediately; journey loads in background
+    if (mounted) setState(() => _loaded = true);
+    try {
+      await _journey.loadForLastProject();
+      // Optionally refresh small parts of the UI after load
+      if (mounted) setState(() {});
+    } catch (e) {
+      // If journey fails, initialize a safe default state
+      final first = _journey.firstStep;
+      _journey.state.value = JourneyState(
+        journeyId: 'default_color_story_v1',
+        projectId: null,
+        currentStepId: first.id,
+        completedStepIds: const [],
+        artifacts: const {},
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   @override

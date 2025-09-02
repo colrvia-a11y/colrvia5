@@ -34,7 +34,7 @@ class JourneyService {
         projectId: null,
         currentStepId: firstStep.id,
         completedStepIds: const [],
-        artifacts: {},
+        artifacts: const {},
       );
       return;
     }
@@ -42,18 +42,33 @@ class JourneyService {
   }
 
   Future<void> loadForProject(String projectId) async {
-    final snap =
-        await FirebaseFirestore.instance.collection('projects').doc(projectId).get();
-    final data = snap.data() ?? {};
-    final journey = (data['journey'] as Map?)?.cast<String, dynamic>() ?? {};
-    final current = JourneyState.fromJson({
-      'journeyId': journey['journeyId'] ?? defaultColorStoryJourneyId,
-      'projectId': projectId,
-      'currentStepId': journey['currentStepId'] ?? firstStep.id,
-      'completedStepIds': journey['completedStepIds'] ?? <String>[],
-      'artifacts': journey['artifacts'] ?? <String, dynamic>{},
-    });
-    state.value = current;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(projectId)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      final data = snap.data() ?? {};
+      final journey = (data['journey'] as Map?)?.cast<String, dynamic>() ?? {};
+      final current = JourneyState.fromJson({
+        'journeyId': journey['journeyId'] ?? defaultColorStoryJourneyId,
+        'projectId': projectId,
+        'currentStepId': journey['currentStepId'] ?? firstStep.id,
+        'completedStepIds': journey['completedStepIds'] ?? <String>[],
+        'artifacts': journey['artifacts'] ?? <String, dynamic>{},
+      });
+      state.value = current;
+    } catch (e) {
+      debugPrint('JourneyService load failed: $e');
+      // Fallback to a local default state; do NOT persist
+      state.value = JourneyState(
+        journeyId: defaultColorStoryJourneyId,
+        projectId: null, // unknown/unavailable
+        currentStepId: firstStep.id,
+        completedStepIds: const [],
+        artifacts: const {},
+      );
+    }
   }
 
   Future<void> _persist(JourneyState s) async {

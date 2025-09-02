@@ -81,9 +81,23 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
     setState(() => _isSaving = true);
 
     try {
+      await AuthGuard.ensureSignedIn(context);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please sign in to save palettes.')),
+          );
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
+
+      debugPrint('Attempting to save palette for userId: $uid to collection: palettes');
+
       final palette = UserPalette(
         id: '', // Will be set by FirebaseService
-        userId: '', // Will be set by FirebaseService
+        userId: uid, // Will be set by FirebaseService
         name: _nameController.text.trim(),
         colors: widget.paints
             .asMap()
@@ -105,7 +119,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
       );
 
       final savedPalette = await FirebaseService.createPalette(
-        userId: palette.userId,
+        userId: uid,
         name: palette.name,
         colors: palette.colors,
         tags: palette.tags,
@@ -120,26 +134,24 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
           'tags': palette.tags,
         });
 
-        // Ensure user is signed in before creating/attaching projects
-        await AuthGuard.ensureSignedIn(context);
-
-        final uid = FirebaseAuth.instance.currentUser?.uid;
         final savedPaletteId = savedPalette; // your existing var
-        ProjectDoc? project;
+        String? projectId = widget.projectId; // Use existing projectId if available
 
-        if (uid != null) {
-          if (widget.projectId != null) {
-            await ProjectService.attachPalette(
-                widget.projectId!, savedPaletteId,
-                setActive: true);
-            project = await ProjectService.fetch(widget.projectId!);
-          } else {
-            project = await ProjectService.create(
-              title: palette.name,
-              paletteId: savedPaletteId,
-            );
-          }
+        if (projectId == null) {
+          // Create a new project if none exists
+          final newProject = await ProjectService.create(
+            ownerId: uid,
+            title: palette.name,
+            activePaletteId: savedPaletteId,
+          );
+          projectId = newProject.id;
+        } else {
+          // Attach palette to existing project
+          await ProjectService.attachPalette(projectId, savedPaletteId);
         }
+
+        // Persist lastOpenedProjectId
+        await UserPrefsService.setLastProject(projectId, 'roller');
 
         // Show subtle success snackbar
         widget.onSaved(); // Close save panel first
@@ -163,9 +175,10 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
             .logRollerSaveToProject(project?.id ?? 'none', savedPaletteId);
       }
     } catch (e) {
+      debugPrint('Save palette failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving palette: $e')),
+          SnackBar(content: Text('Save failed: $e')),
         );
       }
     } finally {

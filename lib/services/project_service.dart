@@ -1,6 +1,6 @@
 // lib/services/project_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added this import
 import 'package:flutter/foundation.dart';
 import '../models/project.dart';
 import '../services/analytics_service.dart';
@@ -8,17 +8,18 @@ import 'sync_queue_service.dart';
 
 class ProjectService {
   static final _db = FirebaseFirestore.instance;
-  static final _auth = FirebaseAuth.instance;
-  static String? get _uid => _auth.currentUser?.uid;
+  static final _auth = FirebaseAuth.instance; // Keep this
+  static String? get _uid => _auth.currentUser?.uid; // Keep this
   static CollectionReference get _col => _db.collection('projects');
+
+  // Keep the SyncQueueService registration if it's still needed
   static final SyncQueueService _queue = SyncQueueService.instance
     ..registerHandler('createProject', (p) async {
       await create(
+        ownerId: p['ownerId'] as String, // Changed to ownerId
         title: p['title'] as String,
-        paletteId: p['paletteId'] as String?,
-        roomType: p['roomType'] as String?,
-        styleTag: p['styleTag'] as String?,
-        vibeWords: List<String>.from(p['vibeWords'] as List? ?? []),
+        activePaletteId: p['activePaletteId'] as String?, // Changed to activePaletteId
+        paletteIds: List<String>.from(p['paletteIds'] as List? ?? []), // Changed to paletteIds
       );
     });
 
@@ -38,100 +39,48 @@ class ProjectService {
     }).map((s) => s.docs.map((d) => ProjectDoc.fromSnap(d)).toList());
   }
 
-  static Future<ProjectDoc> create({
-    required String title,
-    String? paletteId,
-    String? roomType,
-    String? styleTag,
-    List<String> vibeWords = const [],
+  static Future<String> create({
+    required String ownerId,
+    String? title,
+    String? activePaletteId,
+    List<String> paletteIds = const [],
   }) async {
-    final uid = _uid;
-    if (uid == null) {
-      throw Exception('Sign in required to create projects');
-    }
+    final now = DateTime.now();
+    final doc = _db.collection('projects').doc();
+    final allPaletteIds = (paletteIds.isNotEmpty)
+        ? paletteIds
+        : (activePaletteId != null && activePaletteId.isNotEmpty ? [activePaletteId] : <String>[]);
 
-    try {
-      final now = DateTime.now();
-      final ref = await _col.add({
-        'ownerId': uid,
-        'title': title,
-        'paletteIds': paletteId != null ? [paletteId] : [],
-        'activePaletteId': paletteId,
-        'colorStoryId': null,
-        'roomType': roomType,
-        'styleTag': styleTag,
-        'vibeWords': vibeWords,
-        'funnelStage': 'build',
-        'createdAt': Timestamp.fromDate(now),
-        'updatedAt': Timestamp.fromDate(now),
-      });
-      final snap = await ref.get();
-      return ProjectDoc.fromSnap(snap);
-    } catch (e) {
-      await _queue.enqueue('createProject', {
-        'title': title,
-        'paletteId': paletteId,
-        'roomType': roomType,
-        'styleTag': styleTag,
-        'vibeWords': vibeWords,
-      });
-      throw Exception('Failed to create project: $e');
-    }
+    debugPrint('Creating project for ownerId=$ownerId at /projects/${doc.id}'); // Changed ref.id to doc.id
+    await doc.set({
+      'ownerId': ownerId,
+      'title': title ?? 'My Color Story',
+      'activePaletteId': activePaletteId ?? '',
+      'paletteIds': allPaletteIds,
+      'funnelStage': 'build',
+      'createdAt': Timestamp.fromDate(now),
+      'updatedAt': Timestamp.fromDate(now),
+    });
+
+    return doc.id;
   }
 
-  static Future<void> attachPalette(String projectId, String paletteId,
-      {bool setActive = true}) async {
-    final uid = _uid;
-    if (uid == null) {
-      throw Exception('Sign in required to update projects');
-    }
-
-    try {
-      await _col.doc(projectId).update({
-        'paletteIds': FieldValue.arrayUnion([paletteId]),
-        if (setActive) 'activePaletteId': paletteId,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      throw Exception('Failed to attach palette: $e');
-    }
+  static Future<void> attachPalette(String projectId, String paletteId) async {
+    await _db.collection('projects').doc(projectId).set({
+      'activePaletteId': paletteId,
+      'paletteIds': FieldValue.arrayUnion([paletteId]),
+      'updatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
   }
 
-  static Future<void> setStory(String projectId, String colorStoryId) async {
-    final uid = _uid;
-    if (uid == null) {
-      throw Exception('Sign in required to update projects');
-    }
-
-    try {
-      await _col.doc(projectId).update({
-        'colorStoryId': colorStoryId,
-        'funnelStage': 'story',
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      throw Exception('Failed to set story: $e');
-    }
-  }
-
-  static Future<void> setFunnelStage(
-      String projectId, FunnelStage stage) async {
-    final uid = _uid;
-    if (uid == null) {
-      throw Exception('Sign in required to update projects');
-    }
-
-    try {
-      await _col.doc(projectId).update({
-        'funnelStage': funnelStageToString(stage),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Track stage change
-      AnalyticsService.instance.logProjectStageChanged(projectId, stage);
-    } catch (e) {
-      throw Exception('Failed to update stage: $e');
-    }
+  static Future<void> setFunnelStage(String projectId, FunnelStage stage) async {
+    final stageStr = stage.toString().split('.').last; // build/story/visualize/share
+    await _db.collection('projects').doc(projectId).set({
+      'funnelStage': stageStr,
+      'updatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
+    // Track stage change
+    AnalyticsService.instance.logProjectStageChanged(projectId, stage); // Keep this
   }
 
   static Future<ProjectDoc?> fetch(String id) async {
@@ -142,13 +91,13 @@ class ProjectService {
 
   static Future<void> addPaletteHistory(
       String projectId, String kind, List<String> palette) async {
-    final uid = _uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       throw Exception('Sign in required to update projects');
     }
 
     try {
-      await _col.doc(projectId).collection('paletteHistory').add({
+      await _db.collection('projects').doc(projectId).collection('paletteHistory').add({
         'kind': kind,
         'palette': palette,
         'createdAt': FieldValue.serverTimestamp(),

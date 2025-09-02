@@ -664,10 +664,15 @@ class FirebaseService {
     List<String> tags = const [],
     String notes = '',
   }) async {
-    final doc = _db.collection('palettes').doc();
+    final uid = (userId.isNotEmpty ? userId : currentUser?.uid) ?? '';
+    if (uid.isEmpty) {
+      throw Exception('Must be signed in to create a palette');
+    }
+
     final now = DateTime.now();
+    final doc = _db.collection('palettes').doc();
     await doc.set({
-      'userId': userId,
+      'userId': uid,
       'name': name,
       'colors': colors.map((c) => c.toJson()).toList(),
       'tags': tags,

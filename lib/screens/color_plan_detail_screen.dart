@@ -1915,7 +1915,8 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
       await AuthGuard.ensureSignedIn(context);
 
       // Create a new project for the remix
-      final project = await ProjectService.create(
+      final projectId = await ProjectService.create(
+        ownerId: FirebaseAuth.instance.currentUser!.uid,
         title:
             (story.room.isNotEmpty == true) && (story.style.isNotEmpty == true)
                 ? '${story.room} ${story.style} Story (Remix)'
@@ -1927,13 +1928,13 @@ class _ColorPlanDetailScreenState extends State<ColorPlanDetailScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => ColorPlanScreen(
-              projectId: project.id,
+              projectId: projectId,
               remixStoryId: story.id,
             ),
           ),
         );
 
-        AnalyticsService.instance.logStartFromExplore(story.id, project.id);
+        AnalyticsService.instance.logStartFromExplore(story.id, projectId);
       }
     } catch (e) {
       if (mounted) {
