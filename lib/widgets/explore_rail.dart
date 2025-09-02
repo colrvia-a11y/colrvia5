@@ -5,6 +5,7 @@ import '../widgets/paint_swatch_card.dart';
 import '../firestore/firestore_data_schema.dart';
 
 class ExploreRail extends StatefulWidget {
+  static const double _railHeight = 250; // roomy & future-proof
   final String title;
   final String? colorFamily;
   final String? undertone;
@@ -12,6 +13,13 @@ class ExploreRail extends StatefulWidget {
   final RangeValues? lrvRange;
   final void Function(Paint) onSelect;
   final void Function(Paint) onLongPress;
+
+  final void Function({
+    String? colorFamily,
+    String? undertone,
+    String? temperature,
+    RangeValues? lrvRange,
+  })? onSeeAll;
 
   const ExploreRail({
     super.key,
@@ -22,6 +30,7 @@ class ExploreRail extends StatefulWidget {
     this.lrvRange,
     required this.onSelect,
     required this.onLongPress,
+    this.onSeeAll,
   });
 
   @override
@@ -68,8 +77,14 @@ class _ExploreRailState extends State<ExploreRail> {
               const Spacer(),
               IconButton(
                 onPressed: () {
-                  // TODO: open All Colors tab with pre-applied filters
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('See all (coming soon)')));
+                  if (widget.onSeeAll != null) {
+                    widget.onSeeAll!(
+                      colorFamily: widget.colorFamily,
+                      undertone: widget.undertone,
+                      temperature: widget.temperature,
+                      lrvRange: widget.lrvRange,
+                    );
+                  }
                 },
                 icon: const Icon(Icons.chevron_right),
               ),
@@ -77,7 +92,7 @@ class _ExploreRailState extends State<ExploreRail> {
           ),
         ),
         SizedBox(
-          height: 190,
+          height: ExploreRail._railHeight,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -89,6 +104,7 @@ class _ExploreRailState extends State<ExploreRail> {
                 width: 150,
                 child: PaintSwatchCard(
                   paint: p,
+                  compact: true,
                   onTap: () => widget.onSelect(p),
                   onLongPress: () => widget.onLongPress(p),
                 ),
@@ -106,7 +122,7 @@ class _ExploreRailState extends State<ExploreRail> {
       children: [
         Container(height: 22, width: 140, margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6))),
         SizedBox(
-          height: 190,
+          height: ExploreRail._railHeight,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),

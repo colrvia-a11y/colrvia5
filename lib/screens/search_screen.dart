@@ -2,11 +2,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:color_canvas/utils/color_utils.dart';
-import 'package:color_canvas/utils/debug_logger.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
-import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/screens/compare_colors_screen.dart';
 import 'package:color_canvas/screens/home_screen.dart';
@@ -53,6 +50,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     super.initState();
     _searchController.addListener(_onSearchChanged);
     _scrollController.addListener(_onScroll);
+    // 🔆 glow hook: rebuild when focus changes
+    _searchFocusNode.addListener(() => setState(() {}));
   }
 
   @override
@@ -76,7 +75,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 
   void _loadMore() {
-    if ((_page + 1) * _pageSize >= _cached.length) return;
+    if ((_page + 1) * _pageSize >= _cached.length) {
+      return;
+    }
     setState(() {
       _page++;
       _visible.addAll(_cached.skip(_page * _pageSize).take(_pageSize));
@@ -84,7 +85,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 
   Future<void> _performSearch(String query) async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     if (query.trim().isEmpty) {
       setState(() {
         _isSearching = false;
@@ -107,85 +110,31 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       setState(() => _isSearching = false);
       AnalyticsService.instance.logEvent('search_performed', {'q': query, 'count': results.length});
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
       setState(() => _isSearching = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Search error: $e')));
     }
   }
 
-  void _selectPaint(Paint paint) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(
-                        color: ColorUtils.getPaintColor(paint.hex),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.25)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(paint.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                          Text(paint.brandName, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () { Navigator.pop(context); _loadPaintIntoRoller(paint); },
-                  icon: const Icon(Icons.color_lens),
-                  label: const Text('Load into Roller'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaintDetailScreen(paint: paint)));
-                  },
-                  icon: const Icon(Icons.info_outline),
-                  label: const Text('View details'),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
+  void _openDetails(Paint p) {
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PaintDetailScreen(paint: p)),
     );
   }
 
-  void _loadPaintIntoRoller(Paint paint) {
-    if (widget.onPaintSelectedForRoller != null) {
-      widget.onPaintSelectedForRoller!(paint);
-      return;
-    }
-    final home = context.findAncestorStateOfType<HomeScreenState>();
-    if (home != null) {
-      home.onPaintSelectedFromSearch(paint);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load ${paint.name} into Roller.')));
-    }
-  }
 
   void _toggleCompare(Paint p) {
     setState(() {
-      if (_selectedForCompare.contains(p.id)) _selectedForCompare.remove(p.id);
-      else if (_selectedForCompare.length < 4) _selectedForCompare.add(p.id);
+      if (_selectedForCompare.contains(p.id)) {
+        _selectedForCompare.remove(p.id);
+      } else if (_selectedForCompare.length < 4) {
+        _selectedForCompare.add(p.id);
+      }
     });
   }
 
@@ -221,31 +170,81 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12))),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.colorScheme.surface,
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.40),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        ),
       ),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Search by name, brand, code, or hex…',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _showClearButton
-                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchController.clear(); setState(() { _showSearchResults = false; _visible.clear(); _cached.clear(); }); _searchFocusNode.unfocus(); })
-                  : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20), // was 16
+              boxShadow: [
+                // base drop shadow
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+                // subtle focus glow ring
+                if (_searchFocusNode.hasFocus) BoxShadow(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.20),
+                  blurRadius: 20,
+                  spreadRadius: 1.5,
+                ),
+              ],
             ),
-            onChanged: (value) {
-              _debounceTimer?.cancel();
-              _debounceTimer = Timer(const Duration(milliseconds: 400), () => _performSearch(value));
-            },
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              decoration: InputDecoration(
+                hintText: 'Search by name, brand, code, or hex…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _showClearButton
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _showSearchResults = false;
+                            _visible.clear();
+                            _cached.clear();
+                          });
+                          _searchFocusNode.unfocus();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              onChanged: (value) {
+                _debounceTimer?.cancel();
+                _debounceTimer = Timer(const Duration(milliseconds: 400), () => _performSearch(value));
+              },
+              onSubmitted: _performSearch, // enter key triggers search
+              textInputAction: TextInputAction.search,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14), // more breathing room (was 10)
           _activeFiltersChips(theme),
         ],
       ),
@@ -254,34 +253,129 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Widget _activeFiltersChips(ThemeData theme) {
     final chips = <Widget>[];
-    if (filters.colorFamily != null) chips.add(_chip(theme, filters.colorFamily!, () => setState(() => filters = filters.copyWith(colorFamily: null))));
-    if (filters.undertone != null) chips.add(_chip(theme, 'undertone: ${filters.undertone}', () => setState(() => filters = filters.copyWith(undertone: null))));
-    if (filters.temperature != null) chips.add(_chip(theme, filters.temperature!, () => setState(() => filters = filters.copyWith(temperature: null))));
-    if (filters.lrvRange != null) chips.add(_chip(theme, 'LRV ${filters.lrvRange!.start.round()}–${filters.lrvRange!.end.round()}', () => setState(() => filters = filters.copyWith(lrvRange: null))));
-    if (filters.brandName != null) chips.add(_chip(theme, filters.brandName!, () => setState(() => filters = filters.copyWith(brandName: null))));
-    if (chips.isEmpty) return const SizedBox.shrink();
-    return Align(alignment: Alignment.centerLeft, child: Wrap(spacing: 6, runSpacing: 6, children: chips));
+
+    if (filters.colorFamily != null) {
+      chips.add(_removableChip('Family: ${filters.colorFamily!}', () {
+        setState(() => filters = filters.copyWith(colorFamily: null));
+      }));
+    }
+    if (filters.undertone != null) {
+      chips.add(_removableChip('Undertone: ${filters.undertone!}', () {
+        setState(() => filters = filters.copyWith(undertone: null));
+      }));
+    }
+    if (filters.temperature != null) {
+      chips.add(_removableChip('Temp: ${filters.temperature!}', () {
+        setState(() => filters = filters.copyWith(temperature: null));
+      }));
+    }
+    if (filters.lrvRange != null) {
+      final r = filters.lrvRange!;
+      chips.add(_removableChip('LRV ${r.start.round()}–${r.end.round()}', () {
+        setState(() => filters = filters.copyWith(lrvRange: null));
+      }));
+    }
+    if (filters.brandName != null) {
+      chips.add(_removableChip('Brand: ${filters.brandName!}', () {
+        setState(() => filters = filters.copyWith(brandName: null));
+      }));
+    }
+
+    if (chips.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    chips.add(
+      InputChip(
+        label: const Text('Clear all'),
+        avatar: const Icon(Icons.clear_all, size: 16),
+        onPressed: () => setState(() => filters.clear()),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(spacing: 6, runSpacing: 6, children: chips),
+    );
   }
 
-  Widget _chip(ThemeData theme, String label, VoidCallback onDeleted) {
+  Widget _removableChip(String text, VoidCallback onDelete) {
     return InputChip(
-      label: Text(label),
-      onDeleted: onDeleted,
-      deleteIcon: const Icon(Icons.close, size: 18),
+      label: Text(text),
+      onDeleted: onDelete, // shows the “x” and calls onDelete
+      deleteIcon: const Icon(Icons.close, size: 16),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
   Widget _buildSegmentedControl(ThemeData theme) {
-    final tabs = ['Explore','All Colors','Rooms & Combos','Brands'];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-      child: SegmentedButton<int>(
-        segments: tabs.asMap().entries.map((e) => ButtonSegment(value: e.key, label: Text(e.value))).toList(),
-        selected: <int>{_tabIndex},
-        onSelectionChanged: (s) => setState(() => _tabIndex = s.first),
-        showSelectedIcon: false,
-        style: ButtonStyle(
-          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            // keeps the container at least the width of the screen so it looks “full”
+            minWidth: MediaQuery.of(context).size.width - 32,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface.withValues(alpha: 0.60),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(value: 0, label: const Text('Explore', softWrap: false, overflow: TextOverflow.ellipsis)),
+                  ButtonSegment(value: 1, label: const Text('All Colors', softWrap: false, overflow: TextOverflow.ellipsis)),
+                  ButtonSegment(value: 2, label: const Text('Rooms & Combos', softWrap: false, overflow: TextOverflow.fade)),
+                  ButtonSegment(value: 3, label: const Text('Brands', softWrap: false, overflow: TextOverflow.ellipsis)),
+                ],
+                selected: <int>{_tabIndex},
+                onSelectionChanged: (s) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _tabIndex = s.first);
+                },
+                showSelectedIcon: false,
+                style: ButtonStyle(
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  ),
+                  side: WidgetStateProperty.resolveWith((states) {
+                    final sel = states.contains(WidgetState.selected);
+                    return BorderSide(
+                      color: sel
+                          ? theme.colorScheme.primary.withValues(alpha: 0.40)
+                          : theme.colorScheme.outline.withValues(alpha: 0.40),
+                      width: 1,
+                    );
+                  }),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    final sel = states.contains(WidgetState.selected);
+                    return sel
+                        ? theme.colorScheme.primary.withValues(alpha: 0.16)
+                        : Colors.transparent;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    final sel = states.contains(WidgetState.selected);
+                    return sel ? theme.colorScheme.primary : theme.colorScheme.onSurface;
+                  }),
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -300,40 +394,89 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   // ---------- Explore ----------
   Widget _buildExplore() {
     return ListView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: EdgeInsets.only(
+        bottom: 24 + kBottomNavigationBarHeight,
+      ),
       children: [
         const SizedBox(height: 6),
         ExploreRail(
           title: 'Warm Reds',
           colorFamily: 'Red',
           temperature: 'Warm',
-          onSelect: _selectPaint,
+          onSelect: _openDetails,
           onLongPress: _toggleCompare,
+          onSeeAll: ({colorFamily, undertone, temperature, lrvRange}) {
+            setState(() {
+              if (colorFamily != null) {
+                filters = filters.copyWith(colorFamily: colorFamily);
+              }
+              if (undertone != null) {
+                filters = filters.copyWith(undertone: undertone);
+              }
+              if (temperature != null) {
+                filters = filters.copyWith(temperature: temperature);
+              }
+              if (lrvRange != null) {
+                filters = filters.copyWith(lrvRange: lrvRange);
+              }
+              _tabIndex = 1; // jump to All Colors
+            });
+          },
         ),
         ExploreRail(
           title: 'Light Blues (LRV 70–85)',
           colorFamily: 'Blue',
           lrvRange: const RangeValues(70, 85),
-          onSelect: _selectPaint,
+          onSelect: _openDetails,
           onLongPress: _toggleCompare,
+          onSeeAll: ({colorFamily, undertone, temperature, lrvRange}) {
+            setState(() {
+              filters = filters.copyWith(
+                colorFamily: colorFamily,
+                lrvRange: lrvRange,
+              );
+              _tabIndex = 1;
+            });
+          },
         ),
         ExploreRail(
           title: 'Balanced Greiges',
           colorFamily: 'Neutral',
           undertone: 'green', // greiges often lean green/green-yellow
-          onSelect: _selectPaint,
+          onSelect: _openDetails,
           onLongPress: _toggleCompare,
+          onSeeAll: ({colorFamily, undertone, temperature, lrvRange}) {
+            setState(() {
+              filters = filters.copyWith(
+                colorFamily: colorFamily,
+                undertone: undertone,
+              );
+              _tabIndex = 1;
+            });
+          },
         ),
         ExploreRail(
           title: 'Cool Charcoals',
           colorFamily: 'Neutral',
           temperature: 'Cool',
           lrvRange: const RangeValues(5, 22),
-          onSelect: _selectPaint,
+          onSelect: _openDetails,
           onLongPress: _toggleCompare,
+          onSeeAll: ({colorFamily, undertone, temperature, lrvRange}) {
+            setState(() {
+              filters = filters.copyWith(
+                colorFamily: colorFamily,
+                temperature: temperature,
+                lrvRange: lrvRange,
+              );
+              _tabIndex = 1;
+            });
+          },
         ),
         ExploreRail(
           title: 'Bedrooms we love',
-          onSelect: _selectPaint,
+          onSelect: _openDetails,
           onLongPress: _toggleCompare,
         ),
         const SizedBox(height: 24),
@@ -364,17 +507,26 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             _filterSortBar(),
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.78),
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                padding: EdgeInsets.fromLTRB(
+                  16, 8, 16,
+                  24 + kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                mainAxisExtent: MediaQuery.textScalerOf(context).scale(1.0) > 1.1 ? 232 : 220,
+                ),
                 itemCount: list.length,
                 itemBuilder: (_, i) {
                   final p = list[i];
                   final selected = _selectedForCompare.contains(p.id);
                   return PaintSwatchCard(
                     paint: p,
+                    compact: true,
                     selected: selected,
-                    onTap: () => _selectPaint(p),
+                    onTap: () => _openDetails(p),
                     onLongPress: () => _toggleCompare(p),
                   );
                 },
@@ -459,7 +611,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       _roomCard('Exterior Winners', Icons.house, 'Light + Charcoal Trim', 'Moody Modern', 'Warm Cream + Slate'),
     ];
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        16, 12, 16,
+        24 + kBottomNavigationBarHeight,
+      ),
       itemBuilder: (_, i) => cards[i],
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemCount: cards.length,
@@ -523,6 +678,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildBrands() {
     final brands = ['Sherwin-Williams','Benjamin Moore','Behr'];
     return ListView.builder(
+      padding: EdgeInsets.only(
+        bottom: 24 + kBottomNavigationBarHeight,
+      ),
       itemCount: brands.length,
       itemBuilder: (_, i) => ListTile(
         leading: const Icon(Icons.factory_outlined),
@@ -556,8 +714,12 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       ));
     }
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        16, 12, 16,
+        24 + kBottomNavigationBarHeight,
+      ),
       itemCount: _visible.length,
       itemBuilder: (_, i) {
         final p = _visible[i];
@@ -567,7 +729,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           child: PaintSwatchCard(
             paint: p,
             selected: selected,
-            onTap: () => _selectPaint(p),
+            onTap: () => _openDetails(p),
             onLongPress: () => _toggleCompare(p),
           ),
         );

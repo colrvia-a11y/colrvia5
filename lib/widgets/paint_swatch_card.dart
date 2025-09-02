@@ -1,4 +1,3 @@
-// lib/widgets/paint_swatch_card.dart
 import 'package:flutter/material.dart';
 import '../utils/color_utils.dart';
 import '../firestore/firestore_data_schema.dart';
@@ -12,6 +11,9 @@ class PaintSwatchCard extends StatelessWidget {
   final bool selected;
   final bool showMeta;
 
+  /// NEW: compact layout for rails
+  final bool compact;
+
   const PaintSwatchCard({
     super.key,
     required this.paint,
@@ -19,6 +21,7 @@ class PaintSwatchCard extends StatelessWidget {
     this.onLongPress,
     this.selected = false,
     this.showMeta = true,
+    this.compact = false, // <-- default false; rails will pass true
   });
 
   @override
@@ -26,30 +29,39 @@ class PaintSwatchCard extends StatelessWidget {
     final color = ColorUtils.getPaintColor(paint.hex);
     final lrv = paint.computedLrv;
     final theme = Theme.of(context);
+
+    final double swatchHeight = compact ? 96 : 110;
+
     return Stack(
       children: [
         Card(
-          elevation: selected ? 3 : 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: EdgeInsets.zero, // avoid extra outer margin
+          elevation: selected ? 4 : 1.5,
+          shadowColor: Colors.black.withOpacity(0.10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
             onLongPress: onLongPress,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Swatch
                 Container(
-                  height: 110,
+                  height: swatchHeight,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.18)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withOpacity(0.18),
+                    ),
                   ),
                 ),
                 if (showMeta)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    padding: EdgeInsets.fromLTRB(12, compact ? 8 : 10, 12, compact ? 8 : 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -57,7 +69,9 @@ class PaintSwatchCard extends StatelessWidget {
                           paint.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -65,20 +79,22 @@ class PaintSwatchCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+                            color: theme.colorScheme.onSurface.withOpacity(0.62),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
+                        const SizedBox(height: 4),
+                        // Wrap avoids right overflow; will use 2 lines if needed
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
                           children: [
-                            _pill(context, paint.hex.toUpperCase(), isMonospace: true),
-                            const SizedBox(width: 6),
-                            _pill(context, 'LRV ${lrv.toStringAsFixed(0)}'),
+                            _pill(context, paint.hex.toUpperCase(), isMonospace: true, compact: compact),
+                            _pill(context, 'LRV ${lrv.toStringAsFixed(0)}', compact: compact),
                           ],
-                        )
+                        ),
                       ],
                     ),
-                  )
+                  ),
               ],
             ),
           ),
@@ -88,23 +104,23 @@ class PaintSwatchCard extends StatelessWidget {
             top: 8,
             right: 8,
             child: Icon(Icons.check_circle, color: theme.colorScheme.primary),
-          )
+          ),
       ],
     );
   }
 
-  Widget _pill(BuildContext context, String text, {bool isMonospace = false}) {
+  Widget _pill(BuildContext context, String text, {bool isMonospace = false, bool compact = false}) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: compact ? 2 : 2),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.60),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
         style: theme.textTheme.bodySmall?.copyWith(
-          fontSize: 11,
+          fontSize: compact ? 10 : 11,
           fontFamily: isMonospace ? 'monospace' : null,
           fontWeight: FontWeight.w600,
         ),

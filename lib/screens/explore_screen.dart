@@ -91,9 +91,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget _buildPlaceholderGrid(ThemeData theme) {
+    final bottomPadding = 24 + kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom;
     return GridView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         mainAxisSpacing: 12,

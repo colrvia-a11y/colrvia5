@@ -24,14 +24,20 @@ class PaintQueryService {
   Future<List<Paint>> getAllPaints({int? hardLimit}) async {
     try {
       final fs = await FirebaseService.getAllPaints();
-      return hardLimit != null ? fs.take(hardLimit).toList() : fs;
-    } catch (e) {
-      // Fallback to bundled sample data -> adapt to Firestore Paint
-      final raw = await SamplePaints.searchPaints('');
-      return raw
-          .map((m) => Paint.fromJson(m, m['id'] as String? ?? m['code'] as String? ?? 'unknown'))
-          .toList();
+      if (fs.isNotEmpty) {
+        return hardLimit != null ? fs.take(hardLimit).toList() : fs;
+      }
+    } catch (_) {
+      // ignore and fall back
     }
+    // Fallback to bundled sample data when Firestore is empty/unavailable
+    final raw = await SamplePaints.searchPaints('');
+    return raw
+        .map((m) => Paint.fromJson(
+              m,
+              m['id'] as String? ?? m['code'] as String? ?? 'unknown',
+            ))
+        .toList();
   }
 
   /// Compute derived attributes for filtering using existing utilities.
