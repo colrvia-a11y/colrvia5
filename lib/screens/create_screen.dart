@@ -11,6 +11,7 @@ import 'interview_screen.dart';
 import 'roller_screen.dart';
 import 'visualizer_screen.dart';
 import 'learn_screen.dart';
+import 'review_contrast_screen.dart';
 
 /// ✨ Create Hub — Guided (orchestrated) + Tools tabs
 class CreateHubScreen extends StatefulWidget {
@@ -180,6 +181,9 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
         break;
       case 'roller.build':
         _open(context, const RollerScreen());
+        break;
+      case 'review.contrast':
+        _open(context, const ReviewContrastScreen());
         break;
       case 'visualizer.photo':
       case 'visualizer.generate':
