@@ -4,6 +4,7 @@ import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/utils/color_utils.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/utils/color_math.dart';
+import 'package:color_canvas/services/firebase_service.dart';
 
 enum LightingMode { d65, incandescent, north }
 enum CbMode { none, deuter, protan, tritan }
@@ -40,7 +41,6 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final fg = ThemeData.estimateBrightnessForColor(_display) == Brightness.dark ? Colors.white : Colors.black;
 
     final delta = ColorMath.deltaE76(_base, _display);
@@ -67,7 +67,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft, end: Alignment.bottomRight,
-                        colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent, Colors.black.withValues(alpha: 0.08)],
+                        colors: [Colors.white.withAlpha(25), Colors.transparent, Colors.black.withAlpha(20)],
                         stops: const [0, .45, 1],
                       ),
                     ),
@@ -90,7 +90,7 @@ class _PaintDetailScreenState extends State<PaintDetailScreen> {
                 boxShadow: [
                   // soft lift so the sheet reads like a card coming up from the color area
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withAlpha(12),
                     blurRadius: 12,
                     offset: const Offset(0, -2),
                   ),
@@ -158,7 +158,7 @@ class _ViewModes extends StatelessWidget {
         label: Text(label),
         selected: sel,
         onSelected: (_) => on(value),
-        selectedColor: t.colorScheme.primary.withValues(alpha: .14),
+        selectedColor: t.colorScheme.primary.withAlpha(36),
         labelStyle: TextStyle(color: sel ? t.colorScheme.primary : t.colorScheme.onSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -168,9 +168,9 @@ class _ViewModes extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: t.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        color: t.colorScheme.surfaceContainerHighest.withAlpha(153),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: t.colorScheme.outline.withValues(alpha: 0.12)),
+        border: Border.all(color: t.colorScheme.outline.withAlpha(30)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(
@@ -184,7 +184,7 @@ class _ViewModes extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: t.colorScheme.surface,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: t.colorScheme.outline.withValues(alpha: .15)),
+                  border: Border.all(color: t.colorScheme.outline.withAlpha(38)),
                 ),
                 child: Text('ΔE $deltaE', style: t.textTheme.labelMedium),
               ),
@@ -192,7 +192,7 @@ class _ViewModes extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        Text('Lighting', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withValues(alpha: .65))),
+        Text('Lighting', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withAlpha(165))),
         const SizedBox(height: 6),
         Wrap(spacing: 8, runSpacing: 8, children: [
           chip('D65', LightingMode.d65, lighting, onLighting),
@@ -200,7 +200,7 @@ class _ViewModes extends StatelessWidget {
           chip('North', LightingMode.north, lighting, onLighting),
         ]),
         const SizedBox(height: 12),
-        Text('Color-blind simulation', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withValues(alpha: .65))),
+        Text('Color-blind simulation', style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurface.withAlpha(165))),
         const SizedBox(height: 6),
         Wrap(spacing: 8, runSpacing: 8, children: [
           chip('None', CbMode.none, cb, onCb),
@@ -245,6 +245,7 @@ class _MetaRow extends StatelessWidget {
       onPressed: () async {
         await Clipboard.setData(ClipboardData(text: text));
         AnalyticsService.instance.logEvent('detail_copy_$semantics', {'value': text});
+        if (!context.mounted) return;
         // tiny toast
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -253,7 +254,7 @@ class _MetaRow extends StatelessWidget {
           ),
         );
       },
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+      backgroundColor: theme.colorScheme.surfaceContainerHighest.withAlpha(178),
     );
   }
 
@@ -263,7 +264,7 @@ class _MetaRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
+        border: Border.all(color: Colors.black.withAlpha(30)),
       ),
       child: Text(text, style: style),
     );
@@ -282,9 +283,9 @@ class _AnalyticsStrip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        color: theme.colorScheme.surfaceContainerHighest.withAlpha(153),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        border: Border.all(color: theme.colorScheme.outline.withAlpha(30)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +335,7 @@ class _AnalyticsStrip extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withAlpha(153))),
         const SizedBox(height: 4),
         Text(value, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         if (trailing != null) const SizedBox(height: 6),
@@ -353,43 +354,121 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _PairingRow extends StatelessWidget {
+class _PairingRow extends StatefulWidget {
   final List<String> ids;
   const _PairingRow({required this.ids});
 
   @override
-  Widget build(BuildContext context) {
-    if (ids.isEmpty) return Text('We’re curating pairings for this shade…',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))
-    );
+  State<_PairingRow> createState() => _PairingRowState();
+}
 
-    // TODO: swap for real fetch if needed; for now just show stub chips by id.
+class _PairingRowState extends State<_PairingRow> {
+  List<Paint>? _paints;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPaints();
+  }
+
+  Future<void> _fetchPaints() async {
+    if (widget.ids.isEmpty) return;
+    final paints = await FirebaseService.getPaintsByIds(widget.ids);
+    if (mounted) {
+      setState(() {
+        _paints = paints;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.ids.isEmpty) {
+      return Text('We’re curating pairings for this shade…',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withAlpha(153))
+      );
+    }
+
+    if (_paints == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Wrap(
-      spacing: 8, runSpacing: 8,
-      children: ids.take(6).map((id) {
-        return InputChip(label: Text(id), onPressed: () {});
+      spacing: 8,
+      runSpacing: 8,
+      children: _paints!.map((paint) {
+        return InputChip(
+          label: Text(paint.name),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => PaintDetailScreen(paint: paint),
+            ));
+          },
+        );
       }).toList(),
     );
   }
 }
 
-class _SimilarRow extends StatelessWidget {
+class _SimilarRow extends StatefulWidget {
   final List<String> ids;
   const _SimilarRow({required this.ids});
 
   @override
+  State<_SimilarRow> createState() => _SimilarRowState();
+}
+
+class _SimilarRowState extends State<_SimilarRow> {
+  List<Paint>? _paints;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPaints();
+  }
+
+  Future<void> _fetchPaints() async {
+    if (widget.ids.isEmpty) return;
+    final paints = await FirebaseService.getPaintsByIds(widget.ids);
+    if (mounted) {
+      setState(() {
+        _paints = paints;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (ids.isEmpty) return Text('Similar shades coming soon',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))
-    );
+    if (widget.ids.isEmpty) {
+      return Text('Similar shades coming soon',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withAlpha(153))
+      );
+    }
+
+    if (_paints == null) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return SizedBox(
       height: 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: ids.length.clamp(0, 20),
+        itemCount: _paints!.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => Chip(label: Text(ids[i])),
+        itemBuilder: (_, i) {
+          final paint = _paints![i];
+          return ActionChip(
+            label: Text(paint.name),
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => PaintDetailScreen(paint: paint),
+              ));
+            },
+          );
+        },
       ),
     );
   }

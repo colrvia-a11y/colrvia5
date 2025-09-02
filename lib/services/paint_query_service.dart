@@ -1,5 +1,4 @@
 // lib/services/paint_query_service.dart
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../firestore/firestore_data_schema.dart' show Paint;
 import '../services/firebase_service.dart';
@@ -50,21 +49,21 @@ class PaintQueryService {
     final hue = HSLColor.fromColor(ColorUtils.getPaintColor(p.hex)).hue; // 0..360
     String family;
     // Coarse family from hue (simplified buckets)
-    if (hue >= 0 && hue < 15) family = 'Red';
-    else if (hue < 45) family = 'Orange';
-    else if (hue < 70) family = 'Yellow';
-    else if (hue < 160) family = 'Green';
-    else if (hue < 250) family = 'Blue';
-    else if (hue < 290) family = 'Purple';
-    else family = 'Red';
+    if (hue >= 0 && hue < 15) { family = 'Red'; }
+    else if (hue < 45) { family = 'Orange'; }
+    else if (hue < 70) { family = 'Yellow'; }
+    else if (hue < 160) { family = 'Green'; }
+    else if (hue < 250) { family = 'Blue'; }
+    else if (hue < 290) { family = 'Purple'; }
+    else { family = 'Red'; }
     // Override to neutrals if saturation is very low
     final hslColor = HSLColor.fromColor(ColorUtils.getPaintColor(p.hex));
     final sat = hslColor.saturation;
     if (sat < 0.08) {
       // neutral lane
-      if (lrv > 85) family = 'White';
-      else if (lrv < 10) family = 'Black';
-      else family = 'Neutral';
+      if (lrv > 85) { family = 'White'; }
+      else if (lrv < 10) { family = 'Black'; }
+      else { family = 'Neutral'; }
     }
     // Undertone family from tags
     String? undertone;
@@ -121,7 +120,6 @@ class PaintQueryService {
         // If popularity exists later, hook here
         return list;
       case PaintSort.relevance:
-      default:
         return list;
     }
   }

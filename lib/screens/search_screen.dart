@@ -10,7 +10,6 @@ import 'package:color_canvas/screens/home_screen.dart';
 import '../models/color_filters.dart';
 import '../services/paint_query_service.dart';
 import '../widgets/filter_sheet.dart';
-import '../widgets/paint_swatch_card.dart';
 import '../widgets/fancy_paint_tile.dart';
 import '../widgets/explore_rail.dart';
 import '../widgets/compare_tray.dart';
@@ -68,9 +67,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   // Collapsing search (tabs stay visible)
   bool _hideSearch = false;
-
-  // Small movement threshold to trigger hide/show
-  static const double _collapseDelta = 6;
 
   // Suggestions
 
@@ -207,7 +203,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       body: SafeArea(
         child: Stack(
@@ -316,228 +311,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            theme.colorScheme.surface,
-            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.40),
-          ],
-        ),
-        border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
-        ),
-      ),
-      child: Column(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20), // was 16
-              boxShadow: [
-                // base drop shadow
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 14,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 6),
-                ),
-                // subtle focus glow ring
-                if (_searchFocusNode.hasFocus) BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.20),
-                  blurRadius: 20,
-                  spreadRadius: 1.5,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Search by name, brand, code, or hex…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _showClearButton
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _showSearchResults = false;
-                            _visible.clear();
-                            _cached.clear();
-                          });
-                          _searchFocusNode.unfocus();
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withValues(alpha: 0.70),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              ),
-              onChanged: (value) {
-                _debounceTimer?.cancel();
-                _debounceTimer = Timer(const Duration(milliseconds: 400), () => _performSearch(value));
-              },
-              onSubmitted: _performSearch, // enter key triggers search
-              textInputAction: TextInputAction.search,
-            ),
-
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _activeFiltersChips(ThemeData theme) {
-    final chips = <Widget>[];
-
-    if (filters.colorFamily != null) {
-      chips.add(_removableChip('Family: ${filters.colorFamily!}', () {
-        setState(() => filters = filters.copyWith(colorFamily: null));
-      }));
-    }
-    if (filters.undertone != null) {
-      chips.add(_removableChip('Undertone: ${filters.undertone!}', () {
-        setState(() => filters = filters.copyWith(undertone: null));
-      }));
-    }
-    if (filters.temperature != null) {
-      chips.add(_removableChip('Temp: ${filters.temperature!}', () {
-        setState(() => filters = filters.copyWith(temperature: null));
-      }));
-    }
-    if (filters.lrvRange != null) {
-      final r = filters.lrvRange!;
-      chips.add(_removableChip('LRV ${r.start.round()}–${r.end.round()}', () {
-        setState(() => filters = filters.copyWith(lrvRange: null));
-      }));
-    }
-    if (filters.brandName != null) {
-      chips.add(_removableChip('Brand: ${filters.brandName!}', () {
-        setState(() => filters = filters.copyWith(brandName: null));
-      }));
-    }
-
-    if (chips.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    chips.add(
-      InputChip(
-        label: const Text('Clear all'),
-        avatar: const Icon(Icons.clear_all, size: 16),
-        onPressed: () => setState(() => filters = filters.clear()),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-    );
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Wrap(spacing: 6, runSpacing: 6, children: chips),
-    );
-  }
-
-  Widget _removableChip(String text, VoidCallback onDelete) {
-    final theme = Theme.of(context);
-    return InputChip(
-      label: Text(text),
-      // Make the whole chip remove the filter on tap:
-      onPressed: onDelete,
-      // Keep the 'x' working too:
-      onDeleted: onDelete,
-      deleteIcon: const Icon(Icons.close, size: 16),
-      deleteButtonTooltipMessage: 'Remove filter',
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      // small visual affordances (optional)
-      side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.35)),
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-    );
-  }
-
-  Widget _buildSegmentedControl(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            // keeps the container at least the width of the screen so it looks “full”
-            minWidth: MediaQuery.of(context).size.width - 32,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.60),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 0, label: const Text('Explore', softWrap: false, overflow: TextOverflow.ellipsis)),
-                  ButtonSegment(value: 1, label: const Text('All Colors', softWrap: false, overflow: TextOverflow.ellipsis)),
-                  ButtonSegment(value: 2, label: const Text('Rooms & Combos', softWrap: false, overflow: TextOverflow.fade)),
-                  ButtonSegment(value: 3, label: const Text('Brands', softWrap: false, overflow: TextOverflow.ellipsis)),
-                ],
-                selected: <int>{_tabIndex},
-                onSelectionChanged: (s) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _tabIndex = s.first);
-                },
-                showSelectedIcon: false,
-                style: ButtonStyle(
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  ),
-                  side: WidgetStateProperty.resolveWith((states) {
-                    final sel = states.contains(WidgetState.selected);
-                    return BorderSide(
-                      color: sel
-                          ? theme.colorScheme.primary.withValues(alpha: 0.40)
-                          : theme.colorScheme.outline.withValues(alpha: 0.40),
-                      width: 1,
-                    );
-                  }),
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    final sel = states.contains(WidgetState.selected);
-                    return sel
-                        ? theme.colorScheme.primary.withValues(alpha: 0.16)
-                        : Colors.transparent;
-                  }),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    final sel = states.contains(WidgetState.selected);
-                    return sel ? theme.colorScheme.primary : theme.colorScheme.onSurface;
-                  }),
-                  padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -675,7 +448,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12))),
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withAlpha(12))),
       ),
       child: Row(
         children: [
@@ -848,11 +621,11 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       return Center(child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
+          Icon(Icons.search_off, size: 64, color: Theme.of(context).colorScheme.onSurface.withAlpha(45)),
           const SizedBox(height: 8),
           Text('No results', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
-          Text('Try different keywords', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65))),
+          Text('Try different keywords', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withAlpha(65))),
         ],
       ));
     }
@@ -900,7 +673,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.10),
+            color: theme.colorScheme.outline.withAlpha(10),
           ),
         ),
       ),
@@ -942,7 +715,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           prefixIcon: const Icon(Icons.search, size: 18),
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           filled: true,
-          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+          fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(55),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -992,7 +765,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 // selected: tasteful oval outline
                 border: isSel
                     ? Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                        color: theme.colorScheme.primary.withAlpha(45),
                         width: 1.1,
                       )
                     : null,
@@ -1009,7 +782,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                   letterSpacing: 0.15,
                   color: isSel
                       ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                      : theme.colorScheme.onSurface.withAlpha(78),
                 ),
               ),
             ),

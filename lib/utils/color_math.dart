@@ -5,14 +5,12 @@ class ColorMath {
   // --- sRGB <-> linear helpers ---
   static double _srgbToLin(double c) =>
       c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4).toDouble();
-  static double _linToSrgb(double c) =>
-      c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1 / 2.4).toDouble() - 0.055;
 
   // --- RGB (0..1) -> XYZ (D65) ---
   static List<double> _rgbToXyz(Color col) {
-    final r = _srgbToLin(col.red / 255.0);
-    final g = _srgbToLin(col.green / 255.0);
-    final b = _srgbToLin(col.blue / 255.0);
+    final r = _srgbToLin(col.r);
+    final g = _srgbToLin(col.g);
+    final b = _srgbToLin(col.b);
     final x = 0.4124564 * r + 0.3575761 * g + 0.1804375 * b;
     final y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b;
     final z = 0.0193339 * r + 0.1191920 * g + 0.9503041 * b;
@@ -22,11 +20,11 @@ class ColorMath {
   // --- XYZ -> Lab (D65) ---
   static List<double> _xyzToLab(List<double> xyz) {
     // D65 white
-    const Xn = 0.95047, Yn = 1.00000, Zn = 1.08883;
+    const xn = 0.95047, yn = 1.00000, zn = 1.08883;
     double f(double t) => t > pow(6/29, 3) ? pow(t, 1/3).toDouble() : (1/3)*pow(29/6, 2).toDouble()*t + 4/29;
-    final fx = f(xyz[0] / Xn);
-    final fy = f(xyz[1] / Yn);
-    final fz = f(xyz[2] / Zn);
+    final fx = f(xyz[0] / xn);
+    final fy = f(xyz[1] / yn);
+    final fz = f(xyz[2] / zn);
     final L = 116*fy - 16;
     final a = 500*(fx - fy);
     final b = 200*(fy - fz);
@@ -64,12 +62,12 @@ class ColorMath {
   ];
 
   static Color _applyMatrix(Color c, List<List<double>> m) {
-    final r = c.red / 255.0, g = c.green / 255.0, b = c.blue / 255.0;
+    final r = c.r, g = c.g, b = c.b;
     double clamp01(double v) => v.clamp(0.0, 1.0);
     final nr = clamp01(m[0][0]*r + m[0][1]*g + m[0][2]*b);
     final ng = clamp01(m[1][0]*r + m[1][1]*g + m[1][2]*b);
     final nb = clamp01(m[2][0]*r + m[2][1]*g + m[2][2]*b);
-    return Color.fromARGB(c.alpha, (nr*255).round(), (ng*255).round(), (nb*255).round());
+    return Color.fromARGB((c.a * 255.0).round() & 0xff, (nr*255).round(), (ng*255).round(), (nb*255).round());
     }
 
   static Color simulateCB(Color c, String mode) {
@@ -90,12 +88,12 @@ class ColorMath {
       case 'north':       m = [0.92, 0.98, 1.08]; break; // cool (boost B a bit)
       default:            m = [1.0, 1.0, 1.0];
     }
-    int comp(int v, double mul) => (v * mul).clamp(0, 255).round();
+    int comp(double v, double mul) => (v * mul).clamp(0.0, 1.0).toInt();
     return Color.fromARGB(
-      c.alpha,
-      comp(c.red, m[0]),
-      comp(c.green, m[1]),
-      comp(c.blue, m[2]),
+      (c.a * 255.0).round() & 0xff,
+      comp(c.r, m[0]),
+      comp(c.g, m[1]),
+      comp(c.b, m[2]),
     );
   }
 }

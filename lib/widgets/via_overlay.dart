@@ -56,9 +56,7 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _listController = ScrollController();
 
-  // Kept for future entrance animations if desired.
-  late AnimationController _openCtrl;
-  late Animation<double> _open;
+
 
   bool _sending = false;
   final List<_ChatBubble> _messages = <_ChatBubble>[];
@@ -77,12 +75,9 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _openCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 240));
-    _open = CurvedAnimation(parent: _openCtrl, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
 
     // Overlay appears immediately; default to peek or expanded based on startOpen.
     _stage = widget.startOpen ? _OverlayStage.expanded : _OverlayStage.peek;
-    _openCtrl.value = 1;
     _seedGreeting();
 
     // Focus composer if starting expanded.
@@ -96,7 +91,6 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
     _composer.dispose();
     _focusNode.dispose();
     _listController.dispose();
-    _openCtrl.dispose();
     super.dispose();
   }
 
@@ -265,7 +259,7 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
-                color: Colors.black.withOpacity(_kBackdropOpacity),
+                color: Colors.black.withAlpha((255 * _kBackdropOpacity).round()),
               ),
             ),
           ),
@@ -322,7 +316,6 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
                               return;
                             }
                             if (s.needsImage) {
-                              // TODO: open your image picker / camera flow here.
                               _send(s.prompt);
                             } else {
                               _send(s.prompt);
@@ -348,17 +341,14 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
                           sending: _sending,
                           onSend: _send,
                           onMic: () {
-                            // TODO: Hook your voice input.
                             AnalyticsService.instance
                                 .log('via_mic', {'context': widget.contextLabel});
                           },
                           onAttachImage: () {
-                            // TODO: Hook your image picker.
                             AnalyticsService.instance
                                 .log('via_attach_image', {'context': widget.contextLabel});
                           },
                           onAttachDoc: () {
-                            // TODO: Hook your project/palette picker.
                             AnalyticsService.instance
                                 .log('via_attach_doc', {'context': widget.contextLabel});
                           },
@@ -475,7 +465,7 @@ class _ChatList extends StatelessWidget {
       itemBuilder: (context, i) {
         final m = messages[i];
         final align = m.fromUser ? Alignment.centerRight : Alignment.centerLeft;
-        final bg = m.fromUser ? const Color(0xFFEFE8E1) : Colors.white.withAlpha(209);
+        final bg = m.fromUser ? const Color(0xFFEFE8E1) : Colors.white.withValues(alpha: 209 / 255.0);
 
         return Align(
           alignment: align,
@@ -545,7 +535,7 @@ class _ComposerBarState extends State<_ComposerBar> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(209),
+                color: Colors.white.withValues(alpha: 209 / 255.0),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: TextField(
@@ -669,9 +659,9 @@ class _ChipButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(217),
+          color: Colors.white.withValues(alpha: 217 / 255.0),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _ViaOverlayState._brandPeach.withAlpha(115), width: 1),
+          border: Border.all(color: _ViaOverlayState._brandPeach.withValues(alpha: 115 / 255.0), width: 1),
         ),
         child: Text(
           label,
@@ -697,7 +687,7 @@ class _GhostIconButton extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(209),
+          color: Colors.white.withValues(alpha: 209 / 255.0),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 20, color: Colors.black87),

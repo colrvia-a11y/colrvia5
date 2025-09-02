@@ -37,7 +37,9 @@ class _FixedElementsSheetState extends State<FixedElementsSheet> {
 
   Future<void> _save() async {
     await FixedElementService().saveAll(widget.projectId, _elements);
-    Navigator.of(context).pop(_elements);
+    if (mounted) {
+      Navigator.of(context).pop(_elements);
+    }
   }
 
   @override

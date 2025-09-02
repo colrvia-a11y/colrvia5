@@ -709,4 +709,33 @@ class PaletteGenerator {
     final b = C * math.sin(h);
     return [L, a, b];
   }
+
+  static List<Paint> applyAdjustments(
+    List<Paint> palette,
+    List<Paint> pool,
+    List<bool> lockedStates,
+    double hueShift,
+    double satScale,
+  ) {
+    if (pool.isEmpty) return palette;
+    return [
+      for (var i = 0; i < palette.length; i++)
+        (lockedStates.length > i && lockedStates[i])
+            ? palette[i]
+            : _adjustPaint(palette[i], pool, hueShift, satScale)
+    ];
+  }
+
+  static Paint _adjustPaint(
+    Paint p,
+    List<Paint> pool,
+    double hueShift,
+    double satScale,
+  ) {
+    final l = p.lch[0];
+    final c = (satScale * p.lch[1]).clamp(0.0, 150.0);
+    final h = (hueShift + p.lch[2]) % 360.0;
+    final targetLab = ColorUtils.lchToLab(l, c, h);
+    return ColorUtils.nearestToTargetLab(targetLab, pool) ?? pool.first;
+  }
 }

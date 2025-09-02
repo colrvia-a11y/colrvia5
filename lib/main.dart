@@ -295,7 +295,7 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Paint Roller',
+              'ColorCanvas',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[800],

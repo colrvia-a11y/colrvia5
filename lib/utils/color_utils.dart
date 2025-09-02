@@ -124,6 +124,26 @@ class ColorUtils {
     return deltaE(lab1, lab2);
   }
 
+  static List<double> lchToLab(double l, double c, double hDeg) {
+    final h = hDeg * pi / 180.0;
+    final a = c * cos(h);
+    final b = c * sin(h);
+    return [l, a, b];
+  }
+
+  static Paint? nearestToTargetLab(List<double> targetLab, List<Paint> candidates) {
+    Paint? best;
+    double bestDe = double.infinity;
+    for (final p in candidates) {
+      final de = deltaE2000(p.lab, targetLab);
+      if (de < bestDe) {
+        bestDe = de;
+        best = p;
+      }
+    }
+    return best;
+  }
+
   // Convert LAB to LCH
   static List<double> labToLch(List<double> lab) {
     final l = lab[0];
@@ -233,7 +253,7 @@ class ColorUtils {
     final count = min(a.length, b.length);
     final flat = <int>[];
     for (var i = 0; i < count; i++) {
-      flat..add(a[i].value)..add(b[i].value);
+      flat..add(a[i].toARGB32())..add(b[i].toARGB32());
     }
     if (count <= threshold) {
       return _contrastList(flat);
@@ -297,6 +317,13 @@ class ColorUtils {
 
     /// Placeholder for future image-based undertone inference.
     /// Currently unimplemented and always returns `null`.
+    ///
+    /// TODO: Implement real undertone analysis from an image.
+    /// This would require:
+    /// - Image processing to extract dominant colors
+    /// - Color analysis algorithms to determine undertones
+    /// - Possibly machine learning models for accurate undertone detection
+    /// - Integration with image processing libraries (e.g., image package)
     static Future<String?> inferUndertoneFromImage(dynamic image) async {
       // TODO: Implement real undertone analysis from an image.
       return null;

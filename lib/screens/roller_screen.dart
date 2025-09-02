@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show compute, kDebugMode;
-import 'dart:math' as math;
+
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/palette_generator.dart';
@@ -23,15 +23,14 @@ import 'package:color_canvas/services/user_prefs_service.dart';
 import 'package:color_canvas/utils/palette_transforms.dart' as transforms;
 import 'package:color_canvas/utils/lab.dart';
 import 'package:color_canvas/services/project_service.dart';
-import 'package:color_canvas/screens/color_plan_screen.dart';
-import 'package:color_canvas/screens/visualizer_screen.dart';
-import 'package:color_canvas/widgets/fixed_elements_sheet.dart';
+
 import 'package:color_canvas/models/fixed_elements.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
 import 'package:color_canvas/services/fixed_element_service.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../services/feature_flags.dart';
+import '../services/roller_progress.dart';
+import '../services/create_flow_progress.dart';
 
 // Custom intents for keyboard navigation
 class GoToPrevPageIntent extends Intent {
@@ -193,8 +192,14 @@ class _RollerScreenState extends RollerScreenStatePublic {
   }
   
 
+  void _onStepChanged(int step, int total) {
+    CreateFlowProgress.instance.set('roller', step / total);
+  }
+
   @override
   void dispose() {
+    CreateFlowProgress.instance.clear('roller');
+    RollerProgress.instance.value = 0.0;
     _pageCtrl.dispose();
     super.dispose();
   }
@@ -216,7 +221,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
   int _byLrvDescThenStable(Paint a, Paint b) {
     final la = a.computedLrv;
     final lb = b.computedLrv;
-    final cmp = lb.compareTo(la); // DESC (light to dark)
+    final cmp = lb.compareTo(la);
     if (cmp != 0) return cmp;
     final aIndex = _originalIndexMap[a.id] ?? 0;
     final bIndex = _originalIndexMap[b.id] ?? 0;
@@ -295,7 +300,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
     setState(() {
       _availablePaints = paints;
       _availableBrands = brands;
-      _selectedBrandIds = brands.map((b) => b.id).toSet(); // All brands selected by default
+      _selectedBrandIds = brands.map((b) => b.id).toSet();
       _lockedStates = List.filled(_paletteSize, false);
       _isLoading = false;
     });
@@ -511,21 +516,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
     );
   }
 
-  Future<void> _openFixedElements() async {
-    if (widget.projectId == null) return;
-    final updated = await showModalBottomSheet<List<FixedElement>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => FixedElementsSheet(
-        projectId: widget.projectId!,
-        elements: _fixedElements,
-      ),
-    );
-    if (updated != null) {
-      setState(() => _fixedElements = updated);
-    }
-  }
-
   void _removeStripe(int index) {
     if (_paletteSize <= _minPaletteSize) return;
     HapticFeedback.lightImpact();
@@ -614,7 +604,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
     return List<Paint>.from(_currentPalette);
   }
 
-  // Tools dock: helpers and panel builder
   void _closeDock() {
     _safeSetState(() {
       _toolsOpen = false;
@@ -729,34 +718,16 @@ class _RollerScreenState extends RollerScreenStatePublic {
           },
         );
       case ActiveTool.temperature:
-        // Option B uses rail-only; no side panel.
         return const SizedBox.shrink();
     }
-  }
-  
-  List<double> _lchToLab(double l, double c, double hDeg) {
-    final h = hDeg * math.pi / 180.0;
-    final a = c * math.cos(h);
-    final b = c * math.sin(h);
-    return [l, a, b];
-  }
-
-  Paint _nearestToTargetLab(List<double> targetLab, List<Paint> candidates) {
-    Paint? best;
-    double bestDe = double.infinity;
-    for (final p in candidates) {
-      final de = ColorUtils.deltaE2000(p.lab, targetLab);
-      if (de < bestDe) { bestDe = de; best = p; }
-    }
-    return best ?? candidates.first;
   }
 
   Paint _adjustPaint(Paint p, List<Paint> pool) {
     final l = p.lch[0];
     final c = (_satScale * p.lch[1]).clamp(0.0, 150.0);
     final h = (_hueShift + p.lch[2]) % 360.0;
-    final targetLab = _lchToLab(l, c, h);
-    return _nearestToTargetLab(targetLab, pool);
+    final targetLab = ColorUtils.lchToLab(l, c, h);
+    return ColorUtils.nearestToTargetLab(targetLab, pool) ?? pool.first;
   }
 
   List<Paint> _applyAdjustments(List<Paint> palette) {
@@ -822,7 +793,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
+                            color: Colors.black.withAlpha(60),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text('Swipe ↑ for next palette',
@@ -835,7 +806,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                   Positioned.fill(
                     child: IgnorePointer(
                       child: Container(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: Colors.black.withAlpha(10),
                         child: const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         ),
@@ -853,7 +824,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
                     ),
                   ),
 
-                // Tools dock w/ Temperature rail morph
                 Positioned(
                   right: 12,
                   bottom: 24,
@@ -871,9 +841,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
                           _toolsOpen = false;
                         } else {
                           _toolsOpen = true;
-                          // Keep Temperature selected; don’t toggle off on tap
                           if (_activeTool == ActiveTool.temperature && t == ActiveTool.temperature) {
-                            // no-op
                           } else {
                             _activeTool = t;
                           }
@@ -896,7 +864,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
                           .logEvent('temperature_action', {'kind': kind, 'size': _currentPalette.length});
                     },
                     onTemperatureBack: () {
-                      // Go back to main rail (keep dock open)
                       _safeSetState(() {
                         _activeTool = null;
                         _toolsOpen = true;
@@ -906,7 +873,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
                 ),
               ],
             ),
-      // No bottomNavigationBar: variants now live in the Temperature rail
     );
   }
 
@@ -940,6 +906,10 @@ class _RollerScreenState extends RollerScreenStatePublic {
             _currentPalette = newPalette;
           }
         }
+        if (_pages.length > 1) {
+          _onStepChanged(i, _pages.length - 1);
+        }
+        RollerProgress.instance.value = (i / (_pages.length - 1)).clamp(0.0, 1.0);
       }, details: 'Page changed from $_visiblePage to $i');
     }
     if (i + 1 >= _pages.length) {
@@ -959,7 +929,7 @@ class _RollerScreenState extends RollerScreenStatePublic {
 
     String? nearestId(Lab lab) {
       final paints = _getFilteredPaints();
-      final nearest =
+      final nearest = 
           ColorUtils.nearestByDeltaE([lab.l, lab.a, lab.b], paints);
       return nearest?.id;
     }
@@ -1028,7 +998,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
     }
   }
 
-  // Restored helper to fix the undefined method build error
   Future<void> _shareCurrentPalette() async {
     if (_currentPalette.isEmpty) return;
 
@@ -1240,8 +1209,6 @@ class _RollerScreenState extends RollerScreenStatePublic {
   }
 }
 
-// === ToolsDock + Panels ======================================================
-
 class _StyleOptionTile extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -1282,9 +1249,9 @@ class _StyleOptionTile extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: selected 
-                            ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: selected
+                            ? Theme.of(context).colorScheme.onPrimaryContainer.withAlpha((255 * 0.7).round())
+                            : Theme.of(context).colorScheme.onSurface.withAlpha((255 * 0.6).round()),
                       ),
                     ),
                   ],
@@ -1319,7 +1286,6 @@ class ToolsDock extends StatefulWidget {
   final List<DockItem> items;
   final Widget Function(ActiveTool) panelBuilder;
 
-  // Temperature rail hooks
   final ValueChanged<String>? onTemperatureAction;
   final VoidCallback? onTemperatureBack;
 
@@ -1343,7 +1309,7 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
   late AnimationController _dockController;
   late AnimationController _panelController;
   late Animation<double> _panelProgress;
-  final double _dockWidthPx = 72.0; // fixed width to match available calculation
+  final double _dockWidthPx = 72.0;
 
   @override
   void initState() {
@@ -1375,7 +1341,6 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
       }
     }
     if (widget.activeTool != oldWidget.activeTool) {
-      // Only open the side panel for non-temperature tools.
       if (widget.activeTool != null && widget.activeTool != ActiveTool.temperature) {
         _panelController.forward();
       } else {
@@ -1397,14 +1362,13 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Left-side panel (not used for Temperature)
         AnimatedBuilder(
           animation: _panelProgress,
           builder: (context, child) {
             final size = MediaQuery.of(context).size;
 
-            const double rightMargin = 12.0; // matches rail margin
-            const double gapBetween = 12.0;  // visual gap to the pill/rail
+            const double rightMargin = 12.0;
+            const double gapBetween = 12.0;
             final double available = size.width - rightMargin - gapBetween - _dockWidthPx;
             final double targetWidth = available <= 0 ? 0 : available.clamp(0.0, 320.0);
             final double panelWidth = _panelProgress.value * targetWidth;
@@ -1419,7 +1383,7 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withAlpha(8),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1432,7 +1396,6 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
           },
         ),
         
-        // Rail (collapsed/expanded or Temperature morph)
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: !widget.open
@@ -1453,9 +1416,8 @@ class _ToolsDockState extends State<ToolsDock> with TickerProviderStateMixin {
                       items: widget.items,
                       activeTool: widget.activeTool,
                       onSelect: (t) {
-                        // Keep Temperature selected; others can toggle off
                         if (t == null && widget.activeTool == ActiveTool.temperature) {
-                          return; // ignore toggle-off for temperature
+                          return;
                         }
                         widget.onSelect(t);
                       },
@@ -1535,7 +1497,7 @@ class _RailItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: () {
           if (item.tool == ActiveTool.temperature) {
-            onSelect(item.tool); // don’t toggle off; morph the rail
+            onSelect(item.tool);
           } else {
             onSelect(isActive ? null : item.tool);
           }
@@ -1544,7 +1506,7 @@ class _RailItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: isActive
               ? BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withAlpha(5),
                   borderRadius: BorderRadius.circular(8),
                 )
               : null,
@@ -1561,9 +1523,6 @@ class _RailItem extends StatelessWidget {
   }
 }
 
-/// Temperature rail (Option B):
-/// Reuses the rail’s exact footprint; shows one-tap actions.
-/// Top slot: Back → returns to main rail.
 class _TemperatureRail extends StatelessWidget {
   final double width;
   final ValueChanged<String>? onAction;
@@ -1617,7 +1576,6 @@ class _TemperatureRail extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Back to main rail
               _btn(
                 context,
                 icon: Icons.arrow_back_ios_new_rounded,
@@ -1637,7 +1595,6 @@ class _TemperatureRail extends StatelessWidget {
   }
 }
 
-// Tool Panel Hosts (unchanged aside from presence of Temperature in enum)
 class _StylePanel extends StatelessWidget {
   final HarmonyMode currentMode;
   final bool diversifyBrands;

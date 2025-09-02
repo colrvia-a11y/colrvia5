@@ -40,7 +40,7 @@ class SyncQueueService {
     AnalyticsService.instance
         .log('offline_enqueued', {'opType': opType});
     final context = MyApp.navigatorKey.currentContext;
-    if (context != null) {
+    if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Saved offline; will sync later')),
       );

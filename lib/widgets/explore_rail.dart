@@ -1,7 +1,6 @@
 // lib/widgets/explore_rail.dart
 import 'package:flutter/material.dart';
 import '../services/paint_query_service.dart';
-import '../widgets/paint_swatch_card.dart';
 import '../widgets/fancy_paint_tile.dart';
 import '../widgets/staggered_entrance.dart';
 import '../firestore/firestore_data_schema.dart';

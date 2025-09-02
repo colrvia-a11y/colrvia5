@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:color_canvas/models/color_plan.dart';
 
 Future<void> main() async {
@@ -36,9 +37,9 @@ Future<void> main() async {
         });
         await planRef.set(plan.toJson());
         migrated++;
-        print('Migrated story ${s.id} -> plan ${planRef.id}');
+        debugPrint('Migrated story ${s.id} -> plan ${planRef.id}');
       }
     }
   }
-  print('Total migrated plans: $migrated');
+  debugPrint('Total migrated plans: $migrated');
 }

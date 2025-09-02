@@ -22,18 +22,20 @@ Future<LightingProfile?> showLightingProfilePicker(
                   child: Text('Lighting Profile',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
-                ...LightingProfile.values.map(
-                  (p) => ListTile(
-                    title: Text(p.label),
-                    leading: Radio<LightingProfile>(
-                      value: p,
-                      groupValue: temp,
-                      onChanged: (v) => setState(() => temp = v ?? temp),
-                    ),
-                    onTap: () {
-                      if (p != temp) {
-                        setState(() => temp = p);
-                      }
+                                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SegmentedButton<LightingProfile>(
+                    segments: LightingProfile.values
+                        .map((p) => ButtonSegment<LightingProfile>(
+                              value: p,
+                              label: Text(p.label),
+                            ))
+                        .toList(),
+                    selected: {temp},
+                    onSelectionChanged: (selection) {
+                      setState(() {
+                        temp = selection.first;
+                      });
                     },
                   ),
                 ),
