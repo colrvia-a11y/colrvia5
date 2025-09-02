@@ -1,12 +1,45 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
-import 'package:color_canvas/models/project.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/services/project_service.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/services/auth_guard.dart';
+import 'package:color_canvas/services/user_prefs_service.dart';
+import 'package:color_canvas/services/journey/journey_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:color_canvas/screens/visualizer_screen.dart';
+
+typedef CreatePaletteFn = Future<String> Function({
+  required String userId,
+  required String name,
+  required List<PaletteColor> colors,
+  List<String> tags,
+  String notes,
+});
+typedef CreateProjectFn = Future<String> Function({
+  required String ownerId,
+  String? title,
+  String? activePaletteId,
+  List<String> paletteIds,
+});
+typedef AttachPaletteFn = Future<void> Function(String projectId, String paletteId);
+typedef SetLastProjectFn = Future<void> Function(String projectId, String screen);
+typedef EnsureSignedInFn = Future<void> Function(BuildContext context);
+typedef GetUidFn = String? Function();
+
+@visibleForTesting
+CreatePaletteFn createPaletteFn = FirebaseService.createPalette;
+@visibleForTesting
+CreateProjectFn createProjectFn = ProjectService.create;
+@visibleForTesting
+AttachPaletteFn attachPaletteFn = ProjectService.attachPalette;
+@visibleForTesting
+SetLastProjectFn setLastProjectFn = UserPrefsService.setLastProject;
+@visibleForTesting
+EnsureSignedInFn ensureSignedInFn = AuthGuard.ensureSignedIn;
+@visibleForTesting
+GetUidFn getUidFn = () => FirebaseAuth.instance.currentUser?.uid;
 
 class SavePalettePanel extends StatefulWidget {
   final String? projectId;
@@ -81,8 +114,8 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
     setState(() => _isSaving = true);
 
     try {
-      await AuthGuard.ensureSignedIn(context);
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      await ensureSignedInFn(context);
+      final uid = getUidFn();
       if (uid == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +151,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
         updatedAt: DateTime.now(),
       );
 
-      final savedPalette = await FirebaseService.createPalette(
+      final savedPaletteId = await createPaletteFn(
         userId: uid,
         name: palette.name,
         colors: palette.colors,
@@ -134,24 +167,30 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
           'tags': palette.tags,
         });
 
-        final savedPaletteId = savedPalette; // your existing var
         String? projectId = widget.projectId; // Use existing projectId if available
 
         if (projectId == null) {
           // Create a new project if none exists
-          final newProject = await ProjectService.create(
+          projectId = await createProjectFn(
             ownerId: uid,
             title: palette.name,
             activePaletteId: savedPaletteId,
+            paletteIds: const [],
           );
-          projectId = newProject.id;
         } else {
           // Attach palette to existing project
-          await ProjectService.attachPalette(projectId, savedPaletteId);
+          await attachPaletteFn(projectId, savedPaletteId);
         }
 
         // Persist lastOpenedProjectId
-        await UserPrefsService.setLastProject(projectId, 'roller');
+        await setLastProjectFn(projectId, 'roller');
+
+        final journey = JourneyService.instance;
+        final curr = journey.state.value;
+        if (curr != null && curr.projectId == null) {
+          journey.state.value = curr.copyWith(projectId: projectId);
+        }
+        await journey.completeCurrentStep(artifacts: {'paletteId': savedPaletteId});
 
         // Show subtle success snackbar
         widget.onSaved(); // Close save panel first
@@ -172,7 +211,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
           ),
         );
         AnalyticsService.instance
-            .logRollerSaveToProject(project?.id ?? 'none', savedPaletteId);
+            .logRollerSaveToProject(projectId ?? 'none', savedPaletteId);
       }
     } catch (e) {
       debugPrint('Save palette failed: $e');
