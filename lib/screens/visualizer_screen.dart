@@ -7,6 +7,7 @@ import 'dart:async';
 import '../services/gemini_ai_service.dart';
 import '../services/surface_detection_service.dart';
 import '../services/photo_library_service.dart';
+import '../services/journey/journey_service.dart';
 import '../firestore/firestore_data_schema.dart';
 import 'photo_library_screen.dart';
 
@@ -1943,6 +1944,21 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     final bytes = await file.readAsBytes();
     setState(() => _originalImage = bytes);
 
+    try {
+      final photoId = await PhotoLibraryService.savePhoto(
+        imageData: bytes,
+        description: 'Original Photo',
+        metadata: {
+          'source': 'visualizer_photo',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+      await JourneyService.instance.setArtifact('photoId', photoId);
+      await JourneyService.instance.completeCurrentStep();
+    } catch (e) {
+      debugPrint('Failed to save photo: $e');
+    }
+
     // Note: Analysis will be triggered manually by user pressing "Analyze Image" button
     debugPrint('📷 Image selected and ready for analysis');
   }
@@ -2112,6 +2128,21 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
       _navigateToMode(VisualizerMode.results);
       _resultsController.forward();
+
+      final renderIds = <String>[];
+      for (final v in variants) {
+        final id = await PhotoLibraryService.savePhoto(
+          imageData: v.imageData,
+          description: v.description,
+          metadata: {
+            'source': 'visualizer_render',
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+        renderIds.add(id);
+      }
+      await JourneyService.instance.setArtifact('renderIds', renderIds);
+      await JourneyService.instance.completeCurrentStep();
     } catch (e) {
       debugPrint('❌ Generation failed: $e');
       _showError('Failed to generate visualizations. Please try again.');

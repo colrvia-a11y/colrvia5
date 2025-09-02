@@ -12,6 +12,7 @@ import 'roller_screen.dart';
 import 'visualizer_screen.dart';
 import 'learn_screen.dart';
 import 'review_contrast_screen.dart';
+import 'export_guide_screen.dart';
 
 /// ✨ Create Hub — Guided (orchestrated) + Tools tabs
 class CreateHubScreen extends StatefulWidget {
@@ -188,6 +189,15 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
       case 'visualizer.photo':
       case 'visualizer.generate':
         _open(context, const VisualizerScreen());
+        break;
+      case 'guide.export':
+        final pid = s?.projectId;
+        if (pid != null) {
+          _open(context, ExportGuideScreen(projectId: pid));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No project found')));
+        }
         break;
       default:
         // default to Create hub or show dialog

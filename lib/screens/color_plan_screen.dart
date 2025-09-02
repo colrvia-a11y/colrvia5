@@ -3,6 +3,7 @@ import '../models/color_plan.dart';
 import '../services/color_plan_service.dart';
 import '../services/analytics_service.dart';
 import '../services/user_prefs_service.dart';
+import '../services/journey/journey_service.dart';
 
 class ColorPlanScreen extends StatefulWidget {
   final String projectId;
@@ -54,6 +55,9 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
         paletteColorIds: widget.paletteColorIds!,
         context: {'lightingProfile': 'auto'},
       );
+
+      await JourneyService.instance
+          .completeCurrentStep(artifacts: {'planId': plan.id});
 
       // Telemetry - record plan generation details using structured params
       await AnalyticsService.instance.logEvent('plan_generated', {

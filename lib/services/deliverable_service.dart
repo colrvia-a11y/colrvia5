@@ -1,24 +1,31 @@
-// lib/services/deliverable_service.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:logging/logging.dart';
 
-/// Placeholder for server-side PDF export integration.
-/// Call `exportGuide(projectId)` to set `journey.artifacts.guideUrl` when server is ready.
+import 'analytics_service.dart';
+import 'journey/journey_service.dart';
+
 class DeliverableService {
-  static final _db = FirebaseFirestore.instance;
+  DeliverableService._();
+  static final DeliverableService instance = DeliverableService._();
 
-  static Future<void> saveGuideUrl(String projectId, String url) async {
-    await _db.collection('projects').doc(projectId).set({
-      'journey': {
-        'artifacts': {'guideUrl': url}
-      }
-    }, SetOptions(merge: true));
-  }
+  final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+  final _log = Logger('DeliverableService');
 
-  /// TODO: integrate with a callable function or HTTPS endpoint.
-  static Future<String?> exportGuide(String projectId) async {
-    debugPrint('DeliverableService.exportGuide: stub called for $projectId');
-    // Return null to indicate not yet available
-    return null;
+  Future<String> exportGuide(String projectId) async {
+    final callable = _functions.httpsCallable('exportColorStory');
+    try {
+      final resp = await callable.call({'projectId': projectId});
+      final data = Map<String, dynamic>.from(resp.data as Map);
+      final url = data['url'] as String;
+      await JourneyService.instance.setArtifact('guideUrl', url);
+      await AnalyticsService.instance.logEvent('guide_export_success');
+      await JourneyService.instance.completeCurrentStep();
+      _log.info('guide_export_success');
+      return url;
+    } catch (e, st) {
+      await AnalyticsService.instance.logEvent('guide_export_fail');
+      _log.severe('guide_export_fail', e, st);
+      rethrow;
+    }
   }
 }
