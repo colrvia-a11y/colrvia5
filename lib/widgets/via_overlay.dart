@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/via_service.dart';
 import '../services/analytics_service.dart';
+import '../services/journey/journey_service.dart';
 
 /// Premium floating assistant overlay for "Via".
 /// Overlay-only: access bubble lives in HomeScreen.
@@ -187,41 +188,43 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
   // --- Suggestions -----------------------------------------------------------
 
   List<_Suggestion> _buildSuggestions() {
-    final ctx = widget.contextLabel.toLowerCase();
-    final List<_Suggestion> base = [
-      _Suggestion("Suggest a paint color",
-          "Suggest a paint color for my space based on undertone harmony and LRV balance."),
-      _Suggestion("Find a replacement color",
-          "Find close replacements (same vibe) with ΔLRV and undertone shift."),
-      _Suggestion("Talk about lighting",
-          "Consider my room’s orientation and time of day. How will lighting affect color?"),
-      _Suggestion("Match a photo", "Match the main color from this photo and suggest complements.",
-          needsImage: true),
-      _Suggestion("Visualize this room", "Open the visualizer with this palette and apply to walls.",
-          onTapOverride: widget.onVisualize),
-      _Suggestion("Build a plan", "Create a quick ‘how to use’ plan for this palette.",
-          onTapOverride: widget.onMakePlan),
-    ];
-
-    if (ctx.contains('roller')) {
-      base.insertAll(0, [
-        _Suggestion("Balance undertones", "Help me balance undertones and avoid muddy mixes."),
-        _Suggestion("Add bridge color", "Suggest a bridge/transition color between anchor and accent."),
-      ]);
-    } else if (ctx.contains('visualizer')) {
-      base.insertAll(0, [
-        _Suggestion("Refine edges", "Sharpen mask edges and fix spill on trim."),
-        _Suggestion("Try 10% darker", "Show a 10% darker simulation with sheen kept the same."),
-      ]);
-    } else if (ctx.contains('project')) {
-      base.insertAll(0, [
-        _Suggestion("Room plan", "Turn this palette into a room plan with finishes and sheens."),
-        _Suggestion("Export palette", "Export a palette card with usage notes."),
-      ]);
+    final step = JourneyService.instance.state.value?.currentStepId;
+    switch (step) {
+      case 'interview.basic':
+        return [
+          _Suggestion('How do I answer?', 'Give me tips for the interview.'),
+          _Suggestion('Suggest a palette', 'Suggest a starting palette.'),
+        ];
+      case 'roller.build':
+        return [
+          _Suggestion('Balance undertones', 'Help me balance undertones.'),
+          _Suggestion('Add bridge color', 'Suggest a bridge color between hues.'),
+        ];
+      case 'visualizer.photo':
+        return [
+          _Suggestion('Pick a good photo', 'What makes a good reference photo?'),
+        ];
+      case 'visualizer.generate':
+        return [
+          _Suggestion('Refine edges', 'Sharpen mask edges and fix spill.'),
+          _Suggestion('Try 10% darker', 'Show a slightly darker simulation.'),
+        ];
+      case 'plan.create':
+        return [
+          _Suggestion('Room plan tips', 'How should I use these colors?'),
+        ];
+      case 'guide.export':
+        return [
+          _Suggestion('What\'s next?', 'How do I share this guide?'),
+        ];
+      default:
+        return [
+          _Suggestion('Suggest a paint color',
+              'Suggest a paint color for my space.'),
+          _Suggestion('Talk about lighting',
+              'Consider my room\'s orientation and time of day.'),
+        ];
     }
-
-    // Remove any that rely on callbacks if they’re not wired.
-    return base.where((s) => !(s.onTapOverride == null && s.requiresCallback)).toList();
   }
 
   // --- Build -----------------------------------------------------------------

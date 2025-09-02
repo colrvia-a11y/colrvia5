@@ -34,6 +34,9 @@ class _ColorPlanScreenState extends State<ColorPlanScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': JourneyService.instance.state.value?.currentStepId ?? 'plan.create',
+    });
     UserPrefsService.setLastProject(widget.projectId, 'plan');
     _generate();
   }

@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 admin.initializeApp();
 
 const rateLimits = new Map();
@@ -12,6 +13,16 @@ function checkRate(uid, name, ms) {
     throw new functions.https.HttpsError('resource-exhausted', 'Too many requests');
   }
   rateLimits.set(key, now);
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  if (!m) return { r: 1, g: 1, b: 1 };
+  return {
+    r: parseInt(m[1], 16) / 255,
+    g: parseInt(m[2], 16) / 255,
+    b: parseInt(m[3], 16) / 255,
+  };
 }
 
 // REGION: generateColorPlanV2
@@ -169,4 +180,86 @@ exports.awardReferral = functions.https.onCall(async (data, context) => {
   return { ok: true };
 });
 // END REGION: awardReferral
+
+// REGION: exportColorStory
+exports.exportColorStory = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Auth required');
+  }
+  checkRate(context.auth.uid, 'exportColorStory', 5000);
+
+  const { projectId } = data || {};
+  if (typeof projectId !== 'string') {
+    functions.logger.info('function_input_invalid', { name: 'exportColorStory' });
+    throw new functions.https.HttpsError('invalid-argument', 'projectId required');
+  }
+
+  const db = admin.firestore();
+  const projectSnap = await db.collection('projects').doc(projectId).get();
+  if (!projectSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'project missing');
+  }
+  const project = projectSnap.data() || {};
+  const artifacts = project.journey?.artifacts || {};
+  const answers = artifacts.answers || {};
+
+  let palette;
+  if (artifacts.paletteId) {
+    const palSnap = await db.collection('palettes').doc(artifacts.paletteId).get();
+    if (palSnap.exists) palette = palSnap.data();
+  }
+
+  let plan;
+  if (artifacts.planId) {
+    const planSnap = await db.collection('plans').doc(artifacts.planId).get();
+    if (planSnap.exists) plan = planSnap.data();
+  }
+
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage();
+  const { width, height } = page.getSize();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  let y = height - 40;
+  page.drawText(project.name || 'Color Story', { x: 40, y, size: 24, font });
+  y -= 30;
+  for (const [k, v] of Object.entries(answers)) {
+    page.drawText(`${k}: ${v}`, { x: 40, y, size: 12, font });
+    y -= 14;
+  }
+  if (palette?.items?.length) {
+    y -= 20;
+    let x = 40;
+    const sw = 40;
+    for (const item of palette.items.slice(0, 5)) {
+      const { r, g, b } = hexToRgb(item.hex || '#ffffff');
+      page.drawRectangle({
+        x,
+        y,
+        width: sw,
+        height: sw,
+        color: rgb(r, g, b),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
+      x += sw + 10;
+    }
+    y -= sw + 20;
+  }
+
+  if (plan?.sampleSequence?.length) {
+    for (const line of plan.sampleSequence) {
+      page.drawText(`- ${line}`, { x: 40, y, size: 12, font });
+      y -= 14;
+    }
+  }
+
+  const pdfBytes = await pdf.save();
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(`projects/${projectId}/guide.pdf`);
+  await file.save(pdfBytes, { contentType: 'application/pdf' });
+  const [url] = await file.getSignedUrl({ action: 'read', expires: Date.now() + 3600 * 1000 });
+  functions.logger.info('guide_export_success', { projectId });
+  return { url };
+});
+// END REGION: exportColorStory
 

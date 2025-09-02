@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:color_canvas/services/journey/journey_service.dart';
 import 'package:color_canvas/services/journey/default_color_story_v1.dart';
 import 'package:color_canvas/widgets/journey_timeline.dart';
+import 'package:color_canvas/services/project_service.dart';
+import 'package:color_canvas/services/user_prefs_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'interview_screen.dart';
 import 'roller_screen.dart';
@@ -28,6 +31,7 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
   late final TabController _tab;
   final JourneyService _journey = JourneyService.instance;
   bool _loaded = false;
+  bool _hasProjects = true;
 
   @override
   void initState() {
@@ -40,8 +44,9 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
     // Show UI immediately; journey loads in background
     if (mounted) setState(() => _loaded = true);
     try {
+      final projects = await ProjectService.myProjectsStream(limit: 1).first;
+      _hasProjects = projects.isNotEmpty;
       await _journey.loadForLastProject();
-      // Optionally refresh small parts of the UI after load
       if (mounted) setState(() {});
     } catch (e) {
       // If journey fails, initialize a safe default state
@@ -101,6 +106,29 @@ class _CreateHubScreenState extends State<CreateHubScreen> with TickerProviderSt
 
   Widget _buildGuided(BuildContext context) {
     final journey = _journey;
+    if (!_hasProjects) {
+      return Center(
+        child: Semantics(
+          label: 'Start your Color Story',
+          button: true,
+          child: FilledButton(
+            onPressed: () async {
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+            if (uid == null) return;
+            final pid = await ProjectService.create(ownerId: uid);
+            await UserPrefsService.setLastProject(pid, 'create');
+            await _journey.loadForProject(pid);
+            if (mounted) {
+              setState(() {
+                _hasProjects = true;
+              });
+            }
+          },
+          child: const Text('Start your Color Story'),
+        ),
+        ),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(

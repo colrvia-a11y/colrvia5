@@ -7,6 +7,7 @@ import 'package:color_canvas/services/user_prefs_service.dart';
 import 'package:color_canvas/models/project.dart';
 import 'package:color_canvas/services/journey/journey_models.dart';
 import 'package:color_canvas/services/journey/default_color_story_v1.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 
 /// Thin orchestrator that persists step state into the project doc under `journey`.
 class JourneyService {
@@ -117,6 +118,16 @@ class JourneyService {
     if (s.projectId != null && stage != null) {
       await ProjectService.setFunnelStage(s.projectId!, stage);
     }
+    final analytics = AnalyticsService.instance;
+    analytics.log('journey_step_complete', {
+      'step_id': step.id,
+      'next_step_id': nextId,
+    });
+    if (artifacts != null) {
+      for (final key in artifacts.keys) {
+        analytics.log('artifact_created', {'key': key});
+      }
+    }
 
     await _persist(updated);
   }
@@ -126,6 +137,7 @@ class JourneyService {
     if (s == null) return;
     final art = Map<String, dynamic>.of(s.artifacts);
     art[key] = value;
+    AnalyticsService.instance.log('artifact_created', {'key': key});
     await _persist(s.copyWith(artifacts: art));
   }
 

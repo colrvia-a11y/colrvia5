@@ -8,6 +8,7 @@ import '../services/gemini_ai_service.dart';
 import '../services/surface_detection_service.dart';
 import '../services/photo_library_service.dart';
 import '../services/journey/journey_service.dart';
+import '../services/analytics_service.dart';
 import '../firestore/firestore_data_schema.dart';
 import 'photo_library_screen.dart';
 
@@ -63,6 +64,9 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': JourneyService.instance.state.value?.currentStepId ?? 'visualizer.photo',
+    });
     _initializeAnimations();
     _loadInitialData();
   }

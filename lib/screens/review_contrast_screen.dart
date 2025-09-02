@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:color_canvas/services/journey/journey_service.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 
-class ReviewContrastScreen extends StatelessWidget {
+class ReviewContrastScreen extends StatefulWidget {
   const ReviewContrastScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final journey = JourneyService.instance;
-    final colors = (journey.state.value?.artifacts['palettePreview'] as List?)
+  State<ReviewContrastScreen> createState() => _ReviewContrastScreenState();
+}
+
+class _ReviewContrastScreenState extends State<ReviewContrastScreen> {
+  final JourneyService journey = JourneyService.instance;
+  late final List<String> colors;
+
+  @override
+  void initState() {
+    super.initState();
+    colors = (journey.state.value?.artifacts['palettePreview'] as List?)
             ?.cast<String>() ??
         const <String>[];
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': journey.state.value?.currentStepId ?? 'review.contrast',
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Contrast Review')),
       body: Column(
@@ -30,8 +46,7 @@ class ReviewContrastScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: FilledButton(
               onPressed: () async {
-                await journey.setArtifact(
-                    'contrastReport', {'checked': true});
+                await journey.setArtifact('contrastReport', {'checked': true});
                 await journey.completeCurrentStep();
                 if (context.mounted) {
                   Navigator.of(context).maybePop();
@@ -52,10 +67,12 @@ class _SwatchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        Color(int.parse(hex.replaceAll('#', ''), radix: 16) | 0xFF000000);
+    final color = Color(int.parse(hex.replaceAll('#', ''), radix: 16) | 0xFF000000);
     return ListTile(
-      leading: Container(width: 40, height: 40, color: color),
+      leading: Semantics(
+        label: 'Color swatch $hex',
+        child: Container(width: 40, height: 40, color: color),
+      ),
       title: Text('Sample text', style: TextStyle(color: _contrast(color))),
     );
   }
