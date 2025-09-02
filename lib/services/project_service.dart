@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart'; // Added this import
 import 'package:flutter/foundation.dart';
 import '../models/project.dart';
 import '../services/analytics_service.dart';
-import 'sync_queue_service.dart';
 
 class ProjectService {
   static final _db = FirebaseFirestore.instance;
@@ -12,16 +11,7 @@ class ProjectService {
   static String? get _uid => _auth.currentUser?.uid; // Keep this
   static CollectionReference get _col => _db.collection('projects');
 
-  // Keep the SyncQueueService registration if it's still needed
-  static final SyncQueueService _queue = SyncQueueService.instance
-    ..registerHandler('createProject', (p) async {
-      await create(
-        ownerId: p['ownerId'] as String, // Changed to ownerId
-        title: p['title'] as String,
-        activePaletteId: p['activePaletteId'] as String?, // Changed to activePaletteId
-        paletteIds: List<String>.from(p['paletteIds'] as List? ?? []), // Changed to paletteIds
-      );
-    });
+
 
   static Stream<List<ProjectDoc>> myProjectsStream({int limit = 50}) {
     final uid = _uid;

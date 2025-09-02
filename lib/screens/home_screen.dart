@@ -277,8 +277,8 @@ class _NavSquareButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const double size = 56;
-    final Color bgColor = Colors.black.withOpacity(0.20);
-    final Color iconColor = selected ? kPeach : Colors.white.withOpacity(0.90);
+    final Color bgColor = Colors.black.withValues(alpha: (0.20 * 255));
+    final Color iconColor = selected ? kPeach : Colors.white.withValues(alpha: (0.90 * 255));
     final Color borderColor = selected ? kPeach : Colors.transparent;
 
     final button = SizedBox(
@@ -304,7 +304,7 @@ class _NavSquareButton extends StatelessWidget {
                   BoxShadow(
                     blurRadius: 8,
                     offset: const Offset(0, 2),
-                    color: Colors.black.withOpacity(0.10),
+                    color: Colors.black.withValues(alpha: (0.10 * 255)),
                   ),
                 ],
               ),

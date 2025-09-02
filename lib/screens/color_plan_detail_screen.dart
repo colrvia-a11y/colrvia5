@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/color_story.dart';
 import '../models/color_plan.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

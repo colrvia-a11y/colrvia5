@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/utils/color_utils.dart';
@@ -284,9 +285,10 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
 
                   // Create project first, then navigate to wizard
                   try {
-                    final project = await ProjectService.create(
+                    final projectId = await ProjectService.create(
+                      ownerId: FirebaseAuth.instance.currentUser!.uid,
                       title: '${widget.palette.name} Story',
-                      paletteId: widget.palette.id,
+                      activePaletteId: widget.palette.id,
                     );
 
                     if (!context.mounted) return;
@@ -294,7 +296,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ColorPlanScreen(
-                          projectId: project.id,
+                          projectId: projectId,
                           paletteId: widget.palette.id,
                         ),
                       ),
@@ -304,7 +306,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                         .logEvent('palette_detail_create_story', {
                       'palette_id': widget.palette.id,
                       'color_count': widget.palette.colors.length,
-                      'project_id': project.id,
+                      'project_id': projectId,
                     });
                   } catch (e) {
                     if (!context.mounted) return;

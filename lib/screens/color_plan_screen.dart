@@ -4,7 +4,6 @@ import '../services/color_plan_service.dart';
 import '../services/analytics_service.dart';
 import '../services/user_prefs_service.dart';
 import '../services/journey/journey_service.dart';
-import 'package:meta/meta.dart';
 
 typedef SetLastProjectFn = Future<void> Function(String projectId, String screen);
 

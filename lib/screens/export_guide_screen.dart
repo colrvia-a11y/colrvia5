@@ -18,6 +18,7 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
   String? _url;
   bool _loading = true;
   String? _error;
+  late final WebViewController _controller;
 
   @override
   void initState() {
@@ -26,12 +27,22 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
       'step_id': JourneyService.instance.state.value?.currentStepId ?? 'guide.export',
     });
     _load();
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
   }
 
   Future<void> _load() async {
     try {
       final url = await DeliverableService.instance.exportGuide(widget.projectId);
-      if (mounted) setState(() => _url = url);
+      if (mounted) {
+        setState(() {
+          _url = url;
+          if (_url != null) {
+            _controller.loadRequest(Uri.parse(_url!));
+          }
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -57,14 +68,11 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: 'Share guide',
-            onPressed: () => Share.share(_url!),
+            onPressed: () => SharePlus.instance.share(ShareParams(text: _url!)),
           ),
         ],
       ),
-      body: WebView(
-        initialUrl: _url!,
-        javascriptMode: JavascriptMode.unrestricted,
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

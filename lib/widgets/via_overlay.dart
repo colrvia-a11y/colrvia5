@@ -318,11 +318,7 @@ class _ViaOverlayState extends State<ViaOverlay> with TickerProviderStateMixin {
                               s.onTapOverride!();
                               return;
                             }
-                            if (s.needsImage) {
-                              _send(s.prompt);
-                            } else {
-                              _send(s.prompt);
-                            }
+                            _send(s.prompt);
                             _expand();
                           },
                         ),
@@ -717,11 +713,10 @@ class _ChatBubble {
 class _Suggestion {
   final String label;
   final String prompt;
-  final bool needsImage;
   final bool requiresCallback;
   final VoidCallback? onTapOverride;
 
   _Suggestion(this.label, this.prompt,
-      {this.needsImage = false, this.onTapOverride, bool? requiresCallback})
+      {this.onTapOverride, bool? requiresCallback})
       : requiresCallback = requiresCallback ?? (onTapOverride != null);
 }

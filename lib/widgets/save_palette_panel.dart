@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
@@ -211,7 +210,7 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
           ),
         );
         AnalyticsService.instance
-            .logRollerSaveToProject(projectId ?? 'none', savedPaletteId);
+            .logRollerSaveToProject(projectId, savedPaletteId);
       }
     } catch (e) {
       debugPrint('Save palette failed: $e');
