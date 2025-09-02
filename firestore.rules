@@ -3,21 +3,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn()       { return request.auth != null; }
-    function isOwner()        { return signedIn() && resource.data.ownerId == request.auth.uid; }
-    function isOwnerCreate()  { return signedIn() && request.resource.data.ownerId == request.auth.uid; }
+    function isProjectOwner() { return signedIn() && resource.data.ownerId == request.auth.uid; }
+    function canCreateProject() { return signedIn() && request.resource.data.ownerId == request.auth.uid; }
+    function isPaletteOwner() { return signedIn() && resource.data.userId == request.auth.uid; }
+    function canCreatePalette() { return signedIn() && request.resource.data.userId == request.auth.uid; }
 
-    // palettes: if your code writes userId on palettes, keep these as-is
+    // palettes owned by userId
     match /palettes/{paletteId} {
-      allow read:   if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isOwnerCreate() || (signedIn() && request.resource.data.userId == request.auth.uid);
-      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isPaletteOwner();
+      allow create: if canCreatePalette();
     }
 
-    // projects: use ownerId (NOT userId)
+    // projects owned by ownerId
     match /projects/{projectId} {
-      allow read:   if isOwner();
-      allow create: if isOwnerCreate();
-      allow update, delete: if isOwner();
+      allow read, update, delete: if isProjectOwner();
+      allow create: if canCreateProject();
     }
 
     match /{document=**} { allow read, write: if false; }

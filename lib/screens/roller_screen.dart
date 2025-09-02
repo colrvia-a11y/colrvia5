@@ -23,6 +23,7 @@ import 'package:color_canvas/services/user_prefs_service.dart';
 import 'package:color_canvas/utils/palette_transforms.dart' as transforms;
 import 'package:color_canvas/utils/lab.dart';
 import 'package:color_canvas/services/project_service.dart';
+import 'package:color_canvas/services/journey/journey_service.dart';
 
 import 'package:color_canvas/models/fixed_elements.dart';
 import 'package:color_canvas/services/accessibility_service.dart';
@@ -172,6 +173,9 @@ class _RollerScreenState extends RollerScreenStatePublic {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': JourneyService.instance.state.value?.currentStepId ?? 'roller.build',
+    });
     AccessibilityService.instance
         .addListener(() => mounted ? setState(() {}) : null);
     AccessibilityService.instance.load();

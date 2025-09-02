@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:color_canvas/services/journey/journey_service.dart';
 import '../services/create_flow_progress.dart';
+import 'package:color_canvas/services/analytics_service.dart';
 
 class InterviewScreen extends StatefulWidget {
   const InterviewScreen({super.key});
@@ -13,6 +14,14 @@ class _InterviewScreenState extends State<InterviewScreen> {
   int _currentStep = 0;
   final int _totalSteps = 5; // Example total steps
   final Map<String, dynamic> _answers = <String, dynamic>{};
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': JourneyService.instance.state.value?.currentStepId ?? 'interview.basic',
+    });
+  }
 
   void _onStepChanged(int step, int total) {
     CreateFlowProgress.instance.set('interview', step / total);

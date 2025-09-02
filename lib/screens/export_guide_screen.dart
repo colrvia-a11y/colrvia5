@@ -3,6 +3,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../services/deliverable_service.dart';
+import '../services/analytics_service.dart';
+import '../services/journey/journey_service.dart';
 
 class ExportGuideScreen extends StatefulWidget {
   final String projectId;
@@ -20,6 +22,9 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.log('journey_step_view', {
+      'step_id': JourneyService.instance.state.value?.currentStepId ?? 'guide.export',
+    });
     _load();
   }
 
@@ -51,6 +56,7 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
+            tooltip: 'Share guide',
             onPressed: () => Share.share(_url!),
           ),
         ],
