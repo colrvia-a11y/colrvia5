@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:color_canvas/screens/interview_screen.dart';
+import 'package:color_canvas/screens/interview_screen.dart'; // Subject under test
 import 'package:color_canvas/services/journey/journey_service.dart';
 import 'package:color_canvas/services/journey/default_color_story_v1.dart';
 import 'package:color_canvas/services/journey/journey_models.dart';
