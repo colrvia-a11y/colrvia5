@@ -1,0 +1,3 @@
+- lib/widgets/gradient_fallback_hero.dart: This file may contain relevant code for implementing gradient backgrounds, which could be useful for enhancing text readability in the overlay.
+- lib/screens/home_screen.dart: This file references the `via_overlay.dart` and may provide insights into how the overlay is integrated within the overall application structure, including navigation and user interactions.
+- lib/services/via_service.dart: This service may contain logic related to the functionality of the Via assistant, which could be beneficial for understanding how to extend or modify the existing features in the overlay.

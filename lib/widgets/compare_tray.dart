@@ -19,7 +19,8 @@ class CompareTray extends StatelessWidget {
     this.onTapPaint,
   });
 
-  static const double height = 66;
+  // Increased to ensure enough vertical space for ridge + spacing + 44px tiles + padding
+  static const double height = 80;
 
   @override
   Widget build(BuildContext context) {
@@ -54,48 +55,51 @@ class CompareTray extends StatelessWidget {
                   children: [
                     // mini carousel
                     Expanded(
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) {
-                          final p = items[i];
-                          final c = ColorUtils.getPaintColor(p.hex);
-                          return GestureDetector(
-                            onTap: onTapPaint == null ? null : () => onTapPaint!(p),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: c,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.25)),
-                                  ),
-                                ),
-                                if (onRemoveOne != null)
-                                  Positioned(
-                                    right: -6,
-                                    top: -6,
-                                    child: InkWell(
-                                      onTap: () => onRemoveOne!(p),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.surface,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6)],
-                                        ),
-                                        child: Icon(Icons.close, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-                                      ),
+                      child: SizedBox(
+                        height: 44,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: items.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (_, i) {
+                            final p = items[i];
+                            final c = ColorUtils.getPaintColor(p.hex);
+                            return GestureDetector(
+                              onTap: onTapPaint == null ? null : () => onTapPaint!(p),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: c,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.25)),
                                     ),
                                   ),
-                              ],
-                            ),
-                          );
-                        },
+                                  if (onRemoveOne != null)
+                                    Positioned(
+                                      right: -6,
+                                      top: -6,
+                                      child: InkWell(
+                                        onTap: () => onRemoveOne!(p),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.surface,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6)],
+                                          ),
+                                          child: Icon(Icons.close, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
 
