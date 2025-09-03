@@ -105,7 +105,6 @@ void main() async {
     await NotificationsService.instance.init();
 
     Debug.info('App', 'main', 'Running app');
-    runApp(const MyApp());
   } catch (e, stack) {
     // Handle Firebase initialization errors
     isFirebaseInitialized = false;
@@ -115,6 +114,7 @@ void main() async {
 }, (error, stack) {
   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
 });
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

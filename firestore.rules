@@ -20,6 +20,15 @@ service cloud.firestore {
       allow create: if canCreateProject();
     }
 
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+
+      // Allow read/write to all subcollections and documents under a user's path
+      match /{documents=**} {
+        allow read, write: if request.auth.uid == userId;
+      }
+    }
+
     match /{document=**} { allow read, write: if false; }
   }
 }
