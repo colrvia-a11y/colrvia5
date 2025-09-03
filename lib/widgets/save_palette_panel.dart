@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // for @visibleForTesting, debugPrint
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
 import 'package:color_canvas/services/firebase_service.dart';
 import 'package:color_canvas/services/project_service.dart';
@@ -64,6 +65,12 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
   final List<String> _tags = [];
   final _tagController = TextEditingController();
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.logEvent('save_palette_panel_opened');
+  }
 
   static const List<String> quickTags = [
     'Living Room',
@@ -160,10 +167,9 @@ class _SavePalettePanelState extends State<SavePalettePanel> {
 
       if (mounted) {
         // Track successful save
-        AnalyticsService.instance.logEvent('palette_saved', {
+        AnalyticsService.instance.logEvent('save_palette_completed', {
           'palette_name': palette.name,
           'color_count': palette.colors.length,
-          'tags': palette.tags,
         });
 
         String? projectId = widget.projectId; // Use existing projectId if available

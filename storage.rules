@@ -77,6 +77,10 @@ service firebase.storage {
       allow read, write: if isAdmin(); // Only admins can upload data files
     }
     
+    match /users/{uid}/transcripts/{sessionId}.json {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    
     // Default deny for any other paths
     match /{allPaths=**} {
       allow read, write: if false;

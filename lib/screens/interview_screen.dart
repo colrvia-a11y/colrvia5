@@ -1,12 +1,17 @@
- // lib/screens/interview_screen.dart
+// lib/screens/interview_screen.dart
 import 'package:flutter/material.dart';
 import 'package:color_canvas/services/journey/journey_service.dart';
 import 'package:color_canvas/services/create_flow_progress.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/services/interview_engine.dart';
 import 'package:color_canvas/services/voice_assistant.dart';
+import 'package:color_canvas/screens/interview_review_screen.dart';
+import 'package:color_canvas/screens/talk_entry_screen.dart';
 import 'package:color_canvas/services/schema_interview_compiler.dart';
 import 'package:color_canvas/widgets/interview_widgets.dart';
+import 'package:color_canvas/widgets/photo_picker_inline.dart';
+import 'package:color_canvas/services/nlu_enum_mapper.dart';
+import 'package:color_canvas/services/transcript_recorder.dart';
 
 enum InterviewMode { text, talk }
 
@@ -21,6 +26,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
   late InterviewEngine _engine; // built after schema load
   final _voice = VoiceAssistant();
   final _scroll = ScrollController();
+  final _transcript = TranscriptRecorder();
 
   InterviewMode _mode = InterviewMode.text;
   InterviewDepth _depth = InterviewDepth.quick;
@@ -70,6 +76,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
   }
 
   void _enqueueSystem(String text) {
+    _transcript.add(TranscriptEvent(type: 'question', text: _engine.current!.title, promptId: _engine.current!.id));
     setState(() => _messages.add(_Message.system(text)));
     _autoScroll();
   }
@@ -96,15 +103,34 @@ class _InterviewScreenState extends State<InterviewScreen> {
   }
 
   Future<void> _finish() async {
+    // Persist current answers
     await journey.setArtifact('answers', _engine.answers);
     await AnalyticsService.instance.logEvent('interview_completed');
-    await journey.completeCurrentStep();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nice! Generating your palette…')),
-      );
-      Navigator.of(context).maybePop();
+    try {
+      await _transcript.uploadJson();
+    } catch (_) {}
+
+    // Navigate to Review (and await potential deep-link edit requests)
+    final result = await Navigator.of(context).push<Map<String, String>?>(
+      MaterialPageRoute(
+        builder: (_) => InterviewReviewScreen(engine: _engine),
+        fullscreenDialog: true,
+      ),
+    );
+
+    // If review asked to jump back to a specific prompt, do it and continue chat
+    final jumpTo = result != null ? result['jumpTo'] : null;
+    if (jumpTo != null && jumpTo.isNotEmpty) {
+      _engine.jumpTo(jumpTo);
+      if (_engine.current != null) {
+        _enqueueSystem('Let\'s update: ' + _engine.current!.title);
+        if (_mode == InterviewMode.talk) _voice.speak(_engine.current!.title);
+      }
+      return; // back to chat to edit
     }
+
+    // If review confirmed (no jump back), the Review screen already completed the journey.
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   Future<void> _submitFreeText(String text) async {
@@ -146,66 +172,96 @@ class _InterviewScreenState extends State<InterviewScreen> {
     }
   }
 
-  // ---- Voice helpers (kept from Patch 2) ----
-  final Map<String, List<String>> _synonyms = {
-    'veryBright': ['very bright','tons of light','super bright','flooded'],
-    'kindaBright': ['pretty bright','fairly bright','some light','medium bright'],
-    'dim': ['dim','dark','little light','not much light'],
-    'cozyYellow_2700K': ['warm bulbs','yellow light','2700','cozy'],
-    'neutral_3000_3500K': ['neutral','3000','3500','soft white'],
-    'brightWhite_4000KPlus': ['cool white','bright white','4000','daylight'],
-    'loveIt': ['yes','love it','i like it','for sure'],
-    'maybe': ['maybe','not sure','depends'],
-    'noThanks': ['no','no thanks','skip it'],
-  };
-
-  String? _fuzzyValueFromSpeech(InterviewPrompt prompt, String heard) {
-    final h = heard.toLowerCase();
-    for (final o in prompt.options) {
-      if (h.contains(o.label.toLowerCase())) return o.value;
-    }
-    for (final o in prompt.options) {
-      final syns = _synonyms[o.value] ?? const [];
-      if (syns.any((s) => h.contains(s))) return o.value;
-    }
-    return null;
-  }
-
   Future<void> _handleTalkTap() async {
     final prompt = _engine.current;
     if (prompt == null) return;
-
     final heard = await _voice.listenOnce();
     if (heard == null || heard.isEmpty) return;
+    _transcript.add(TranscriptEvent(type: 'user', text: heard, promptId: prompt.id));
 
     switch (prompt.type) {
       case InterviewPromptType.singleSelect:
-        final match = _fuzzyValueFromSpeech(prompt, heard);
-        if (match != null) {
-          final label = prompt.options.firstWhere((o) => o.value == match).label;
-          await _selectSingle(label);
+        final m = EnumMapper.instance.mapSingle(prompt, heard);
+        if (m != null) {
+          final label = prompt.options.firstWhere((o) => o.value == m.value).label;
+          _enqueueUser(label);
+          _engine.setAnswer(prompt.id, m.value);
+          await _persistAnswers();
+          _transcript.add(TranscriptEvent(type: 'answer', text: m.value, promptId: prompt.id));
+          _engine.next();
         } else {
-          _enqueueSystem('I heard "$heard". Could you tap or say one of the options?');
+          _enqueueSystem('I heard "$heard". Could you pick one of the options?');
           _voice.speak('Please choose one of the options on screen.');
+          _transcript.add(TranscriptEvent(type: 'note', text: 'low-confidence'));
         }
         break;
-      case InterviewPromptType.freeText:
-        await _submitFreeText(heard);
-        break;
-      case InterviewPromptType.multiSelect:
+
       case InterviewPromptType.yesNo:
-        _enqueueSystem('Please tap to pick your choices.');
-        _voice.speak('Please tap your choices.');
+        final m = EnumMapper.instance.mapSingle(
+          InterviewPrompt(
+            id: prompt.id,
+            title: prompt.title,
+            type: InterviewPromptType.singleSelect,
+            options: const [InterviewPromptOption('yes', 'Yes'), InterviewPromptOption('no', 'No')],
+          ),
+          heard,
+        );
+        if (m != null) {
+          final label = m.value == 'yes' ? 'Yes' : 'No';
+          _enqueueUser(label);
+          _engine.setAnswer(prompt.id, m.value);
+          await _persistAnswers();
+          _transcript.add(TranscriptEvent(type: 'answer', text: m.value, promptId: prompt.id));
+          _engine.next();
+        } else {
+          _enqueueSystem('Please say yes or no.');
+          _voice.speak('Please say yes or no.');
+        }
         break;
+
+      case InterviewPromptType.multiSelect:
+        if (prompt.options.isEmpty) {
+          _enqueueSystem('Please tap to add items for this one.');
+          _voice.speak('Please tap to add items for this one.');
+          return;
+        }
+        final picks = EnumMapper.instance.mapMulti(prompt, heard);
+        if (picks.isNotEmpty) {
+          final labels = picks.map((v) => prompt.options.firstWhere((o) => o.value == v).label).toList();
+          _enqueueUser(labels.join(', '));
+          _engine.setAnswer(prompt.id, picks);
+          await _persistAnswers();
+          _transcript.add(TranscriptEvent(type: 'answer', text: picks.join(','), promptId: prompt.id));
+          _engine.next();
+        } else {
+          _enqueueSystem('I heard "$heard". Could you tap to choose one or more options?');
+          _voice.speak('Please tap to choose one or more options.');
+        }
+        break;
+
+      case InterviewPromptType.freeText:
+        _enqueueUser(heard);
+        _engine.setAnswer(prompt.id, heard);
+        await _persistAnswers();
+        _transcript.add(TranscriptEvent(type: 'answer', text: heard, promptId: prompt.id));
+        _engine.next();
+        break;
+    }
+
+    if (_engine.current != null) {
+      _enqueueSystem(_engine.current!.title);
+      if (_mode == InterviewMode.talk) _voice.speak(_engine.current!.title);
+    } else {
+      await _finish();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Interview')),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Interview')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -215,6 +271,11 @@ class _InterviewScreenState extends State<InterviewScreen> {
       appBar: AppBar(
         title: const Text('Interview'),
         actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TalkEntryScreen())),
+            icon: const Icon(Icons.call),
+            tooltip: 'Call AI',
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: SegmentedButton<InterviewMode>(
@@ -279,56 +340,94 @@ class _InterviewScreenState extends State<InterviewScreen> {
                         children: [
                           ChatBubble(isUser: false, child: Text(prompt.title)),
                           const SizedBox(height: 8),
-                          OptionChips(options: labels, onTap: _selectSingle),
+                          OptionChips(options: labels, onTap: (l) { _selectSingle(l); }),
                           help,
                         ],
                       );
                     case InterviewPromptType.multiSelect:
-                      final labels = prompt.options.map((o) => o.label).toList();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ChatBubble(isUser: false, child: Text(prompt.title)),
-                          const SizedBox(height: 8),
-                          MultiSelectChips(
-                            options: labels,
-                            minItems: prompt.minItems,
-                            maxItems: prompt.maxItems,
-                            onChanged: (vals) {
-                              final values = vals
-                                  .map((l) => prompt.options.firstWhere((o) => o.label == l).value)
-                                  .toList();
-                              _engine.setAnswer(prompt.id, values);
-                              _persistAnswers();
-                            },
-                          ),
-                          help,
-                          const SizedBox(height: 8),
-                          Row(children: [
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                _enqueueUser('Selections updated');
-                                _engine.next();
-                                if (_engine.current != null) {
-                                  _enqueueSystem(_engine.current!.title);
-                                  if (_mode == InterviewMode.talk) _voice.speak(_engine.current!.title);
-                                } else {
-                                  await _finish();
-                                }
+                      // Inline photo uploader for photos prompt; otherwise default chips flow
+                      if (prompt.id == 'photos') {
+                        final urls = (_engine.answers['photos'] as List?)?.cast<String>() ?? const <String>[];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ChatBubble(isUser: false, child: Text(prompt.title)),
+                            const SizedBox(height: 8),
+                            PhotoPickerInline(
+                              value: urls,
+                              onChanged: (next) async {
+                                _engine.setAnswer('photos', next);
+                                await _persistAnswers();
+                                setState(() {});
                               },
-                              icon: const Icon(Icons.check),
-                              label: const Text('Continue'),
                             ),
-                          ]),
-                        ],
-                      );
+                            help,
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  _enqueueUser('Photos added');
+                                  _engine.next();
+                                  if (_engine.current != null) {
+                                    _enqueueSystem(_engine.current!.title);
+                                    if (_mode == InterviewMode.talk) _voice.speak(_engine.current!.title);
+                                  } else {
+                                    await _finish();
+                                  }
+                                },
+                                icon: const Icon(Icons.check),
+                                label: const Text('Continue'),
+                              ),
+                            ]),
+                          ],
+                        );
+                      } else {
+                        final labels = prompt.options.map((o) => o.label).toList();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ChatBubble(isUser: false, child: Text(prompt.title)),
+                            const SizedBox(height: 8),
+                            MultiSelectChips(
+                              options: labels,
+                              minItems: prompt.minItems,
+                              maxItems: prompt.maxItems,
+                              onChanged: (vals) {
+                                final values = vals
+                                    .map((l) => prompt.options.firstWhere((o) => o.label == l).value)
+                                    .toList();
+                                _engine.setAnswer(prompt.id, values);
+                                _persistAnswers();
+                              },
+                            ),
+                            help,
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  _enqueueUser('Selections updated');
+                                  _engine.next();
+                                  if (_engine.current != null) {
+                                    _enqueueSystem(_engine.current!.title);
+                                    if (_mode == InterviewMode.talk) _voice.speak(_engine.current!.title);
+                                  } else {
+                                    await _finish();
+                                  }
+                                },
+                                icon: const Icon(Icons.check),
+                                label: const Text('Continue'),
+                              ),
+                            ]),
+                          ],
+                        );
+                      }
                     case InterviewPromptType.yesNo:
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ChatBubble(isUser: false, child: Text(prompt.title)),
                           const SizedBox(height: 8),
-                          OptionChips(options: const ['Yes','No'], onTap: (val) => _selectSingle(val)),
+                          OptionChips(options: const ['Yes','No'], onTap: (val) { _selectSingle(val); }),
                           help,
                         ],
                       );
@@ -371,3 +470,74 @@ class _TextComposer extends StatefulWidget {
 }
 
 class _TextComposerState extends State<_TextComposer> {
+  final _controller = TextEditingController();
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            minLines: 1,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Type your answer…',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton.icon(
+          onPressed: _busy ? null : _submit,
+          icon: const Icon(Icons.arrow_upward),
+          label: const Text('Send'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _busy = true);
+    await widget.onSubmit(text);
+    _controller.clear();
+    setState(() => _busy = false);
+  }
+}
+
+class _TalkComposer extends StatelessWidget {
+  final VoidCallback onMic;
+  final bool isListening;
+  final bool isSpeaking;
+  const _TalkComposer({required this.onMic, required this.isListening, required this.isSpeaking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 48,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: Text(isListening ? 'Listening…' : (isSpeaking ? 'Speaking…' : 'Tap the mic and answer')),
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton.icon(
+          onPressed: onMic,
+          icon: Icon(isListening ? Icons.hearing : Icons.mic),
+          label: Text(isListening ? 'Listening' : 'Speak'),
+        ),
+      ],
+    );
+  }
+}

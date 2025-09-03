@@ -8,6 +8,7 @@ import 'package:color_canvas/models/project.dart';
 import 'package:color_canvas/services/journey/journey_models.dart';
 import 'package:color_canvas/services/journey/default_color_story_v1.dart';
 import 'package:color_canvas/services/analytics_service.dart';
+import 'package:color_canvas/services/notifications_service.dart';
 
 /// Thin orchestrator that persists step state into the project doc under `journey`.
 class JourneyService {
@@ -119,9 +120,9 @@ class JourneyService {
       await ProjectService.setFunnelStage(s.projectId!, stage);
     }
     final analytics = AnalyticsService.instance;
-    analytics.log('journey_step_complete', {
+    analytics.log('journey_step_complete', <String, Object>{
       'step_id': step.id,
-      'next_step_id': nextId,
+      'next_step_id': nextId ?? '',
     });
     if (artifacts != null) {
       for (final key in artifacts.keys) {

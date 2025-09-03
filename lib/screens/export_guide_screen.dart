@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share/share.dart';
 
 import '../services/deliverable_service.dart';
 import '../services/analytics_service.dart';
@@ -29,7 +29,12 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
     _load();
 
     _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted: (url) => AnalyticsService.instance.logWebviewPageStarted(url),
+        onPageFinished: (url) => AnalyticsService.instance.logWebviewPageFinished(url),
+        onWebResourceError: (error) => AnalyticsService.instance.logWebviewError(error.description),
+      ));
   }
 
   Future<void> _load() async {
@@ -68,7 +73,10 @@ class _ExportGuideScreenState extends State<ExportGuideScreen> {
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: 'Share guide',
-            onPressed: () => SharePlus.instance.share(ShareParams(text: _url!)),
+            onPressed: () {
+              AnalyticsService.instance.logExportGuideShared(widget.projectId);
+              share(_url!);
+            },
           ),
         ],
       ),

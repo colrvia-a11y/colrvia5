@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:color_canvas/services/analytics_service.dart';
 import 'package:color_canvas/firestore/firestore_data_schema.dart';
+import 'package:color_canvas/screens/home_screen.dart';
 import 'package:color_canvas/screens/paint_detail_screen.dart';
 import 'package:color_canvas/screens/compare_colors_screen.dart';
-import 'package:color_canvas/screens/home_screen.dart';
+import 'package:color_canvas/screens/roller_screen.dart';
 import '../models/color_filters.dart';
 import '../services/paint_query_service.dart';
 import '../widgets/filter_sheet.dart';
@@ -168,6 +169,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     if (!mounted) {
       return;
     }
+    // Check if we can find the HomeScreenState in the widget tree
+    final home = context.findAncestorStateOfType<HomeScreenState>();
+    
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => PaintDetailScreen(paint: p)),
     );
@@ -190,14 +194,12 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       widget.onPaintSelectedForRoller!(p);
       return;
     }
-    final home = context.findAncestorStateOfType<HomeScreenState>();
-    if (home != null) {
-      home.onPaintSelectedFromSearch(p);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load ${p.name} into Roller.')),
-      );
-    }
+    // Navigate directly to Roller with this paint preloaded
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RollerScreen(initialPaints: [p]),
+      ),
+    );
   }
 
   @override

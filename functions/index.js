@@ -62,3 +62,96 @@ Give clear, conversational, and helpful guidance about home colors, palettes, an
     throw new functions.https.HttpsError("internal", "AI request failed");
   }
 });
+
+// Deterministic palette generation onCall
+const { generatePalette } = require("./generator.js");
+
+exports.generatePaletteOnCall = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Auth required");
+  }
+  if (!context.app) {
+    throw new functions.https.HttpsError("failed-precondition", "App Check required");
+  }
+
+  const uid = context.auth.uid;
+  const answers = data && data.answers;
+  if (!answers || typeof answers !== "object") {
+    throw new functions.https.HttpsError("invalid-argument", "answers object required");
+  }
+
+  // Minimal validation for required fields
+  const required = ["roomType","usage","moodWords","daytimeBrightness","bulbColor","boldDarkerSpot","brandPreference"];
+  for (const k of required) {
+    if (!(k in answers)) {
+      throw new functions.https.HttpsError("invalid-argument", `Missing field: ${k}`);
+    }
+  }
+
+  try {
+    const out = generatePalette(answers);
+
+    // Best-effort job log
+    try {
+      await admin.firestore().collection("paletteJobs").add({
+        uid,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        answers,
+        output: out,
+      });
+    } catch (e) {
+      functions.logger.warn("palette_job_log_failed", { error: String(e) });
+    }
+
+    return { ok: true, palette: out };
+  } catch (e) {
+    functions.logger.error("generate_palette_error", e);
+    throw new functions.https.HttpsError("failed-precondition", String(e.message || e));
+  }
+});
+
+// Create a talk session (start-now or scheduled)
+exports.createTalkSession = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Auth required");
+  }
+  if (!context.app) {
+    throw new functions.https.HttpsError("failed-precondition", "App Check required");
+  }
+
+  const uid = context.auth.uid;
+  const when = data && data.scheduledAt;
+  const now = admin.firestore.Timestamp.now();
+
+  const payload = {
+    uid,
+    status: when ? "scheduled" : "ready",
+    scheduledAt: when ? admin.firestore.Timestamp.fromDate(new Date(when)) : null,
+    answersSnapshot: (data && data.answers) || {},
+    createdAt: now,
+    progress: 0,
+  };
+
+  const docRef = await admin.firestore().collection("talkSessions").add(payload);
+  return { sessionId: docRef.id };
+});
+
+// Issue an ephemeral token for the Voice Gateway (placeholder; replace with signed JWT)
+exports.issueVoiceGatewayToken = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Auth required");
+  }
+  if (!context.app) {
+    throw new functions.https.HttpsError("failed-precondition", "App Check required");
+  }
+
+  const uid = context.auth.uid;
+  const sessionId = data && data.sessionId;
+  if (!sessionId) {
+    throw new functions.https.HttpsError("invalid-argument", "sessionId");
+  }
+
+  // Short-lived opaque token (5 minutes). Replace with real signed JWT from your Voice Gateway.
+  const token = Buffer.from(JSON.stringify({ uid, sessionId, exp: Date.now() + 1000 * 60 * 5 })).toString("base64url");
+  return { token };
+});

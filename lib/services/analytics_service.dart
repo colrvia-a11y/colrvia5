@@ -1,777 +1,240 @@
-import 'dart:developer' as developer;
+// lib/services/analytics_service.dart
+import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import '../models/project.dart';
 
-/// A comprehensive analytics tracking service for Color Stories feature.
-///
-/// This service provides analytics tracking for Color Stories interactions.
-/// It uses a mock implementation that logs events to the console since Firebase Analytics
-/// is not currently installed in the project. When Firebase Analytics is added to the project,
-/// replace the mock implementation with actual Firebase Analytics calls.
 class AnalyticsService {
-  static final AnalyticsService _instance = AnalyticsService._internal();
-  factory AnalyticsService() => _instance;
-  AnalyticsService._internal();
+  AnalyticsService._();
+  factory AnalyticsService() => instance; // allow AnalyticsService() calls
+  static final instance = AnalyticsService._();
+  final FirebaseAnalytics _fa = FirebaseAnalytics.instance;
 
-  static AnalyticsService get instance => _instance;
+  // Keep a small rolling buffer of recent analytics events for diagnostics
+  final List<Map<String, Object?>> _recentEvents = [];
+  List<Map<String, Object?>> get recentEvents => List.unmodifiable(_recentEvents);
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  Future<void> logAppOpen() => _fa.logAppOpen();
+  Future<void> setUserId(String? uid) => _fa.setUserId(id: uid);
 
-  bool _isEnabled = true;
-  final List<Map<String, dynamic>> _recentEvents = [];
-
-  /// Enable or disable analytics tracking
-  void setAnalyticsCollectionEnabled(bool enabled) {
-    _isEnabled = enabled;
-    _analytics.setAnalyticsCollectionEnabled(enabled);
+  Future<void> logEvent(String name, [Map<String, Object?> params = const {}]) async {
+    // record locally for diagnostics (trim to last 50)
+    _recentEvents.add({
+      'name': name,
+      'params': params,
+      'at': DateTime.now().toIso8601String(),
+    });
+    if (_recentEvents.length > 50) {
+      _recentEvents.removeRange(0, _recentEvents.length - 50);
+    }
+    final cleaned = <String, Object>{};
+    params.forEach((k, v) {
+      if (v == null) return;
+      if (v is num || v is String || v is bool || v is List) cleaned[k] = v;
+      // ignore non-primitive values to avoid runtime/type issues
+    });
+    await _fa.logEvent(name: name, parameters: cleaned);
+    if (kDebugMode) debugPrint('[analytics] $name $cleaned');
   }
 
-  /// Log a screen view event
-  void logScreenView(String screenName) {
-    if (!_isEnabled) return;
-    developer.log('Screen View: $screenName', name: 'Analytics');
+  /// Accepts nullable values, then filters out nulls and only keeps primitive types,
+  /// because FirebaseAnalytics requires Map<String, Object> (non-null values).
+  Future<void> log(String name, [Map<String, Object?> params = const {}]) async {
+    final cleaned = <String, Object>{};
+    params.forEach((k, v) {
+      if (v == null) return;
+      if (v is num || v is String || v is bool || v is List) cleaned[k] = v;
+      // ignore non-primitive values to avoid runtime/type issues
+    });
+
+    await _fa.logEvent(name: name, parameters: cleaned);
+    if (kDebugMode) debugPrint('[analytics] $name $cleaned');
   }
 
-  /// Log a generic event with parameters
-  Future<void> logEvent(String name, [Map<String, dynamic>? parameters]) async {
-    await log(name, parameters);
+  // Typed helpers used across the app
+  Future<void> interviewStarted({String? mode}) {
+    return logEvent('interview_started', {'mode': mode ?? 'unknown'});
   }
 
-  /// Primary logging method used by wrappers
-  Future<void> log(String name, [Map<String, dynamic>? params]) async {
-    if (!_isEnabled) return;
-    await _logEvent(name, params ?? {});
+  Future<void> interviewAnswerSet(String id) =>
+      logEvent('interview_answer', {'id': id});
+  Future<void> interviewCompleted() => logEvent('interview_completed');
+  Future<void> reviewConfirmed() => logEvent('review_confirmed');
+  Future<void> paletteGenerated({String? brand}) {
+    return logEvent('palette_generated', {'brand': brand ?? 'unknown'});
   }
 
-  List<Map<String, dynamic>> get recentEvents =>
-      List.unmodifiable(_recentEvents);
+  Future<void> visualizerOpened() => logEvent('visualizer_opened');
+  Future<void> visualizerStroke({required String role}) =>
+      logEvent('viz_stroke', {'role': role});
+  Future<void> vizExport() => logEvent('viz_export');
+  Future<void> talkStart() => logEvent('talk_start');
+  Future<void> talkEnd() => logEvent('talk_end');
+  Future<void> logDashboardOpened() => logEvent('dashboard_opened');
 
-  // Convenience wrappers for core flows
-  Future<void> ctaPlanClicked(String source) =>
-      log('cta_plan_clicked', {'source': source});
+  // Backward-compat stubs for existing call sites across the app
+  Future<void> logProjectStageChanged(String projectId, Object stage) =>
+      logEvent('project_stage_changed', {'projectId': projectId, 'stage': stage.toString()});
 
-  Future<void> ctaVisualizeClicked(String source) =>
-      log('cta_visualize_clicked', {'source': source});
+  Future<void> resumeLastShown(String projectId) =>
+      logEvent('resume_last_shown', {'projectId': projectId});
 
-  Future<void> ctaCompareClicked(String source) =>
-      log('cta_compare_clicked', {'source': source});
+  Future<void> resumeLastClicked(String projectId, String screen) =>
+      logEvent('resume_last_clicked', {'projectId': projectId, 'screen': screen});
 
-  // Legacy planGenerated signatures removed; use logEvent or planGenerated(projectId, planId) wrapper below.
+  Future<void> planGenerated(String projectId, String planId) =>
+      logEvent('plan_generated', {'projectId': projectId, 'planId': planId});
 
-  Future<void> renderFastRequested() => log('render_fast_requested');
-
-  Future<void> renderHqRequested() => log('render_hq_requested');
-
-  Future<void> renderHqCompleted(int ms) =>
-      log('render_hq_completed', {'ms_elapsed': ms});
+  Future<void> planFallbackCreated() => logEvent('plan_fallback_created');
 
   Future<void> compareOpened(int count) =>
-      log('compare_opened', {'count': count});
+      logEvent('compare_opened', {'count': count});
 
-  Future<void> painterPackExported(int pageCount, int colorCount) =>
-      log('painter_pack_exported', {
-        'page_count': pageCount,
-        'color_count': colorCount,
-      });
+  Future<void> permissionMicrocopyShown(String type) =>
+      logEvent('permission_microcopy_shown', {'type': type});
 
-  Future<void> viaActionClicked(String action) =>
-      log('via_action_clicked', {'action': action});
-
-  Future<void> lightingProfileSelected(String profile) =>
-      log('lighting_profile_selected', {'profile': profile});
-
-  Future<void> planFallbackCreated() => log('plan_fallback_created');
-
-  Future<void> visualizerHqFailed() => log('visualizer_hq_failed');
-
-  Future<void> visualizerHqRetryClicked() =>
-      log('visualizer_hq_retry_clicked');
-
-  Future<void> fallbackUsed(String source) =>
-      log('fallback_used', {'source': source});
+  Future<void> permissionRequested(String type) =>
+      logEvent('permission_requested', {'type': type});
 
   Future<void> featureFlagState(String flag, bool enabled) =>
-      log('feature_flag_state', {'flag': flag, 'enabled': enabled});
+      logEvent('feature_flag_state', {'flag': flag, 'enabled': enabled});
 
-  /// Track when a user opens/views a color story
+  // === NEW: used by save_palette_panel.dart ===
+  Future<void> logRollerSaveToProject(String projectId, String savedPaletteId) {
+    return log('roller_save_to_project', {
+      'project_id': projectId,
+      'saved_palette_id': savedPaletteId,
+    });
+  }
+
+  // -------- Compatibility and richer API stubs --------
+
+  // Screen view helpers
+  Future<void> setCurrentScreen({required String screenName, String? screenClass}) =>
+      _fa.logScreenView(screenName: screenName, screenClass: screenClass);
+  Future<void> logScreenView(String screenName) =>
+      setCurrentScreen(screenName: screenName);
+
+  // User property
+  Future<void> setUserProperty(String name, String value) =>
+      _fa.setUserProperty(name: name, value: value);
+
+  // Color Story analytics (examples and call sites)
   Future<void> trackColorStoryOpen({
     required String storyId,
-    required String slug,
+    String? slug,
     String? title,
     List<String>? themes,
     List<String>? families,
     List<String>? rooms,
     bool? isFeatured,
-    String? source, // e.g., 'explore', 'featured', 'search'
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'slug': slug,
-        if (title != null) 'story_title': title,
-        if (themes != null && themes.isNotEmpty) 'themes': themes.join(','),
-        if (families != null && families.isNotEmpty)
-          'families': families.join(','),
-        if (rooms != null && rooms.isNotEmpty) 'rooms': rooms.join(','),
-        if (isFeatured != null) 'is_featured': isFeatured,
+    String? source,
+  }) =>
+      logEvent('color_story_open', {
+        'storyId': storyId,
+        if (slug != null) 'slug': slug,
+        if (title != null) 'title': title,
+        if (themes != null) 'themes': themes,
+        if (families != null) 'families': families,
+        if (rooms != null) 'rooms': rooms,
+        if (isFeatured != null) 'isFeatured': isFeatured,
         if (source != null) 'source': source,
-      };
+      });
 
-      await _logEvent('color_story_open', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackColorStoryOpen: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when a user clicks "Use This Palette" button
   Future<void> trackColorStoryUseClick({
     required String storyId,
-    required String slug,
+    String? slug,
     String? title,
     int? paletteColorCount,
     List<String>? colorHexCodes,
-  }) async {
-    if (!_isEnabled) return;
+  }) =>
+      logEvent('color_story_use_click', {
+        'storyId': storyId,
+        if (slug != null) 'slug': slug,
+        if (title != null) 'title': title,
+        if (paletteColorCount != null) 'paletteColorCount': paletteColorCount,
+        if (colorHexCodes != null) 'colorHexCodes': colorHexCodes,
+      });
 
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'slug': slug,
-        if (title != null) 'story_title': title,
-        if (paletteColorCount != null) 'palette_color_count': paletteColorCount,
-        if (colorHexCodes != null && colorHexCodes.isNotEmpty)
-          'color_codes': colorHexCodes.join(','),
-      };
-
-      await _logEvent('color_story_use_click', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackColorStoryUseClick: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when a user clicks "Save to Library" button
   Future<void> trackColorStorySaveClick({
     required String storyId,
-    required String slug,
+    String? slug,
     String? title,
     bool? isAlreadySaved,
-  }) async {
-    if (!_isEnabled) return;
+  }) =>
+      logEvent('color_story_save_click', {
+        'storyId': storyId,
+        if (slug != null) 'slug': slug,
+        if (title != null) 'title': title,
+        if (isAlreadySaved != null) 'isAlreadySaved': isAlreadySaved,
+      });
 
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'slug': slug,
-        if (title != null) 'story_title': title,
-        if (isAlreadySaved != null) 'is_already_saved': isAlreadySaved,
-      };
-
-      await _logEvent('color_story_save_click', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackColorStorySaveClick: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when a user clicks "Share" button
   Future<void> trackColorStoryShareClick({
     required String storyId,
-    required String slug,
+    String? slug,
     String? title,
-    String? shareMethod, // e.g., 'native_share', 'copy_link', 'social'
-  }) async {
-    if (!_isEnabled) return;
+    String? shareMethod,
+  }) =>
+      logEvent('color_story_share_click', {
+        'storyId': storyId,
+        if (slug != null) 'slug': slug,
+        if (title != null) 'title': title,
+        if (shareMethod != null) 'method': shareMethod,
+      });
 
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'slug': slug,
-        if (title != null) 'story_title': title,
-        if (shareMethod != null) 'share_method': shareMethod,
-      };
-
-      await _logEvent('color_story_share_click', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackColorStoryShareClick: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when user changes filters in the explore screen
+  // Explore analytics
   Future<void> trackExploreFilterChange({
-    List<String>? selectedThemes,
-    List<String>? selectedFamilies,
-    List<String>? selectedRooms,
-    bool? featuredOnly,
-    String?
-        changeType, // e.g., 'theme_added', 'family_removed', 'featured_toggled'
+    required List<String> selectedThemes,
+    required List<String> selectedFamilies,
+    required List<String> selectedRooms,
+    required bool featuredOnly,
+    required String changeType,
     int? totalResultCount,
-  }) async {
-    if (!_isEnabled) return;
+  }) =>
+      logEvent('explore_filter_change', {
+        'themes': selectedThemes,
+        'families': selectedFamilies,
+        'rooms': selectedRooms,
+        'featuredOnly': featuredOnly,
+        'changeType': changeType,
+        if (totalResultCount != null) 'resultCount': totalResultCount,
+      });
 
-    try {
-      final Map<String, dynamic> parameters = {
-        if (selectedThemes != null) 'selected_themes': selectedThemes.join(','),
-        if (selectedFamilies != null)
-          'selected_families': selectedFamilies.join(','),
-        if (selectedRooms != null) 'selected_rooms': selectedRooms.join(','),
-        if (featuredOnly != null) 'featured_only': featuredOnly,
-        if (changeType != null) 'change_type': changeType,
-        if (totalResultCount != null) 'result_count': totalResultCount,
-        'active_filter_count': _calculateActiveFilterCount(
-          selectedThemes,
-          selectedFamilies,
-          selectedRooms,
-          featuredOnly,
-        ),
-      };
-
-      await _logEvent('explore_filter_change', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackExploreFilterChange: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when user performs a search in the explore screen
   Future<void> trackExploreSearch({
     required String searchQuery,
     int? resultCount,
-    double? searchDurationMs,
     List<String>? activeFilters,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'search_query': searchQuery.toLowerCase().trim(),
-        'query_length': searchQuery.trim().length,
-        if (resultCount != null) 'result_count': resultCount,
-        if (searchDurationMs != null)
-          'search_duration_ms': searchDurationMs.round(),
-        if (activeFilters != null && activeFilters.isNotEmpty)
-          'active_filters': activeFilters.join(','),
-      };
-
-      await _logEvent('explore_search', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackExploreSearch: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when explore empty state is shown
-  Future<void> trackExploreEmptyStateShown({
-    List<String>? selectedThemes,
-    List<String>? selectedFamilies,
-    List<String>? selectedRooms,
-    String? searchQuery,
-    String? suggestedAction,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        if (selectedThemes != null && selectedThemes.isNotEmpty)
-          'selected_themes': selectedThemes.join(','),
-        if (selectedFamilies != null && selectedFamilies.isNotEmpty)
-          'selected_families': selectedFamilies.join(','),
-        if (selectedRooms != null && selectedRooms.isNotEmpty)
-          'selected_rooms': selectedRooms.join(','),
-        if (searchQuery != null && searchQuery.isNotEmpty)
-          'search_query': searchQuery.toLowerCase().trim(),
-        if (suggestedAction != null) 'suggested_action': suggestedAction,
-        'active_filter_count': _calculateActiveFilterCount(
-          selectedThemes,
-          selectedFamilies,
-          selectedRooms,
-          null,
-        ),
-        'has_search_query':
-            searchQuery != null && searchQuery.trim().isNotEmpty,
-      };
-
-      await _logEvent('explore_empty_state_shown', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackExploreEmptyStateShown: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track general user engagement with color stories feature
-  Future<void> trackColorStoriesEngagement({
-    required String
-        action, // e.g., 'feature_accessed', 'story_favorited', 'palette_exported'
-    String? storyId,
-    Map<String, dynamic>? additionalData,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'action': action,
-        if (storyId != null) 'story_id': storyId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      if (additionalData != null) {
-        parameters.addAll(additionalData);
-      }
-
-      await _logEvent('color_stories_engagement', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackColorStoriesEngagement: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track when harmony modes are sorted by LRV in the Roller
-  Future<void> trackRollerHarmonySortedByLrv({
-    required String modeName,
-    required int paletteSize,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'harmony_mode': modeName,
-        'palette_size': paletteSize,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('roller_harmony_sorted_by_lrv', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackRollerHarmonySortedByLrv: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track user properties for segmentation
-  Future<void> setUserProperty(String name, String? value) async {
-    if (!_isEnabled) return;
-
-    try {
-      // Mock implementation - log the user property
-      developer.log('Setting user property: $name = $value',
-          name: 'AnalyticsService');
-
-      // Future enhancement: When Firebase Analytics is added, replace with:
-      // await FirebaseAnalytics.instance.setUserProperty(name: name, value: value);
-    } catch (e) {
-      developer.log('Analytics error in setUserProperty: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Set the current screen name for analytics
-  Future<void> setCurrentScreen({
-    required String screenName,
-    String? screenClass,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      developer.log(
-          'Screen view: $screenName${screenClass != null ? ' ($screenClass)' : ''}',
-          name: 'AnalyticsService');
-
-      // Future enhancement: When Firebase Analytics is added, replace with:
-      // await FirebaseAnalytics.instance.logScreenView(
-      //   screenName: screenName,
-      //   screenClass: screenClass,
-      // );
-    } catch (e) {
-      developer.log('Analytics error in setCurrentScreen: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track Color Story generation start
-  Future<void> trackStoryGenerateStart({
-    required String paletteId,
-    required String styleTag,
-    required String roomType,
-    List<String>? vibeWords,
-    List<String>? brandHints,
-    String? guidanceLevel,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'palette_id': paletteId,
-        'style_tag': styleTag,
-        'room_type': roomType,
-        if (vibeWords != null && vibeWords.isNotEmpty)
-          'vibe_words': vibeWords.join(','),
-        if (brandHints != null && brandHints.isNotEmpty)
-          'brand_hints': brandHints.join(','),
-        if (guidanceLevel != null) 'guidance_level': guidanceLevel,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_generate_start', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateStart: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track Color Story generation completion
-  Future<void> trackStoryGenerateComplete({
-    required String storyId,
-    required String paletteId,
-    required Duration generationTime,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'palette_id': paletteId,
-        'generation_time_seconds': generationTime.inSeconds,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_generate_complete', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateComplete: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track Color Story generation error
-  Future<void> trackStoryGenerateError({
-    required String errorMessage,
-    String? paletteId,
-    String? storyId,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'error_message': errorMessage,
-        if (paletteId != null) 'palette_id': paletteId,
-        if (storyId != null) 'story_id': storyId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_generate_error', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryGenerateError: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track story audio play
-  Future<void> trackStoryPlay({
-    required String storyId,
-    String? audioType, // 'ambient' | 'tts'
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        if (audioType != null) 'audio_type': audioType,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_play', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryPlay: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track story like
-  Future<void> trackStoryLike({
-    required String storyId,
-    required bool liked, // true = liked, false = unliked
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'liked': liked,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_like', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryLike: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track apply story to visualizer
-  Future<void> trackStoryApplyVisualizer({
-    required String storyId,
-    required String roomType,
-    int? colorCount,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'room_type': roomType,
-        if (colorCount != null) 'color_count': colorCount,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_apply_visualizer', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryApplyVisualizer: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track story remix (regenerate with different parameters)
-  Future<void> trackStoryRemix({
-    required String storyId,
-    required String remixType, // 'image' | 'audio' | 'narration'
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        'remix_type': remixType,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('story_remix', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackStoryRemix: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track wizard screen open
-  Future<void> trackWizardOpen({
-    String? source, // 'explore_fab' | 'save_panel' | 'palette_detail' | etc
-    String? preselectedPaletteId,
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        if (source != null) 'source': source,
-        if (preselectedPaletteId != null)
-          'preselected_palette_id': preselectedPaletteId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('wizard_open', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackWizardOpen: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track color story reveal screen open
-  Future<void> trackRevealOpen({
-    required String storyId,
-    String? source, // 'wizard' | 'explore' | 'library' | etc
-    String? status, // 'complete' | 'processing' | 'error'
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'story_id': storyId,
-        if (source != null) 'source': source,
-        if (status != null) 'status': status,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('reveal_open', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackRevealOpen: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-  /// Track Explore screen sort changes
-  Future<void> trackExploreSortChanged({
-    required String value, // 'newest' | 'most_loved'
-  }) async {
-    if (!_isEnabled) return;
-
-    try {
-      final Map<String, dynamic> parameters = {
-        'value': value,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      await _logEvent('explore_sort_changed', parameters);
-    } catch (e) {
-      developer.log('Analytics error in trackExploreSortChanged: $e',
-          name: 'AnalyticsService');
-    }
-  }
-
-
-  /// Internal method to log events - currently uses mock implementation
-  Future<void> _logEvent(
-      String eventName, Map<String, Object?> parameters) async {
-    try {
-      _recentEvents.add({
-        'name': eventName,
-        'params': parameters,
-        'ts': DateTime.now().toIso8601String(),
+  }) =>
+      logEvent('explore_search', {
+        'query': searchQuery,
+        if (resultCount != null) 'resultCount': resultCount,
+        if (activeFilters != null) 'filters': activeFilters,
       });
-      if (_recentEvents.length > 50) _recentEvents.removeAt(0);
-      await _analytics.logEvent(
-          name: eventName, parameters: parameters as Map<String, Object>?);
-    } catch (e) {
-      developer.log('Failed to log analytics event $eventName: $e',
-          name: 'AnalyticsService');
-      // Don't rethrow - analytics failures should not crash the app
-    }
-  }
 
-  /// Helper method to calculate the number of active filters
-  int _calculateActiveFilterCount(
-    List<String>? themes,
-    List<String>? families,
-    List<String>? rooms,
-    bool? featuredOnly,
-  ) {
-    int count = 0;
-    if (themes != null && themes.isNotEmpty) count++;
-    if (families != null && families.isNotEmpty) count++;
-    if (rooms != null && rooms.isNotEmpty) count++;
-    if (featuredOnly == true) count++;
-    return count;
-  }
+  // CTA and onboarding helpers used around the app
+  Future<void> onboardingCompleted() => logEvent('onboarding_completed');
+  Future<void> ctaPlanClicked(String projectId) =>
+      logEvent('cta_plan_clicked', {'projectId': projectId});
+  Future<void> ctaVisualizeClicked(String projectId) =>
+      logEvent('cta_visualize_clicked', {'projectId': projectId});
+  Future<void> ctaCompareClicked(String projectId) =>
+      logEvent('cta_compare_clicked', {'projectId': projectId});
 
-  /// Get analytics instance for direct access if needed
-  /// Returns null in mock implementation
-  dynamic get analyticsInstance {
-    return _analytics;
-  }
+  // Visualizer-related helpers
+  Future<void> logVisualizerOpenedFromStory(String projectId) =>
+      logEvent('visualizer_opened_from_story', {'projectId': projectId});
+  Future<void> painterPackExported(int pageCount, int colorCount) =>
+      logEvent('painter_pack_exported', {'pages': pageCount, 'colors': colorCount});
+  Future<void> logExportShared(String projectId) =>
+      logEvent('export_shared', {'projectId': projectId});
+  Future<void> logStartFromExplore(String storyId, String projectId) =>
+      logEvent('remix_started_from_explore', {'storyId': storyId, 'projectId': projectId});
 
-  // Funnel Analytics Methods
-
-  /// Track when dashboard is opened
-  Future<void> logDashboardOpened() async {
-    await _logEvent('dashboard_opened', {});
-  }
-
-  /// Track when a project is created
-  Future<void> logProjectCreated(String projectId) async {
-    await _logEvent('project_created', {
-      'project_id': projectId,
-    });
-  }
-
-  /// Track when a project changes funnel stage
-  Future<void> logProjectStageChanged(
-      String projectId, FunnelStage stage) async {
-    await _logEvent('project_stage_changed', {
-      'project_id': projectId,
-      'stage': funnelStageToString(stage),
-    });
-  }
-
-  /// Track when user starts from explore story
-  Future<void> logStartFromExplore(
-      String sourceStoryId, String projectId) async {
-    await _logEvent('start_from_explore', {
-      'source_story_id': sourceStoryId,
-      'project_id': projectId,
-    });
-  }
-
-  /// Track when roller saves to project
-  Future<void> logRollerSaveToProject(
-      String projectId, String paletteId) async {
-    await _logEvent('roller_save_to_project', {
-      'project_id': projectId,
-      'palette_id': paletteId,
-    });
-  }
-
-  /// Track when story is generated
-  Future<void> logStoryGenerated(String projectId, String colorStoryId) async {
-    await _logEvent('story_generated', {
-      'project_id': projectId,
-      'color_story_id': colorStoryId,
-    });
-  }
-
-  /// Compatibility wrapper used by some services to log plan generation
-  Future<void> planGenerated(String projectId, String planId) async {
-    await _logEvent('plan_generated', {
-      'project_id': projectId,
-      'plan_id': planId,
-    });
-  }
-
-  /// Track when visualizer is opened from story
-  Future<void> logVisualizerOpenedFromStory(String projectId) async {
-    await _logEvent('visualizer_opened_from_story', {
-      'project_id': projectId,
-    });
-  }
-
-  /// Track when export/share happens
-  Future<void> logExportShared(String projectId) async {
-    await _logEvent('export_shared', {
-      'project_id': projectId,
-    });
-  }
-
-  // REGION: CODEX-ADD resume-last analytics
-  Future<void> resumeLastShown(String projectId) async {
-    await _logEvent('resume_last_shown', {
-      'project_id': projectId,
-    });
-  }
-
-  Future<void> resumeLastClicked(String projectId, String screen) async {
-    await _logEvent('resume_last_clicked', {
-      'project_id': projectId,
-      'screen': screen,
-    });
-  }
-  // END REGION: CODEX-ADD resume-last analytics
-
-  // REGION: CODEX-ADD onboarding-permissions analytics
-  Future<void> onboardingCompleted() async {
-    await _logEvent('onboarding_completed', {});
-  }
-
-  Future<void> permissionMicrocopyShown(String type) async {
-    await _logEvent('permission_microcopy_shown', {'type': type});
-  }
-
-  Future<void> permissionRequested(String type) async {
-    await _logEvent('permission_requested', {'type': type});
-  }
-  // END REGION: CODEX-ADD onboarding-permissions analytics
-}
-
-// Extension methods for easy access
-extension AnalyticsServiceExtension on AnalyticsService {
-  /// Quick method to track screen views
-  Future<void> screenView(String screenName) async {
-    await setCurrentScreen(screenName: screenName);
-  }
-
-  /// Quick method to track button clicks
-  Future<void> buttonClick(String buttonName,
-      {Map<String, dynamic>? data}) async {
-    await trackColorStoriesEngagement(
-      action: 'button_click',
-      additionalData: {'button_name': buttonName, ...?data},
-    );
-  }
+  // Webview analytics helpers
+  Future<void> logWebviewPageStarted(String url) =>
+      logEvent('webview_page_started', {'url': url});
+  Future<void> logWebviewPageFinished(String url) =>
+      logEvent('webview_page_finished', {'url': url});
+  Future<void> logWebviewError(String error) =>
+      logEvent('webview_error', {'error': error});
+  Future<void> logExportGuideShared(String projectId) =>
+      logEvent('export_guide_shared', {'projectId': projectId});
 }

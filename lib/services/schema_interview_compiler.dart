@@ -25,7 +25,7 @@ class SchemaInterviewCompiler {
     _compileObject('', props, requiredTop, out);
 
     // 2) Room branches under $defs (kitchen/bathroom/...)
-    final defs = (root['$defs'] as Map?)?.cast<String, dynamic>() ?? {};
+    final defs = (root['\$defs'] as Map?)?.cast<String, dynamic>() ?? {};
     final roomDefs = [
       'kitchen','bathroom','bedroom','livingRoom','diningRoom','office','kidsRoom','laundryMudroom','entryHall','otherRoom'
     ];
@@ -163,7 +163,7 @@ class SchemaInterviewCompiler {
       final thenPart = (block['then'] as Map?)?.cast<String, dynamic>();
       if (ifPart == null || thenPart == null) continue;
 
-      final conditions = <String, dynamic>[];
+      final conditions = <Map<String, dynamic>>[];
       _collectConstConditions(ifPart, '', conditions);
       if (conditions.isEmpty) continue;
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:color_canvas/services/firebase_service.dart';
-import 'package:color_canvas/screens/home_screen.dart';
+import 'package:color_canvas/screens/dashboard_screen.dart';
 import 'package:color_canvas/screens/login_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -25,7 +25,7 @@ class AuthWrapper extends StatelessWidget {
         // Show appropriate screen based on auth state
         if (snapshot.hasData && snapshot.data != null) {
           // User is signed in
-          return const HomeScreen();
+          return const DashboardScreen();
         } else {
           // User is not signed in
           return const LoginScreen();

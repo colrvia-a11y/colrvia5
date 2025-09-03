@@ -1,4 +1,22 @@
-import 'dart:convert';
+Prompt P4 — Import HomeScreenState in Search screen
+
+Goal: Resolve “HomeScreenState isn’t a type”.
+
+Edit file: lib/screens/search_screen.dart
+
+Action:
+
+Add missing import at the top:
+
+import 'package:color_canvas/screens/home_screen.dart';
+
+
+Ensure you use the exact class name defined in home_screen.dart:
+
+final home = context.findAncestorStateOfType<HomeScreenState>();
+
+
+(If your class name differs, update the generic accordingly.)import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -80,7 +98,7 @@ class NotificationsService {
           builder: (_) => VisualizerScreen(
               )));
       AnalyticsService.instance
-          .log('viz_hq_push_opened', {'jobId': jobId});
+          .log('viz_hq_push_opened', <String, Object>{'jobId': jobId ?? 'unknown'});
     }
   }
 
@@ -95,10 +113,23 @@ class NotificationsService {
         android: AndroidNotificationDetails('nudges', 'Nudges'),
         iOS: DarwinNotificationDetails(),
       ),
-      
+
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
     AnalyticsService.instance
         .logEvent('lifecycle_nudge_sent', {'kind': kind});
+  }
+
+  Future<void> showJourneyStepNotification(String stepTitle) async {
+    await _local.show(
+      stepTitle.hashCode,
+      'Journey Step Completed',
+      'You have completed: $stepTitle',
+      NotificationDetails(
+        android: AndroidNotificationDetails('journey', 'Journey Notifications'),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+    AnalyticsService.instance.log('journey_step_notification_shown', {'step_title': stepTitle});
   }
 }
